@@ -59,11 +59,9 @@ function stripFences(s: string): string {
   return (m ? m[1] : s).trim();
 }
 
-export async function sparkJson<T>(schema: ZodType<T>, messages: ChatMessage[]): Promise<T> {
-  const sys: ChatMessage[] = [
-    ...messages,
-    { role: "system", content: "Reply with strictly valid JSON only. No markdown, no commentary." },
-  ];
+export async function sparkJson<T>(schema: ZodType<T>, messages: ChatMessage[], spec?: string): Promise<T> {
+  const rules = "Reply with strictly valid JSON only. No markdown, no commentary." + (spec ? `\n${spec}` : "");
+  const sys: ChatMessage[] = [{ role: "system", content: rules }, ...messages];
   const first = await sparkChat({ messages: sys, json: true });
   const tryParse = (text: string): { ok: true; value: T } | { ok: false; error: string } => {
     try {
@@ -81,7 +79,7 @@ export async function sparkJson<T>(schema: ZodType<T>, messages: ChatMessage[]):
     messages: [
       ...sys,
       { role: "assistant", content: first.content ?? "" },
-      { role: "user", content: `Your previous JSON failed validation: ${a.error}. Return corrected JSON only.` },
+      { role: "user", content: `Your previous JSON failed validation: ${a.error}. Return corrected JSON only, exactly matching the required shape.${spec ? `\n${spec}` : ""}` },
     ],
     json: true,
   });
