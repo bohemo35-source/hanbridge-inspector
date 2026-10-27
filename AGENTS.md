@@ -22,7 +22,7 @@ Next.js 15 (App Router) + TypeScript strict + Tailwind, деплой Vercel. Х�
 ## Meta Model API (проверено 21–23.10)
 База `https://api.meta.ai/v1`, `Authorization: Bearer ${META_API_KEY}`.
 - `muse-spark-1.3` — POST /chat/completions. ВСЕГДА `reasoning_effort: "low"`, `max_tokens >= 1500` (при меньших приходит `content: null`). Пустой content = ошибка → retry 1 раз → фолбэк.
-- `sam-3.1` — POST /responses, `input_text` + `input_image` (data URL работает). Ответ — спец-токены в `output[0].content[0].text`: `<|box;x1;y1;x2;y2;w;h|>` и `<|mask;x;y;data=W,H,…|>`. Формат маски: https://dev.meta.ai/docs/sam/reading-segmentation
+- `sam-3.1` — POST /responses, body `{model:"sam-3.1", input:[{role:"user", content:[{type:"input_text",text:"<concept>"},{type:"input_image",image_url:"data:image/jpeg;base64,…"}]}]}`, ~2–3 с. Ответ в `output[0].content[0].text` (проверено 27.10 на фото MINI): префикс `<0f>0`, затем по каждому экземпляру `<|box;x1=991;y1=193;x2=1025;y2=201;w=1280;h=720|><|mask;x=0;y=0;data=H,W,<encoded>|>` — пары key=value, координаты в пикселях отправленного изображения (w,h = его размер); `data` начинается с высоты и ширины маски (= размер бокса), дальше закодированные пиксели относительно бокса. Алгоритм декодирования: https://dev.meta.ai/docs/sam/reading-segmentation. Пустой ответ = 0 экземпляров. SAM хорошо находит предметы (`car`, `license plate`, `wheel`, панели), а `scratch`/`dent` на тестовом фото дали 0 — дефекты ищет Spark по вырезкам, SAM даёт геометрию.
 - `muse-voice-transcribe-1.0` — POST /asr/transcribe, multipart: `request` (JSON `{model, audioEncoding:"WAV", mode:"PUSH_TO_TALK"}`) + `audio` (WAV ≤ 10 мин). TTS у Meta нет.
 - `muse-image-1.0` — POST /images/generations `{model, prompt, n}` → `data[0].b64_json` (~23 с); правки — /images/edits.
 Все вызовы — только через `src/lib/meta/*` (единый клиент: таймаут, 1 retry, лог длительности и model id без тела и ключа).
@@ -40,10 +40,17 @@ src/lib/agent/      оркестратор, инструменты, verifier
 src/lib/schema/     zod-схемы (Inspection, Finding, Evidence, Report)
 src/lib/store/      Blob-хранилище
 scripts/smoke/      живые smoke-скрипты на каждую модель
-demo-data/          реальные фото/видео/замеры MINI (кладёт Артур)
+demo-data/<car>/    реальные осмотры (photos/, video/, sheets/, inspector_report_ru.txt, paint.json); не в git
 docs/tz/            ТЗ
 docs/reports/       отчёты Muse после каждого ТЗ
 ```
+
+## Экономия лимита Muse (обязательно)
+- Не запускай субагентов и «double check»/verify-проходы: проверку делает ревьюер (Claude).
+- Не перечитывай большие файлы целиком без нужды; `package-lock.json`, `node_modules`, `.next`, `demo-data` не читать.
+- `npm install` — один раз в начале. `next build` — один раз в конце. Между ними хватает `tsc --noEmit` и `vitest`.
+- Живые запросы к Meta API — только в smoke-скриптах, по одному прогону.
+- Не можешь починить за 2 попытки — запиши в отчёт и иди дальше.
 
 ## Definition of Done для любого ТЗ
 1. `npx tsc --noEmit` — 0 ошибок. `npm run build` — успешно. `npm run lint` — 0 ошибок.
