@@ -30,3 +30,6 @@ Thumbs.db
 *.log
 npm-debug.log*
 .session.lock
+
+# generated media
+public/generated/
