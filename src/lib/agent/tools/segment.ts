@@ -2,7 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: segmentImage tool: SAM car / license plate / wheel -> main instances + mask Evidence
 // @created: 2026-10-28
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { samSegment, scaleBox, type SamBox, type SamInstance } from "@/lib/meta/sam";
