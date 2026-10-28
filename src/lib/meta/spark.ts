@@ -22,6 +22,8 @@ export async function sparkChat(opts: {
   messages: ChatMessage[];
   tools?: ToolDef[];
   json?: boolean;
+  /** default 2000; raise for long structured outputs (Spark reasons first, empty content = budget exhausted) */
+  maxTokens?: number;
 }): Promise<SparkResult> {
   const attempt = async (): Promise<SparkResult> => {
     const res = await metaFetch("/chat/completions", {
@@ -32,7 +34,7 @@ export async function sparkChat(opts: {
         model: "muse-spark-1.3",
         messages: opts.messages,
         reasoning_effort: "low",
-        max_tokens: 2000,
+        max_tokens: opts.maxTokens ?? 2000,
         ...(opts.tools ? { tools: opts.tools } : {}),
         ...(opts.json ? { response_format: { type: "json_object" } } : {}),
       }),
@@ -59,10 +61,10 @@ function stripFences(s: string): string {
   return (m ? m[1] : s).trim();
 }
 
-export async function sparkJson<T>(schema: ZodType<T>, messages: ChatMessage[], spec?: string): Promise<T> {
+export async function sparkJson<T>(schema: ZodType<T>, messages: ChatMessage[], spec?: string, opts: { maxTokens?: number } = {}): Promise<T> {
   const rules = "Reply with strictly valid JSON only. No markdown, no commentary." + (spec ? `\n${spec}` : "");
   const sys: ChatMessage[] = [{ role: "system", content: rules }, ...messages];
-  const first = await sparkChat({ messages: sys, json: true });
+  const first = await sparkChat({ messages: sys, json: true, maxTokens: opts.maxTokens });
   const tryParse = (text: string): { ok: true; value: T } | { ok: false; error: string } => {
     try {
       const parsed: unknown = JSON.parse(stripFences(text));
@@ -82,6 +84,7 @@ export async function sparkJson<T>(schema: ZodType<T>, messages: ChatMessage[], 
       { role: "user", content: `Your previous JSON failed validation: ${a.error}. Return corrected JSON only, exactly matching the required shape.${spec ? `\n${spec}` : ""}` },
     ],
     json: true,
+    maxTokens: opts.maxTokens,
   });
   const b = tryParse(second.content ?? "");
   if (b.ok) return b.value;
