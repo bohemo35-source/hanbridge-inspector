@@ -268,15 +268,18 @@ export async function runInspection(opts: {
   } catch { /* deterministic reasons stand */ }
   if (handoffReason) verdict = { ...verdict, handoff: true };
 
-  // tools may run in parallel: if the listing came from a close-up while a 3/4 view was seen, redo it once
+  // tools may run in parallel: if the listing came from a close-up while 3/4 views were seen, try those (plate must be found and hidden)
   {
     const QUARTER = new Set(["front_left", "front_right", "rear_left", "rear_right"]);
-    const quarter = [...photoViews.entries()].find(([, v]) => QUARTER.has(v))?.[0];
-    if (quarter && listingPhotoId !== quarter && !QUARTER.has(photoViews.get(listingPhotoId ?? "") ?? "")) {
-      try {
-        const r = await makeListingPhoto({ carId: opts.carId, photoId: quarter, imagePath: photoPath(opts.carId, quarter) });
-        if (r.url) { listingUrl = r.url; listingPhotoId = quarter; step("make_listing_photo", quarter, true, `re-picked 3/4 view: url=${r.url} plateHidden=${r.plateHidden}`, 0); }
-      } catch { /* keep the first listing */ }
+    if (!QUARTER.has(photoViews.get(listingPhotoId ?? "") ?? "")) {
+      for (const [pid, v] of photoViews) {
+        if (!QUARTER.has(v) || pid === listingPhotoId) continue;
+        try {
+          const r = await makeListingPhoto({ carId: opts.carId, photoId: pid, imagePath: photoPath(opts.carId, pid) });
+          step("make_listing_photo", pid, Boolean(r.url), r.url ? `re-picked 3/4 view (${v}): url=${r.url} plateHidden=${r.plateHidden}` : `3/4 view (${v}) skipped: ${r.rejectedReason}`, 0);
+          if (r.url) { listingUrl = r.url; listingPhotoId = pid; break; }
+        } catch (e) { step("make_listing_photo", pid, false, `3/4 view failed: ${(e as Error).message}`, 0); }
+      }
     }
   }
   if (!listingUrl && suggested[0]) {
