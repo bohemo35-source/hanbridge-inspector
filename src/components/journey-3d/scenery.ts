@@ -10,6 +10,7 @@ export interface Scenery {
   zones: Map<StageId, THREE.Group>;
   ship: THREE.Group;
   shipDeckY: number;
+  ground: THREE.Mesh;
   water: THREE.Mesh;
   waterMaterial: THREE.ShaderMaterial;
   tris: number;
@@ -113,20 +114,32 @@ export function buildPort(at: THREE.Vector3): THREE.Group {
   const g = new THREE.Group();
   g.name = "port";
   const colors = ["#b8543f", "#3f6fb8", "#3fa66a", "#c9a227", "#7a4fa3"];
+  // Two rows ON THE GROUND beside the road: 4 long x up to 2 high, opaque, shadow-casting.
   const cont = new THREE.InstancedMesh(
     new THREE.BoxGeometry(6, 2.6, 2.4),
     new THREE.MeshStandardMaterial({ roughness: 0.6, metalness: 0.2 }),
-    48,
+    14,
   );
+  cont.name = "containers";
+  cont.castShadow = true;
+  cont.receiveShadow = true;
   const dummy = new THREE.Object3D();
   const col = new THREE.Color();
-  for (let i = 0; i < 48; i++) {
-    dummy.position.set(-22 + (i % 8) * 6.4, 1.3 + Math.floor(i / 16) * 2.7, -10 + Math.floor((i % 16) / 8) * 7);
-    dummy.rotation.y = (i % 3) * 0.04;
-    dummy.updateMatrix();
-    cont.setMatrixAt(i, dummy.matrix);
-    cont.setColorAt(i, col.set(colors[i % colors.length]));
+  let ci = 0;
+  for (let row = 0; row < 2; row++) {
+    for (let i = 0; i < 4; i++) {
+      for (let level = 0; level < (i % 2 === 0 ? 2 : 1); level++) {
+        if (ci >= 14) break;
+        dummy.position.set(13 + row * 3.4, 1.3 + level * 2.7, -14 + i * 6.6);
+        dummy.rotation.y = Math.PI / 2;
+        dummy.updateMatrix();
+        cont.setMatrixAt(ci, dummy.matrix);
+        cont.setColorAt(ci, col.set(colors[(i + row) % colors.length]));
+        ci++;
+      }
+    }
   }
+  cont.count = ci;
   g.add(cont);
   for (const x of [-14, 10]) {
     const crane = new THREE.Group();
@@ -143,15 +156,21 @@ export function buildPort(at: THREE.Vector3): THREE.Group {
 export function buildShip(): THREE.Group {
   const g = new THREE.Group();
   g.name = "ship";
-  const hull = box(11, 3.4, 42, "#26303e", 0, 1.4, 0, 0.5);
+  const hull = box(11, 3.4, 42, "#1d2632", 0, 1.4, 0, 0.5);
+  hull.name = "hull";
   const deck = box(10.4, 0.4, 40, "#39434f", 0, 3.3, 0, 0.6);
-  const castle = box(7, 4.4, 5.5, "#cfd6de", 0, 5.5, -16, 0.5);
-  const funnelGeo = new THREE.CylinderGeometry(1.1, 1.3, 3.4, 12);
-  const funnel = new THREE.Mesh(funnelGeo, new THREE.MeshStandardMaterial({ color: "#b8543f", roughness: 0.5 }));
-  funnel.position.set(0, 11, -17);
+  // White superstructure BEHIND the car (stern), wide and low — reads as a ship, not a cube.
+  const castle = box(9.2, 3.2, 5.0, "#d7dde6", 0, 5.0, -17, 0.5);
+  castle.name = "superstructure";
+  const bridgeBand = box(9.3, 0.7, 5.1, "#22314a", 0, 6.1, -17, 0.4);
+  bridgeBand.name = "bridge-band";
+  const funnelGeo = new THREE.CylinderGeometry(0.9, 1.1, 2.6, 12);
+  const funnel = new THREE.Mesh(funnelGeo, new THREE.MeshStandardMaterial({ color: "#33404d", roughness: 0.5 }));
+  funnel.name = "funnel";
+  funnel.position.set(0, 7.6, -18);
   const ramp = box(8, 0.3, 7, "#4a545f", 0, 2.2, 22.5, 0.6);
   ramp.rotation.x = 0.28;
-  g.add(hull, deck, castle, funnel, ramp);
+  g.add(hull, deck, castle, bridgeBand, funnel, ramp);
   return g;
 }
 
@@ -182,7 +201,8 @@ export function buildHills(at: THREE.Vector3): THREE.Group {
     posAttr.setZ(i, Math.max(0, noise(x, y)) * (0.4 + Math.abs(x) / 120));
   }
   geo.computeVertexNormals();
-  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: "#2b3a33", roughness: 1 }));
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: "#161d1c", roughness: 1 }));
+  m.name = "hills-silhouette";
   m.rotation.x = -Math.PI / 2;
   g.add(m);
   g.position.copy(at).add(new THREE.Vector3(-72, 0, -18));
@@ -238,11 +258,21 @@ export function buildScenery(): Scenery {
   group.add(buildRoad());
 
   const insp = new THREE.Group();
-  insp.add(box(11, 0.18, 13, "#22262f", 0, 0.09, 0));
-  const softbox = box(7, 0.25, 0.4, "#e8ecf4", 0, 4.6, 0, 0.3);
-  softbox.material = new THREE.MeshStandardMaterial({ color: "#e8ecf4", emissive: "#ffffff", emissiveIntensity: 1.6 });
-  insp.add(softbox);
-  insp.add(box(0.25, 4.6, 0.25, "#555c68", -3.2, 2.3, 0), box(0.25, 4.6, 0.25, "#555c68", 3.2, 2.3, 0));
+  const glossyFloor = new THREE.Mesh(
+    new THREE.BoxGeometry(13, 0.18, 15),
+    new THREE.MeshStandardMaterial({ color: "#232833", roughness: 0.35, metalness: 0.25 }),
+  );
+  glossyFloor.position.set(0, 0.09, 0);
+  glossyFloor.name = "glossy-floor";
+  glossyFloor.receiveShadow = true;
+  insp.add(glossyFloor);
+  for (const dx of [-2.6, 2.6]) {
+    const panel = box(0.4, 0.25, 6, "#e8ecf4", dx, 4.6, 0, 0.3);
+    panel.material = new THREE.MeshStandardMaterial({ color: "#e8ecf4", emissive: "#ffffff", emissiveIntensity: 2.2 });
+    panel.name = "softbox";
+    insp.add(panel);
+    insp.add(box(0.18, 4.6, 0.18, "#555c68", dx, 2.3, -2.6), box(0.18, 4.6, 0.18, "#555c68", dx, 2.3, 2.6));
+  }
   insp.position.set(P[0][0], 0, P[0][2]);
   add("inspection", insp);
 
@@ -285,6 +315,7 @@ export function buildScenery(): Scenery {
     group,
     zones,
     ship,
+    ground,
     shipDeckY: 3.55,
     water,
     waterMaterial,
