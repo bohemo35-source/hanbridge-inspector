@@ -28,7 +28,7 @@ The report uses a fixed template ("✅" is just a bullet, NOT "ok"). Read the te
 - "Кузов: притертость/потертость/царапина <panel>" -> "scratch"; "вмятина" -> "dent"; sill (порог) -> panel "unknown";
 - "Проверка на окрасы: <panel>: окрашивался" -> "repaint".
 Panel words: задняя правая дверь=rear_right_door, передняя левая дверь=front_left_door, капот=hood, крыша=roof, задний/передний бампер=rear_bumper/front_bumper, крыло=fender (front/rear + side as written).
-quote: 3-15 consecutive words copied EXACTLY from the text (may include the heading word). Ignore owner names, plates, phones.`;
+quote: 3-15 consecutive words copied EXACTLY from the text and it MUST contain the words that state the claim — include the heading when the item itself does not say it (e.g. "Замены: - задняя правая дверь", not just "задняя правая дверь"). Ignore owner names, plates, phones.`;
 
 export async function readInspectorReport(opts: { carId: string }): Promise<InspectorReportResult> {
   const text = await readFile(path.join(process.cwd(), "demo-data", opts.carId, "inspector_report_ru.txt"), "utf8");

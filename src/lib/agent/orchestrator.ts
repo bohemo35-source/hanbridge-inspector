@@ -234,6 +234,16 @@ export async function runInspection(opts: {
     }
   }
 
+  // gauge-screen colour alone (panel guessed from a frame, no digits) is corroboration, not proof
+  for (const f of findings) {
+    const onlyScreen = f.evidence.length > 0 && f.evidence.every((e) => e.type === "gauge" && (e.quote ?? "").startsWith("display colour band"));
+    if (onlyScreen && f.verified) {
+      f.verified = false;
+      f.verifierNote = `${f.verifierNote ?? ""} · single weak source (gauge screen colour, panel guessed from the frame) → needs voice/photo/inspector confirmation`.trim();
+      step("conflict_check", f.id, true, `${f.panel}/${f.kind}: screen colour only → unconfirmed`, 0);
+    }
+  }
+
   // sources disagree -> never verified (goes to Unconfirmed), whatever the verifier said
   for (const f of findings) {
     if (f.conflict && f.verified) {
