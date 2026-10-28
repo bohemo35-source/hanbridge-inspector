@@ -39,18 +39,21 @@ export function selectMainCar(instances: SamInstance[], frame: { w: number; h: n
 }
 
 /**
- * Main license plate: aspect 2..6, inside the main car box or at its lower edge,
- * largest wins. Background cars' plates are discarded.
+ * Main license plate, largest wins; background cars' plates are discarded.
+ * - With a main car box: the plate centre must be inside the box (or just below it) and aspect 0.8..7 —
+ *   3/4 views foreshorten the plate (aspect ~1.4) and close-ups cut it at the frame edge (~0.9).
+ * - Without a car box: only clearly plate-shaped boxes (aspect 2..6).
  */
 export function selectMainPlate(instances: SamInstance[], carBox: SamBox | null): SamInstance | null {
-  const valid = instances.filter((i) => {
-    const w = i.box.x2 - i.box.x1;
+  const aspect = (i: SamInstance) => {
     const h = i.box.y2 - i.box.y1;
-    return h > 0 && w / h >= 2 && w / h <= 6;
-  });
-  if (!carBox) return largest(valid);
+    return h > 0 ? (i.box.x2 - i.box.x1) / h : 0;
+  };
+  if (!carBox) return largest(instances.filter((i) => aspect(i) >= 2 && aspect(i) <= 6));
   const carH = carBox.y2 - carBox.y1;
-  const inside = valid.filter((i) => {
+  const inside = instances.filter((i) => {
+    const a = aspect(i);
+    if (a < 0.8 || a > 7) return false;
     const cx = (i.box.x1 + i.box.x2) / 2;
     const cy = (i.box.y1 + i.box.y2) / 2;
     const centreInside = cx >= carBox.x1 && cx <= carBox.x2 && cy >= carBox.y1 && cy <= carBox.y2;

@@ -38,4 +38,12 @@ describe("main instance selection (photo_243114_0.jpg, 1280x720)", () => {
     expect(selectMainCar([], { w: 1280, h: 720 })).toBeNull();
     expect(selectMainPlate([], null)).toBeNull();
   });
+  it("accepts a foreshortened plate in a 3/4 view and a cut plate at the frame edge (inside the car)", () => {
+    const car = { x1: 228, y1: 70, x2: 1090, y2: 635, w: 1280, h: 720 };
+    const inst = (x1: number, y1: number, x2: number, y2: number) => ({ box: { x1, y1, x2, y2, w: 1280, h: 720 }, mask: null }) as never;
+    expect(selectMainPlate([inst(288, 276, 397, 351)], car)?.box.x1).toBe(288); // aspect 1.45 (photo_243113_0)
+    expect(selectMainPlate([inst(1000, 300, 1080, 390)], car)?.box.x1).toBe(1000); // aspect 0.89, cut at edge
+    expect(selectMainPlate([inst(300, 300, 340, 400)], car)).toBeNull(); // aspect 0.4 — not a plate
+    expect(selectMainPlate([inst(20, 300, 90, 330)], car)).toBeNull(); // background car outside the box
+  });
 });
