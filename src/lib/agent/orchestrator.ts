@@ -70,6 +70,7 @@ export async function runInspection(opts: {
   const trace: AgentStep[] = [];
   const findings: Finding[] = [];
   const paint = new Map<string, number>();
+  const photoViews = new Map<string, string>();
   const contextOverrides: { panel: string; median: number; quote: string; tStart: number }[] = [];
   const called = new Set<string>();
   let listingUrl: string | undefined; let listingPhotoId: string | undefined;
@@ -108,7 +109,7 @@ export async function runInspection(opts: {
         const photoId = String(args.photoId ?? "");
         const image = await readFile(photoPath(opts.carId, photoId));
         const r = await findDefects({ carId: opts.carId, photoId, image });
-        addFindings(r.findings);
+        addFindings(r.findings); photoViews.set(photoId, r.view);
         out = `view=${r.view} panels=${r.panels_visible.join(",")} defects=${r.findings.length}: ${r.findings.map((f) => `${f.panel}/${f.kind}/${f.severity}`).join(", ") || "none"}`;
       } else if (name === "transcribe_note") {
         const videoId = String(args.videoId ?? media.videos[0] ?? "");
@@ -138,7 +139,11 @@ export async function runInspection(opts: {
         addFindings(fs);
         out = `readings=${list.length} paintFindings=${fs.length}: ${list.map((r) => `${r.panel}=${r.microns}`).join(", ") || "none"}`;
       } else if (name === "make_listing_photo") {
-        const photoId = String(args.photoId ?? suggested[0] ?? "");
+        // listing = whole car in a 3/4 view when one was seen; close-ups/details make poor listing photos
+        const QUARTER = new Set(["front_left", "front_right", "rear_left", "rear_right"]);
+        const asked = String(args.photoId ?? suggested[0] ?? "");
+        const quarter = [...photoViews.entries()].find(([, v]) => QUARTER.has(v))?.[0];
+        const photoId = QUARTER.has(photoViews.get(asked) ?? "") || !quarter ? asked : quarter;
         const r = await makeListingPhoto({ carId: opts.carId, photoId, imagePath: photoPath(opts.carId, photoId) });
         if (r.url) { listingUrl = r.url; listingPhotoId = photoId; }
         out = `url=${r.url ?? "none"} plateHidden=${r.plateHidden} backgroundEdited=${r.backgroundEdited} ${r.rejectedReason ?? ""}`;
