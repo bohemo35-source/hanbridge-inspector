@@ -1,35 +1,15 @@
 // @agent:   claude (TZ-06)
 // @project: hanbridge-inspector
-// @purpose: 13 body panels for the 3D damage map + panel colouring by paint gauge / findings
+// @purpose: Panel colouring by paint gauge / findings for the 3D damage map; panel dictionary re-exported from domain
 // @created: 2026-10-28
+// @updated: 2026-10-28 muse-code
 import { classifyPaint } from "@/lib/domain/paint";
+import { PANEL_IDS, type PanelId } from "@/lib/domain/panels";
 import type { Finding, PaintReading } from "@/lib/schema";
 
-// Ids match FINDINGS_DRAFT_SPEC in src/lib/schema/prompt.ts. When TZ-02 adds src/lib/domain/panels.ts,
-// switch this list to import from there (same ids).
-export const PANELS = [
-  { id: "front_bumper", en: "Front bumper", ru: "Передний бампер" },
-  { id: "hood", en: "Hood", ru: "Капот" },
-  { id: "front_left_fender", en: "Front left fender", ru: "Крыло переднее левое" },
-  { id: "front_right_fender", en: "Front right fender", ru: "Крыло переднее правое" },
-  { id: "front_left_door", en: "Front left door", ru: "Дверь передняя левая" },
-  { id: "front_right_door", en: "Front right door", ru: "Дверь передняя правая" },
-  { id: "rear_left_door", en: "Rear left door", ru: "Дверь задняя левая" },
-  { id: "rear_right_door", en: "Rear right door", ru: "Дверь задняя правая" },
-  { id: "rear_left_fender", en: "Rear left fender", ru: "Крыло заднее левое" },
-  { id: "rear_right_fender", en: "Rear right fender", ru: "Крыло заднее правое" },
-  { id: "trunk", en: "Trunk / tailgate", ru: "Багажник / дверь багажника" },
-  { id: "rear_bumper", en: "Rear bumper", ru: "Задний бампер" },
-  { id: "roof", en: "Roof", ru: "Крыша" },
-] as const;
-
-export type PanelId = (typeof PANELS)[number]["id"];
-export const PANEL_IDS: readonly PanelId[] = PANELS.map((p) => p.id);
-export const isPanelId = (s: string): s is PanelId => (PANEL_IDS as readonly string[]).includes(s);
-export const panelLabel = (id: string, lang: "en" | "ru" = "ru") => {
-  const p = PANELS.find((x) => x.id === id);
-  return p ? p[lang] : id;
-};
+// Panel dictionary moved to src/lib/domain/panels.ts (TZ-02); re-exported here so
+// existing 3D imports keep working with the same ids and order.
+export { PANELS, PANEL_IDS, isPanelId, panelLabel, type PanelId } from "@/lib/domain/panels";
 
 export const COLORS = {
   factory: "#4fb38a",
