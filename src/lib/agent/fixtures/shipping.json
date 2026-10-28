@@ -1,0 +1,7 @@
+{
+  "audi-a5-2005": { "stage": "inspection", "etaDays": 28 },
+  "bmw-530i-8053": { "stage": "korea_road", "etaDays": 24 },
+  "bmw-x3-8278": { "stage": "port_busan", "etaDays": 21 },
+  "kia-morning": { "stage": "sea", "etaDays": 16 },
+  "mini-cooper-s": { "stage": "vladivostok", "etaDays": 9 }
+}
