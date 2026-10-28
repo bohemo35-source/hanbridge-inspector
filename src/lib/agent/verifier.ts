@@ -11,7 +11,10 @@ import type { Finding, Verdict } from "@/lib/schema";
 export const VerifierResultSchema = z.object({ supported: z.boolean(), confidence: z.number().min(0).max(1), note: z.string() });
 export type VerifierResult = z.infer<typeof VerifierResultSchema>;
 const SPEC = `Return ONE JSON object: {"supported":boolean,"confidence":number 0..1,"note":"short string"}
-You verify ONE used-car finding against ONLY its evidence. supported=true only if the evidence actually shows/supports the claim. A frame of a different panel/car part does NOT support it. Be strict.`;
+You verify ONE used-car finding against ONLY its evidence. Judge the CORE claim: the panel and the type of issue (paint work: repaint/putty; replacement; scratch; dent; rust; …).
+- supported=true when the evidence shows that panel has that type of issue, even if severity, exact micron values or wording differ — then lower the confidence and say what differs in the note.
+- Inspection jargon (RU): "окрас/перекрас/освежался" = repaint; "ремонтная работа / участок ремонта / шпаклевка" on a painted panel = filler (putty); "замена" = panel_replaced. Paint gauge >150 µm = paint work, >220 µm = likely filler.
+- supported=false when the evidence is about a different panel/car part, says the opposite (e.g. "завод/заводское" for that panel), or does not mention the issue at all. A frame of a different panel does NOT support it.`;
 
 /** Pure: gauge ≤150 µm contradicting a repaint/putty claim (or vice versa) marks a conflict. */
 export function detectConflict(f: Finding, paint: Array<{ panel: string; microns: number }>): boolean {
