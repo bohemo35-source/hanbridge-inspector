@@ -57,6 +57,6 @@ describe("voice findings", () => {
   });
 
   it("paint.json takes the median per panel and skips unknown panels", () => {
-    expect(voicePaintJson(readings)).toEqual({ hood: 189, front_left_fender: 68, roof: 159, trunk: 86, rear_right_door: 198 });
+    expect(voicePaintJson(readings)).toEqual({ hood: 189, front_left_fender: 68, trunk: 86, rear_right_door: 198 }); // roof: inspector says factory despite 159 µm → excluded from the numeric rule
   });
 });

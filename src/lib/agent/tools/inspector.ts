@@ -21,7 +21,14 @@ const Draft = z.object({
   })),
 });
 const SPEC = `Return ONE JSON object: {"claims":[{"panel":"hood","kind":"repaint"|null,"quote":"verbatim quote"}]}
-One claim per body panel the inspector comments on. panel is one of: ${PANEL_VALUES.join(", ")}. kind=null when the inspector says the panel is fine/factory. quote: 3-15 consecutive words copied EXACTLY from the text. Ignore owner names, plates, phones.`;
+One claim per body panel the inspector comments on. panel is one of: ${PANEL_VALUES.join(", ")}. kind=null when the inspector says the panel is fine/factory.
+The report uses a fixed template ("✅" is just a bullet, NOT "ok"). Read the text after each heading:
+- "Замены: <panels>" -> one claim per listed panel with kind "panel_replaced" ("отсутствуют" = none);
+- "Лакокрасочное покрытие: окрас/перекрас <panel>" -> "repaint"; "косметический окрас ... с участком ремонтной работы" -> "putty"; "заводское" -> no claim;
+- "Кузов: притертость/потертость/царапина <panel>" -> "scratch"; "вмятина" -> "dent"; sill (порог) -> panel "unknown";
+- "Проверка на окрасы: <panel>: окрашивался" -> "repaint".
+Panel words: задняя правая дверь=rear_right_door, передняя левая дверь=front_left_door, капот=hood, крыша=roof, задний/передний бампер=rear_bumper/front_bumper, крыло=fender (front/rear + side as written).
+quote: 3-15 consecutive words copied EXACTLY from the text (may include the heading word). Ignore owner names, plates, phones.`;
 
 export async function readInspectorReport(opts: { carId: string }): Promise<InspectorReportResult> {
   const text = await readFile(path.join(process.cwd(), "demo-data", opts.carId, "inspector_report_ru.txt"), "utf8");

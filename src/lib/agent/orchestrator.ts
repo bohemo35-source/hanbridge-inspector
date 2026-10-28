@@ -10,7 +10,7 @@ import { guessBodyType } from "@/components/damage-map-3d/bodyTypeMap";
 import { sparkChat, sparkJson, type ChatMessage, type ToolDef } from "@/lib/meta/spark";
 import type { Finding, Report } from "@/lib/schema";
 import { ReportSchema } from "@/lib/schema";
-import { saveReport } from "@/lib/store/reports";
+import { publishMedia, saveReportAsync } from "@/lib/store/reports";
 import { carMedia, getCar, photoPath, spreadPhotos, videoPath, type CarMedia } from "./catalog";
 import { segmentImage } from "./tools/segment";
 import { findDefects } from "./tools/defects";
@@ -70,6 +70,7 @@ export async function runInspection(opts: {
   const trace: AgentStep[] = [];
   const findings: Finding[] = [];
   const paint = new Map<string, number>();
+  const contextOverrides: { panel: string; median: number; quote: string; tStart: number }[] = [];
   const called = new Set<string>();
   let listingUrl: string | undefined; let listingPhotoId: string | undefined;
   let handoffReason: string | undefined; let finalized = false;
@@ -113,7 +114,7 @@ export async function runInspection(opts: {
         const videoId = String(args.videoId ?? media.videos[0] ?? "");
         if (!videoId) { step(name, key, true, "source absent: no videos for this car", Date.now() - ts); return "source absent: no videos"; }
         const r = await transcribeNote({ video: videoPath(opts.carId, videoId), mediaId: videoId });
-        addFindings(r.findings); addPaint(r.paint);
+        addFindings(r.findings); addPaint(r.paint); contextOverrides.push(...r.conflicts);
         out = `chunks=${r.chunks.length} readings=${r.readings.length} findings=${r.findings.length} conflicts=${r.conflicts.map((c) => c.panel).join(",") || "none"} paint=${JSON.stringify(r.paint)}`;
       } else if (name === "read_gauge_video") {
         if (!media.gaugeVideo) { step(name, key, true, "source absent: no paint_gauge.mp4 for this car", Date.now() - ts); return "source absent: no paint_gauge.mp4"; }
@@ -195,6 +196,15 @@ export async function runInspection(opts: {
   addFindings(findingsFromPaintReadings([...paint.entries()].map(([panel, microns]) => ({ panel, microns }))));
   const paintList = [...paint.entries()].map(([panel, microns]) => ({ panel, microns }));
 
+  // inspector context beats the numeric rule (e.g. MINI contrast roof): drop numeric-only findings on those panels
+  for (const c of contextOverrides) {
+    for (let k = findings.length - 1; k >= 0; k--) {
+      const f = findings[k];
+      if (f.panel === c.panel && f.evidence.every((e) => e.type === "gauge" && e.mediaId === "gauge")) findings.splice(k, 1);
+    }
+    step("context_check", c.panel, true, `${c.panel}: ${c.median} µm but inspector says factory («${c.quote}», ${c.tStart}s) — numeric rule overridden, no finding`, 0);
+  }
+
   // verifier pass (independent model; deterministic paint findings already verified)
   for (const f of findings) {
     f.conflict = detectConflict(f, paintList) || f.conflict;
@@ -224,6 +234,15 @@ export async function runInspection(opts: {
     }
   }
 
+  // sources disagree -> never verified (goes to Unconfirmed), whatever the verifier said
+  for (const f of findings) {
+    if (f.conflict && f.verified) {
+      f.verified = false;
+      f.verifierNote = `${f.verifierNote ?? ""} · sources conflict (e.g. gauge numbers vs screen colour/voice) → unconfirmed`.trim();
+      step("conflict_check", f.id, true, `${f.panel}/${f.kind}: conflicting sources → unconfirmed`, 0);
+    }
+  }
+
   const verified = findings.filter((f) => f.verified);
   let verdict = decideVerdict(verified);
   try {
@@ -237,6 +256,7 @@ export async function runInspection(opts: {
   if (!listingUrl && suggested[0]) {
     try { const r = await makeListingPhoto({ carId: opts.carId, photoId: suggested[0], imagePath: photoPath(opts.carId, suggested[0]) }); if (r.url) { listingUrl = r.url; listingPhotoId = suggested[0]; } } catch { /* listing is optional */ }
   }
+  if (listingUrl) listingUrl = await publishMedia(listingUrl, `media/${opts.carId}/${listingUrl.split("/").pop()}`);
   let heroUrl: string | undefined;
   try { heroUrl = (await getOrCreateHeroImage(reportId)).url; } catch { heroUrl = listingUrl; }
   if (listingPhotoId) { try { assertFindingsFreeOfListingEvidence(findings, [listingPhotoId]); } catch { /* listing ids never used as evidence by construction */ } }
@@ -255,7 +275,7 @@ export async function runInspection(opts: {
   };
   const valid = ReportSchema.safeParse(report);
   if (!valid.success) throw new Error(`report schema: ${valid.error.issues.map((i) => i.message).join("; ")}`);
-  saveReport(report);
+  await saveReportAsync(report);
   return { report, ms: Date.now() - t0 };
 }
 
