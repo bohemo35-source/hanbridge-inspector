@@ -17,5 +17,7 @@ export default async function LabJourneyPage({ searchParams }: { searchParams: P
   const bodyRaw = typeof q.body === "string" ? q.body : "hatchback";
   const body: BodyType = (BODY_TYPES as readonly string[]).includes(bodyRaw) ? (bodyRaw as BodyType) : "hatchback";
   const lang = q.lang === "en" ? "en" : "ru";
-  return <LabJourneyClient stage={isStageId(stageRaw) ? stageRaw : undefined} body={body} lang={lang} />;
+  const beatRaw = typeof q.beat === "string" ? Number(q.beat) : NaN;
+  const beat = beatRaw === 0 || beatRaw === 1 || beatRaw === 2 ? beatRaw : undefined;
+  return <LabJourneyClient stage={isStageId(stageRaw) ? stageRaw : undefined} beat={beat} body={body} lang={lang} />;
 }
