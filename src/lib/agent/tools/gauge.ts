@@ -251,7 +251,7 @@ export async function readGaugeVideo(opts: { video: string; mediaId?: string; ma
       ...chunk.map((f) => ({ type: "image_url" as const, image_url: { url: dataUrl(f.jpg) } })),
     ];
     sparkCalls++;
-    const draft = await sparkJson(FramesDraftSchema, [{ role: "user", content: parts }], FRAMES_SPEC);
+    const draft = await sparkJson(FramesDraftSchema, [{ role: "user", content: parts }], FRAMES_SPEC, { maxTokens: 4000 });
     for (const d of draft.frames) {
       const src = chunk[d.i];
       if (!src) continue;

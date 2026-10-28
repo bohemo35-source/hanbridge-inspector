@@ -236,7 +236,7 @@ export async function transcribeNote(opts: { video: string; mediaId?: string; ch
     ? await sparkJson(VoiceDraftSchema, [
         { role: "system", content: "You extract structured paint-gauge readings from a used-car inspector's spoken commentary (Russian). Be literal; never invent numbers or quotes." },
         { role: "user", content: `Transcript in 15-second chunks:\n${body}` },
-      ], VOICE_SPEC)
+      ], VOICE_SPEC, { maxTokens: 8000 })
     : { readings: [], notes: [] };
   const sparkMs = Date.now() - tSpark;
 
