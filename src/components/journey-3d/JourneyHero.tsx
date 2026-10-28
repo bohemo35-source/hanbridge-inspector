@@ -5,6 +5,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 
 const JourneyScene = dynamic(() => import("./JourneyScene"), { ssr: false });
 
@@ -18,8 +19,8 @@ export default function JourneyHero() {
           Every inspection claim clicks through to its evidence — frame, mask, voice quote or gauge reading — ending in a BUY / NEGOTIATE / WALK AWAY verdict. Then your car travels: Korea → bridge → port → sea → Vladivostok → home.
         </p>
         <div className="pointer-events-auto mt-8 flex flex-wrap gap-3">
-          <a href="/cars" className="inline-block rounded-md bg-zinc-100 px-5 py-2.5 text-sm font-medium text-zinc-900">Каталог осмотров</a>
-          <a href="/inspect/new" className="inline-block rounded-md border border-zinc-600 px-5 py-2.5 text-sm font-medium text-zinc-100">New inspection</a>
+          <Link href="/cars" className="inline-block rounded-md bg-zinc-100 px-5 py-2.5 text-sm font-medium text-zinc-900">Каталог осмотров</Link>
+          <Link href="/cars" className="inline-block rounded-md border border-zinc-600 px-5 py-2.5 text-sm font-medium text-zinc-100">New inspection</Link>
         </div>
       </div>
       <JourneyScene bodyType="hatchback" lang="ru" />

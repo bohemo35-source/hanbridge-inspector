@@ -12,6 +12,7 @@ Next.js 15 + TS strict + Tailwind, Vercel Blob, zod, sharp. Meta API тольк�
 - `src/components/damage-map-3d/buildCar.ts` — параметрическая машина (ТЗ-06), импорт запрещён копировать.
 - `src/components/journey-3d/` — сцена пути (ТЗ-08/09): `route.ts` (7 этапов, `beatAt` — 3 бита/этап), `stageContent.ts` (тексты RU/EN), `scenery.ts`, `JourneyScene.tsx` (2.5D: фото-плейты `public/journey/` + минимальный передний план; proof — `public/journey/proof/`).
 - `src/lib/agent/tools/` — segment, defects, shipping (`getShippingStatus`, фикстура), listing (ТЗ-04: `makeListingPhoto` — номер из `segmentImage`, diff-гард авто; `getOrCreateHeroImage`; listing никогда не evidence), `src/lib/meta/image.ts` (generations/edits; edits маску не принимает).
+- ТЗ-05: `src/lib/agent/orchestrator.ts` (Spark tool calling, ≤16 шагов, SSE `POST /api/inspections/:carId/run`, страница `/inspect/:carId`), `src/lib/agent/verifier.ts` (open-weight Baseten `src/lib/meta/sparkOpen.ts`, fallback Spark; модель в trace), инструменты `tools/{diagnostic,inspector}.ts`, каталог `src/lib/agent/catalog.ts`, store Blob/`data/reports/`, страницы `/r/:id` (noindex, OG), `/cars`; прогон: `node scripts/e2e/run-cars.mjs [carId…]`.
 - Лабы: `/lab/3d`, `/lab/journey` (production 404).
 
 ## Команды

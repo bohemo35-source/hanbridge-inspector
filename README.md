@@ -30,12 +30,37 @@ npm run dev
 
 ## Built during the hackathon
 All code in this repository was written after the kickoff on 2026-10-26. Progress by task:
-- [ ] TZ-01 core + Spark expert
-- [ ] TZ-02 SAM segmentation
-- [ ] TZ-03 voice → findings
-- [ ] TZ-04 listing image + damage map
-- [ ] TZ-05 agent orchestrator + verifier + report
-- [ ] TZ-06 3D body map (parametric templates, 13 panels, explode view) — branch `tz-06`
+- [x] TZ-01 core + Spark expert — `tz-01` (merged)
+- [x] TZ-02 SAM segmentation + defects — `tz-02` (merged)
+- [x] TZ-03 voice + paint-gauge video → findings — `tz-03` (merged)
+- [x] TZ-04 listing image (plate hidden, car-pixel diff guard) — `tz-04` (merged)
+- [x] TZ-05 agent orchestrator + open-weight verifier + report `/r/:id` — branch `tz-05`
+- [x] TZ-06 3D body map (parametric templates, 13 panels) — `tz-06` (merged)
+- [x] TZ-08/09 journey scene (7 stages, 2.5D photo plates) — `tz-08`, `tz-09` (merged)
+
+Reports with raw run output: `docs/reports/tz-01.md` … `tz-09.md`.
+
+## Architecture (TZ-05)
+```mermaid
+flowchart LR
+  UI["/inspect/:carId (SSE live trace)"] --> API["POST /api/inspections/:carId/run"]
+  API --> ORCH["Spark 1.3 orchestrator (tool calling, ≤16 steps)"]
+  ORCH --> TOOLS["segment_image (SAM 3.1) · find_defects (Spark vision) · transcribe_note (Voice) · read_gauge_video · read_diagnostic_report · read_inspector_report · analyze_paint_readings · make_listing_photo (Muse Image) · shipping / cost / handoff"]
+  TOOLS --> MERGE["Cross-source merge: 2nd source +confidence, contradiction -> conflict"]
+  MERGE --> VER["Verifier: muse-spark-open-1026 (Baseten open weights), fallback Spark 1.3"]
+  VER --> VERDICT["Deterministic verdict BUY/NEGOTIATE/WALK_AWAY + handoff rules"]
+  VERDICT --> STORE["Blob reports/{id}.json or data/reports/*.json"]
+  STORE --> REPORT["/r/:id — 3D map, findings, Unconfirmed, trace, chat, delivery"]
+  CARS["/cars catalog"] --> UI
+```
+
+| Meta model | Where used |
+|---|---|
+| `muse-spark-1.3` | Agent orchestrator (native tool calling), defect scan, voice/OBD/inspector extraction, verdict text, report chat |
+| `sam-3.1` | `segment_image`, car crop for defects, plate box for listing |
+| `muse-voice-transcribe-1.0` | `transcribe_note` (15 s chunks from any inspection video) |
+| `muse-image-1.0` | Listing background edit (car-pixel diff guard) + report hero |
+| `muse-spark-open-1026` (Baseten, open weights) | Independent verifier — only the finding + its evidence; fallback `muse-spark-1.3`, model written to trace |
 
 ## Assets
 - **3D cars**: no third-party or AI-generated 3D models. The sedan / SUV / hatchback used in the 3D body map are generated in code at runtime (`src/components/damage-map-3d/buildCar.ts`), brand-neutral (no badges, logos or brand-specific grilles), written on 2026-10-28.
