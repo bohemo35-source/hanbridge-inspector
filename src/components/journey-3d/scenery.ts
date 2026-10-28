@@ -141,12 +141,13 @@ export function buildPort(at: THREE.Vector3): THREE.Group {
   }
   cont.count = ci;
   g.add(cont);
-  for (const x of [-14, 10]) {
+  for (const x of [-26, 22]) {
     const crane = new THREE.Group();
     crane.add(box(0.7, 18, 0.7, "#d8d2c4", -4, 9, 0, 0.4), box(0.7, 18, 0.7, "#d8d2c4", 4, 9, 0, 0.4));
     crane.add(box(16, 0.7, 0.7, "#d8d2c4", 0, 17.6, 0, 0.4));
     crane.add(box(0.3, 7, 0.3, "#d8d2c4", 4, 13.5, 0, 0.4));
-    crane.position.set(x, 0, -4);
+    crane.name = "crane";
+    crane.position.set(x, 0, -18);
     g.add(crane);
   }
   g.position.copy(at).add(new THREE.Vector3(4, 0, 4));
@@ -178,11 +179,18 @@ export function buildWater(size = 700): { mesh: THREE.Mesh; material: THREE.Shad
   const geo = new THREE.PlaneGeometry(size, size, 48, 48);
   const material = new THREE.ShaderMaterial({
     transparent: true,
-    uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color("#0d2b3d") }, uShallow: { value: new THREE.Color("#2f7f9e") } },
-    vertexShader: `uniform float uTime; varying float vH; varying vec3 vPos;
-      void main(){ vec3 p=position; float h=sin(p.x*0.08+uTime*1.2)*0.45+cos(p.y*0.06+uTime*0.9)*0.55; p.z+=h; vH=h; vPos=p; gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0); }`,
-    fragmentShader: `uniform vec3 uColor; uniform vec3 uShallow; varying float vH; varying vec3 vPos;
-      void main(){ float f=clamp(0.5+vH*0.55,0.0,1.0); vec3 c=mix(uColor,uShallow,f); gl_FragColor=vec4(c,0.92); }`,
+    uniforms: {
+      uTime: { value: 0 },
+      uColor: { value: new THREE.Color("#0d2b3d") },
+      uShallow: { value: new THREE.Color("#2f7f9e") },
+      uFogColor: { value: new THREE.Color("#31435a") },
+      uFogNear: { value: 22 },
+      uFogFar: { value: 105 },
+    },
+    vertexShader: `uniform float uTime; varying float vH; varying vec3 vPos; varying float vViewZ;
+      void main(){ vec3 p=position; float h=sin(p.x*0.08+uTime*1.2)*0.45+cos(p.y*0.06+uTime*0.9)*0.55; p.z+=h; vH=h; vPos=p; vec4 mv=modelViewMatrix*vec4(p,1.0); vViewZ=-mv.z; gl_Position=projectionMatrix*mv; }`,
+    fragmentShader: `uniform vec3 uColor; uniform vec3 uShallow; uniform vec3 uFogColor; uniform float uFogNear; uniform float uFogFar; varying float vH; varying vec3 vPos; varying float vViewZ;
+      void main(){ float f=clamp(0.5+vH*0.55,0.0,1.0); vec3 c=mix(uColor,uShallow,f); float fogF=smoothstep(uFogNear,uFogFar,vViewZ); c=mix(c,uFogColor,fogF); gl_FragColor=vec4(c,0.92); }`,
   });
   const mesh = new THREE.Mesh(geo, material);
   mesh.rotation.x = -Math.PI / 2;
@@ -266,12 +274,12 @@ export function buildScenery(): Scenery {
   glossyFloor.name = "glossy-floor";
   glossyFloor.receiveShadow = true;
   insp.add(glossyFloor);
-  for (const dx of [-2.6, 2.6]) {
-    const panel = box(0.4, 0.25, 6, "#e8ecf4", dx, 4.6, 0, 0.3);
+  for (const dx of [-0.95, 0.95]) {
+    // Ceiling-hung panels (no stands in frame): two softboxes directly over the car.
+    const panel = box(0.35, 0.25, 3.4, "#e8ecf4", dx, 6.4, -2.5, 0.3);
     panel.material = new THREE.MeshStandardMaterial({ color: "#e8ecf4", emissive: "#ffffff", emissiveIntensity: 2.2 });
     panel.name = "softbox";
     insp.add(panel);
-    insp.add(box(0.18, 4.6, 0.18, "#555c68", dx, 2.3, -2.6), box(0.18, 4.6, 0.18, "#555c68", dx, 2.3, 2.6));
   }
   insp.position.set(P[0][0], 0, P[0][2]);
   add("inspection", insp);

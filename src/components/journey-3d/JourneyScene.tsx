@@ -172,12 +172,17 @@ export default function JourneyScene(props: JourneySceneProps) {
 
     const curve = buildRouteCurve();
     const scenery = buildScenery();
-    scenery.ground.receiveShadow = true;
-    (scenery.ground.material as THREE.MeshStandardMaterial).color.set(FALLBACK_FOG[0]);
+    // Ground is unlit fog colour: it melts into the plate's bottom edge instead of shading into a seam.
+    scenery.ground.material = new THREE.MeshBasicMaterial({ color: FALLBACK_FOG[0] });
     scene.add(scenery.group);
     // 2.5D rule: per stage only its own minimal foreground stays visible.
     const bridgeZone = scenery.zones.get("korea_road");
     if (bridgeZone) bridgeZone.visible = false; // bridge lives on the photo plate only
+    const hillsZone = scenery.zones.get("vladivostok");
+    if (hillsZone) hillsZone.visible = false; // 3D hills argue with the mountain plate — plate wins
+    const deliveryZone = scenery.zones.get("delivery");
+    if (deliveryZone) deliveryZone.visible = false; // thin side strips read as artefacts; road + plate carry the stage
+    const roadObj = scenery.group.getObjectByName("road");
     scenery.water.visible = false;
 
     const car = buildCar(bodyType, { doors, stations: 80 });
@@ -238,14 +243,18 @@ export default function JourneyScene(props: JourneySceneProps) {
         shownStage = si;
         scenery.zones.forEach((zone, id) => { zone.visible = id === stage; });
         if (bridgeZone) bridgeZone.visible = false;
+        if (hillsZone) hillsZone.visible = false;
+        if (deliveryZone) deliveryZone.visible = false;
+        if (roadObj) roadObj.visible = stage !== "sea";
         scenery.water.visible = stage === "sea";
-        scenery.group.traverse((o) => { if (o.name === "city-lights") o.visible = stage === "vladivostok"; });
+        scenery.ground.visible = stage !== "sea"; // at sea the water plane runs to the horizon
+        scenery.group.traverse((o) => { if (o.name === "city-lights") o.visible = false; });
       }
 
       // Fog + ground ease toward the plate's bottom tint (hides the seam).
       fogTarget.copy(tints.get(si) ?? new THREE.Color(FALLBACK_FOG[si]));
       scene.fog?.color.lerp(fogTarget, 0.04);
-      (scenery.ground.material as THREE.MeshStandardMaterial).color.copy(scene.fog!.color);
+      (scenery.ground.material as THREE.MeshBasicMaterial).color.copy(scene.fog!.color);
       rim.color.set(SKY[si]);
 
       // Backdrop parallax: ±2.5% drift across the stage segment.
@@ -256,7 +265,10 @@ export default function JourneyScene(props: JourneySceneProps) {
 
       scenery.ship.position.y = Math.sin(time * 0.8) * 0.18;
       scenery.ship.rotation.z = Math.sin(time * 0.6) * 0.012;
-      if (!eco && scenery.water.visible) scenery.waterMaterial.uniforms.uTime.value = time;
+      if (!eco && scenery.water.visible) {
+        scenery.waterMaterial.uniforms.uTime.value = time;
+        (scenery.waterMaterial.uniforms.uFogColor.value as THREE.Color).copy(scene.fog!.color);
+      }
 
       curve.getPointAt(Math.min(0.999, p), carPos);
       const tangent = curve.getTangentAt(Math.min(0.999, p));
@@ -278,7 +290,7 @@ export default function JourneyScene(props: JourneySceneProps) {
       rim.position.set(carPos.x - tangent.x * 9, carPos.y + 5.5, carPos.z - tangent.z * 9);
 
       const orbit = stage === "sea" ? Math.sin(time * 0.35) * 3.2 : 0;
-      tmp.copy(tangent).multiplyScalar(-10.5);
+      tmp.copy(tangent).multiplyScalar(camera.aspect < 0.8 ? -17 : -10.5);
       // Gentle camera roll on the sea beat; static otherwise (car stays put, no added motion controls).
       const sway = stage === "sea" ? Math.sin(time * 0.8) * 0.12 : 0;
       camera.position.set(carPos.x + tmp.x + orbit, carPos.y + 4.4 + sway, carPos.z + tmp.z);
