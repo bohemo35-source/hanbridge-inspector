@@ -33,3 +33,6 @@ npm-debug.log*
 
 # generated media
 public/generated/
+
+# TZ-02 outputs
+demo-data/*/out/
