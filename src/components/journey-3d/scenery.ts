@@ -145,7 +145,7 @@ export function buildShip(): THREE.Group {
   g.name = "ship";
   const hull = box(11, 3.4, 42, "#26303e", 0, 1.4, 0, 0.5);
   const deck = box(10.4, 0.4, 40, "#39434f", 0, 3.3, 0, 0.6);
-  const castle = box(8, 6, 6, "#cfd6de", 0, 6.4, -16, 0.5);
+  const castle = box(7, 4.4, 5.5, "#cfd6de", 0, 5.5, -16, 0.5);
   const funnelGeo = new THREE.CylinderGeometry(1.1, 1.3, 3.4, 12);
   const funnel = new THREE.Mesh(funnelGeo, new THREE.MeshStandardMaterial({ color: "#b8543f", roughness: 0.5 }));
   funnel.position.set(0, 11, -17);
@@ -185,7 +185,7 @@ export function buildHills(at: THREE.Vector3): THREE.Group {
   const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: "#2b3a33", roughness: 1 }));
   m.rotation.x = -Math.PI / 2;
   g.add(m);
-  g.position.copy(at).add(new THREE.Vector3(-28, 0, -10));
+  g.position.copy(at).add(new THREE.Vector3(-72, 0, -18));
   return g;
 }
 
@@ -198,7 +198,7 @@ export function buildCityLights(at: THREE.Vector3, count = 260): THREE.Points {
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: "#ffd9a0", size: 0.55, sizeAttenuation: true }));
+  const pts = new THREE.Points(geo, new THREE.PointsMaterial({ color: "#ffd9a0", size: 0.28, sizeAttenuation: true }));
   pts.name = "city-lights";
   return pts;
 }

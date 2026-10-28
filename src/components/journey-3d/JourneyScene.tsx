@@ -100,7 +100,9 @@ export default function JourneyScene(props: JourneySceneProps) {
     const hemi = new THREE.HemisphereLight("#cfd8ec", "#1a1512", 0.7);
     const sun = new THREE.DirectionalLight("#ffdcb0", 1.2);
     sun.position.set(30, 45, 20);
-    scene.add(hemi, sun);
+    const fill = new THREE.DirectionalLight("#bcd0ff", 0.55);
+    fill.position.set(-25, 18, -30);
+    scene.add(hemi, sun, fill, new THREE.AmbientLight("#ffffff", 0.22));
 
     const curve = buildRouteCurve();
     const scenery = buildScenery();
@@ -134,6 +136,8 @@ export default function JourneyScene(props: JourneySceneProps) {
     const domeA = mkDome();
     const domeB = mkDome();
     (domeA.material as THREE.MeshBasicMaterial).map = textures[0];
+    domeA.scale.set(1, 0.45, 1);
+    domeB.scale.set(1, 0.45, 1);
     domeA.position.set(90, 0, -175);
     domeB.position.copy(domeA.position);
     scene.add(domeA, domeB);
@@ -265,7 +269,7 @@ export default function JourneyScene(props: JourneySceneProps) {
   const currentIdx = currentStage ? stageIndex(currentStage) : -1;
   return (
     <div ref={outerRef} className="relative w-full" style={{ height: compact ? undefined : mobile ? "500vh" : "700vh" }}>
-      <div className={compact ? "relative h-[460px] w-full overflow-hidden" : "sticky top-0 h-screen w-full overflow-hidden"}>
+      <div className={compact ? "relative h-[70vh] min-h-[420px] w-full overflow-hidden" : "sticky top-0 h-screen w-full overflow-hidden"}>
         <div ref={hostRef} className="absolute inset-0" data-testid="journey-canvas-host" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-5 sm:p-8">
           <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">{stageIndex(active) + 1} / 7</p>
