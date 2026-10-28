@@ -37,7 +37,7 @@ export interface SamResult {
 }
 
 export function scaleBox(
-  box: SamBox,
+  box: { x1: number; y1: number; x2: number; y2: number; w?: number; h?: number },
   from: { w: number; h: number },
   to: { w: number; h: number },
 ): SamBox {
