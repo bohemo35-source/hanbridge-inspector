@@ -12,7 +12,7 @@ import type { Finding, Report } from "@/lib/schema";
 import { ReportSchema } from "@/lib/schema";
 import { publishMedia, saveReportAsync } from "@/lib/store/reports";
 import { carMedia, getCar, photoPath, spreadPhotos, videoPath, type CarMedia } from "./catalog";
-import { segmentImage } from "./tools/segment";
+import { segmentImage, boxArea, type SegmentImageResult } from "./tools/segment";
 import { findDefects } from "./tools/defects";
 import { transcribeNote } from "./tools/voice";
 import { readGaugeVideo } from "./tools/gauge";
@@ -71,6 +71,13 @@ export async function runInspection(opts: {
   const findings: Finding[] = [];
   const paint = new Map<string, number>();
   const photoViews = new Map<string, string>();
+  const segCache = new Map<string, SegmentImageResult>();
+  /** whole car in frame (not a close-up) with a plate SAM can hide */
+  const isWholeCar = (sg: SegmentImageResult) => {
+    const b = sg.car?.box; if (!b || !sg.licensePlate) return false;
+    const frac = boxArea(b) / (sg.width * sg.height);
+    return b.x1 > sg.width * 0.02 && b.x2 < sg.width * 0.98 && frac >= 0.15 && frac <= 0.85;
+  };
   const contextOverrides: { panel: string; median: number; quote: string; tStart: number }[] = [];
   const called = new Set<string>();
   let listingUrl: string | undefined; let listingPhotoId: string | undefined;
@@ -104,6 +111,7 @@ export async function runInspection(opts: {
       if (name === "segment_image") {
         const photoId = String(args.photoId ?? "");
         const r = await segmentImage({ carId: opts.carId, photoId, imagePath: photoPath(opts.carId, photoId) });
+        segCache.set(photoId, r);
         out = `car=${r.car ? "found" : "none"} plate=${r.licensePlate ? "found" : "none"} wheels=${r.wheels.length} ${r.width}x${r.height}`;
       } else if (name === "find_defects") {
         const photoId = String(args.photoId ?? "");
@@ -268,18 +276,28 @@ export async function runInspection(opts: {
   } catch { /* deterministic reasons stand */ }
   if (handoffReason) verdict = { ...verdict, handoff: true };
 
-  // tools may run in parallel: if the listing came from a close-up while 3/4 views were seen, try those (plate must be found and hidden)
+  // listing must show the whole car: Spark's view label is not enough (a tail-light close-up came back as "rear_left").
+  // Check the chosen photo with SAM; if the car box is cropped/too small, scan analysed views first, then spread photos.
   {
-    const QUARTER = new Set(["front_left", "front_right", "rear_left", "rear_right"]);
-    if (!QUARTER.has(photoViews.get(listingPhotoId ?? "") ?? "")) {
-      for (const [pid, v] of photoViews) {
-        if (!QUARTER.has(v) || pid === listingPhotoId) continue;
-        try {
-          const r = await makeListingPhoto({ carId: opts.carId, photoId: pid, imagePath: photoPath(opts.carId, pid) });
-          step("make_listing_photo", pid, Boolean(r.url), r.url ? `re-picked 3/4 view (${v}): url=${r.url} plateHidden=${r.plateHidden}` : `3/4 view (${v}) skipped: ${r.rejectedReason}`, 0);
-          if (r.url) { listingUrl = r.url; listingPhotoId = pid; break; }
-        } catch (e) { step("make_listing_photo", pid, false, `3/4 view failed: ${(e as Error).message}`, 0); }
+    const segOf = async (pid: string) => segCache.get(pid) ?? segCache.set(pid, await segmentImage({ carId: opts.carId, photoId: pid, imagePath: photoPath(opts.carId, pid) })).get(pid)!;
+    let ok = false;
+    if (listingPhotoId) { try { ok = isWholeCar(await segOf(listingPhotoId)); } catch { ok = false; } }
+    if (!ok) {
+      const QUARTER = new Set(["front_left", "front_right", "rear_left", "rear_right"]);
+      const views = [...photoViews.entries()].sort(([, a], [, b]) => Number(QUARTER.has(b)) - Number(QUARTER.has(a))).map(([pid]) => pid);
+      const candidates = [...new Set([...views, ...spreadPhotos(media.photos, 10)])].filter((pid) => pid !== listingPhotoId).slice(0, 8);
+      const t0 = Date.now();
+      let picked: string | undefined;
+      for (const pid of candidates) {
+        try { if (isWholeCar(await segOf(pid))) { picked = pid; break; } } catch { /* next */ }
       }
+      if (picked) {
+        try {
+          const r = await makeListingPhoto({ carId: opts.carId, photoId: picked, imagePath: photoPath(opts.carId, picked), segment: segCache.get(picked) });
+          step("make_listing_photo", picked, Boolean(r.url), r.url ? `re-picked whole-car photo (${photoViews.get(picked) ?? "unlabelled"}): url=${r.url} plateHidden=${r.plateHidden}` : `skipped: ${r.rejectedReason}`, Date.now() - t0);
+          if (r.url) { listingUrl = r.url; listingPhotoId = picked; }
+        } catch (e) { step("make_listing_photo", picked, false, `re-pick failed: ${(e as Error).message}`, Date.now() - t0); }
+      } else step("make_listing_photo", candidates.join(","), false, "no whole-car photo with a hideable plate among candidates; kept the first listing", Date.now() - t0);
     }
   }
   if (!listingUrl && suggested[0]) {
