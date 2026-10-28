@@ -1,0 +1,51 @@
+[
+  {
+    "stage": "inspection",
+    "prompt": "Car inspection yard in South Korea at dusk, empty paved lot with a bright rectangular softbox light rig, distant low hills and city glow. Cinematic wide establishing shot, twilight and dawn, soft haze, muted teal and warm amber palette, photorealistic backdrop for a 3D scene, no people, no text, no logos, no recognizable brands, no licence plates",
+    "model": "muse-image-1.0",
+    "date": "2026-10-28T16:55:22.413Z",
+    "ms": 21433
+  },
+  {
+    "stage": "korea_road",
+    "prompt": "Night highway in South Korea curving toward a generic cable-stayed bridge over a dark bay, car light trails, city lights on the shore. Cinematic wide establishing shot, twilight and dawn, soft haze, muted teal and warm amber palette, photorealistic backdrop for a 3D scene, no people, no text, no logos, no recognizable brands, no licence plates",
+    "model": "muse-image-1.0",
+    "date": "2026-10-28T16:55:34.143Z",
+    "ms": 10654
+  },
+  {
+    "stage": "port_busan",
+    "prompt": "Generic container departure port at dusk, gantry cranes and stacked shipping containers, calm harbour water, a plain roll-on roll-off ship silhouette without markings. Cinematic wide establishing shot, twilight and dawn, soft haze, muted teal and warm amber palette, photorealistic backdrop for a 3D scene, no people, no text, no logos, no recognizable brands, no licence plates",
+    "model": "muse-image-1.0",
+    "date": "2026-10-28T16:56:01.941Z",
+    "ms": 26730
+  },
+  {
+    "stage": "sea",
+    "prompt": "Open sea at dawn, gentle waves, a plain unbranded roll-on roll-off cargo ship far away, pastel sky with soft haze, no land. Cinematic wide establishing shot, twilight and dawn, soft haze, muted teal and warm amber palette, photorealistic backdrop for a 3D scene, no people, no text, no logos, no recognizable brands, no licence plates",
+    "model": "muse-image-1.0",
+    "date": "2026-10-28T16:56:11.697Z",
+    "ms": 8501
+  },
+  {
+    "stage": "vladivostok",
+    "prompt": "Generic cable-stayed bridge and green sopka hills over a bay at sunrise, a far-eastern port city waking up, golden dawn light, soft haze. Cinematic wide establishing shot, twilight and dawn, soft haze, muted teal and warm amber palette, photorealistic backdrop for a 3D scene, no people, no text, no logos, no recognizable brands, no licence plates",
+    "model": "muse-image-1.0",
+    "date": "2026-10-28T16:56:30.279Z",
+    "ms": 17666
+  },
+  {
+    "stage": "customs",
+    "prompt": "Border customs checkpoint at dawn, plain inspection gates and a small booth, empty asphalt lanes, soft morning haze, mountains behind. Cinematic wide establishing shot, twilight and dawn, soft haze, muted teal and warm amber palette, photorealistic backdrop for a 3D scene, no people, no text, no logos, no recognizable brands, no licence plates",
+    "model": "muse-image-1.0",
+    "date": "2026-10-28T16:56:41.423Z",
+    "ms": 9936
+  },
+  {
+    "stage": "delivery",
+    "prompt": "Long empty highway stretching to the horizon across open steppe at dawn, distant low mountains, warm sunrise glow, a sense of a long journey home. Cinematic wide establishing shot, twilight and dawn, soft haze, muted teal and warm amber palette, photorealistic backdrop for a 3D scene, no people, no text, no logos, no recognizable brands, no licence plates",
+    "model": "muse-image-1.0",
+    "date": "2026-10-28T16:56:52.063Z",
+    "ms": 10467
+  }
+]
