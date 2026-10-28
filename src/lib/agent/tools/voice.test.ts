@@ -42,6 +42,20 @@ describe("voice findings", () => {
     }
   });
 
+  it("merges several readings of one panel into one finding with all quotes", () => {
+    const { findings } = voiceFindings(
+      [
+        { ...r("hood", [181, 197], "unknown", "показатели средние по капоту"), tStart: 0, tEnd: 15 },
+        { ...r("hood", [233, 310, 532], "repair", "двести тридцать три"), tStart: 15, tEnd: 30 },
+      ],
+      "v.mp4",
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ panel: "hood", kind: "putty", severity: "high" });
+    expect(findings[0].evidence.map((e) => e.tStart)).toEqual([0, 15]);
+    expect(findings[0].evidence[0].gaugeMicrons).toBe(233);
+  });
+
   it("paint.json takes the median per panel and skips unknown panels", () => {
     expect(voicePaintJson(readings)).toEqual({ hood: 189, front_left_fender: 68, roof: 159, trunk: 86, rear_right_door: 198 });
   });

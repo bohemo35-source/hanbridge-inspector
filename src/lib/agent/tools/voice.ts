@@ -83,13 +83,34 @@ const median = (xs: number[]) => {
  * - verdict factory but median > 150 -> no finding, recorded as a conflict for the verifier
  *   (e.g. MINI contrast roof: "the roof always reads ~2x on MINI").
  */
+const VERDICT_RANK: Record<InspectorVerdict, number> = { factory: 0, unknown: 1, repaint: 2, repair: 3, replaced: 4 };
+
+/** All readings of one panel become one reading: numbers joined, strongest verdict, earliest/ latest time, all quotes kept. */
+export function mergeVoiceReadings(readings: VoiceReading[]): (VoiceReading & { quotes: { quote: string; tStart: number; tEnd: number }[] })[] {
+  const by = new Map<string, VoiceReading & { quotes: { quote: string; tStart: number; tEnd: number }[] }>();
+  for (const r of readings) {
+    if (r.panel === "unknown") continue;
+    const m = by.get(r.panel);
+    if (!m) {
+      by.set(r.panel, { ...r, microns: [...r.microns], quotes: [{ quote: r.quote, tStart: r.tStart, tEnd: r.tEnd }] });
+      continue;
+    }
+    m.microns.push(...r.microns);
+    if (VERDICT_RANK[r.inspectorVerdict] > VERDICT_RANK[m.inspectorVerdict]) m.inspectorVerdict = r.inspectorVerdict;
+    m.tStart = Math.min(m.tStart, r.tStart);
+    m.tEnd = Math.max(m.tEnd, r.tEnd);
+    m.quotes.push({ quote: r.quote, tStart: r.tStart, tEnd: r.tEnd });
+  }
+  return [...by.values()];
+}
+
 export function voiceFindings(
   readings: VoiceReading[],
   mediaId: string,
 ): { findings: Finding[]; conflicts: { panel: Panel; median: number; quote: string; tStart: number }[] } {
   const findings: Finding[] = [];
   const conflicts: { panel: Panel; median: number; quote: string; tStart: number }[] = [];
-  readings.forEach((r, idx) => {
+  mergeVoiceReadings(readings).forEach((r, idx) => {
     const valid = r.microns.filter((m) => m > 0 && m < 3000);
     const med = valid.length ? median(valid) : null;
     const peak = valid.length ? Math.max(...valid) : null;
@@ -117,17 +138,15 @@ export function voiceFindings(
       description_en: `${panelLabel(r.panel, "en")}: inspector reports ${what[kind] ?? kind}${nums} at ${r.tStart}s of the video.`,
       description_ru: `${panelLabel(r.panel, "ru")}: инспектор фиксирует ${whatRu[kind] ?? kind}${numsRu} на ${r.tStart} с видео.`,
       confidence: r.inspectorVerdict === "unknown" ? 0.6 : 0.8,
-      evidence: [
-        {
-          type: "transcript",
-          mediaId,
-          panel: r.panel,
-          quote: r.quote,
-          tStart: r.tStart,
-          tEnd: r.tEnd,
-          ...(med !== null ? { gaugeMicrons: med } : {}),
-        },
-      ],
+      evidence: r.quotes.map((q, k) => ({
+        type: "transcript" as const,
+        mediaId,
+        panel: r.panel,
+        quote: q.quote,
+        tStart: q.tStart,
+        tEnd: q.tEnd,
+        ...(k === 0 && med !== null ? { gaugeMicrons: med } : {}),
+      })),
       verified: false,
     });
   });
@@ -137,10 +156,10 @@ export function voiceFindings(
 /** paint.json from voice readings: max median per panel (only panels with numbers) */
 export function voicePaintJson(readings: VoiceReading[]): Record<string, number> {
   const out: Record<string, number> = {};
-  for (const r of readings) {
+  for (const r of mergeVoiceReadings(readings)) {
     const v = r.microns.filter((m) => m > 0 && m < 3000);
     if (!v.length || r.panel === "unknown") continue;
-    out[r.panel] = Math.max(out[r.panel] ?? 0, median(v));
+    out[r.panel] = median(v);
   }
   return out;
 }
@@ -197,7 +216,7 @@ const VOICE_SPEC = `Return ONE JSON object:
 {"readings":[{"chunk":3,"panel":"hood","microns":[181,197,225,230],"inspectorVerdict":"repaint","quote":"сто восемьдесят один, сто девяносто семь"}],
  "notes":[{"chunk":7,"panel":"roof","text_en":"Inspector: MINI roof always reads about 2x the body panels (contrast roof)","text_ru":"Инспектор: у MINI крыша всегда показывает примерно в 2 раза больше (контрастная крыша)","quote":"крыша бьет в два раза больше"}]}
 Rules:
-- One reading per panel the inspector measures in a chunk. "panel" is one of: ${PANEL_VALUES.join(", ")}. Map Russian words: капот=hood, крыша=roof, крышка багажника/багажник=trunk, передний бампер=front_bumper, задний бампер=rear_bumper; крыло/дверь + side: водительская = left, пассажирская = right (Korea/RF left-hand drive); переднее/заднее by context; if side or front/rear is unclear use "unknown". Порог (sill) and проём (door opening) are not panels: use "unknown".
+- One reading per panel the inspector measures in a chunk. "panel" is one of: ${PANEL_VALUES.join(", ")}. Map Russian words: капот=hood, крыша=roof, крышка багажника/багажник=trunk, передний бампер=front_bumper, задний бампер=rear_bumper; водительская = left, пассажирская = right (left-hand drive); справа = right, слева = left. The inspector walks AROUND the car in order (e.g. hood -> front fenders -> roof -> one side doors -> rear fender -> trunk -> other side), so infer front/rear and side of "крыло"/"дверь" from the walk order and neighbouring panels ("крыло" right after the hood = front fender; "заднее крыло"/next to trunk = rear fender). Use "unknown" only when there is no clue at all. Порог (sill) and проём (door opening) are not panels: "unknown".
 - "microns": the numbers the inspector says for that panel, as integers (Russian number words -> digits; "один миллиметр восемьсот девяносто шесть" = 1896 is likely ASR noise: keep only plausible values 20..2000).
 - "inspectorVerdict": what the inspector SAYS about the panel: завод/заводской=factory, окрас/перекрас=repaint, ремонт/шпаклевка/ремонтная работа=repair, замена=replaced, else unknown. Never infer from numbers.
 - "quote": 3–12 consecutive words copied EXACTLY from that chunk's text (verbatim, no paraphrase).
