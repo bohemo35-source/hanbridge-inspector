@@ -62,6 +62,25 @@ export function stageIndex(stage: StageId): number {
   return STAGE_IDS.indexOf(stage);
 }
 
+export interface Beat {
+  stage: StageId;
+  /** 0 = cinematic entry, 1 = info card, 2 = stage proof */
+  beat: 0 | 1 | 2;
+  /** progress inside the beat, 0..1 */
+  local: number;
+}
+
+/** Pure: split each stage segment into 3 beats. stageAt/progressOf semantics unchanged. */
+export function beatAt(progress: number): Beat {
+  const p = Math.min(1, Math.max(0, Number.isFinite(progress) ? progress : 0));
+  const scaled = Math.min(STAGE_IDS.length - 1e-9, p * STAGE_IDS.length);
+  const stageIdx = Math.floor(scaled);
+  const seg = scaled - stageIdx;
+  const beatScaled = Math.min(3 - 1e-9, seg * 3);
+  const beat = Math.floor(beatScaled) as 0 | 1 | 2;
+  return { stage: STAGE_IDS[stageIdx], beat, local: beatScaled - beat };
+}
+
 export function buildRouteCurve(): THREE.CatmullRomCurve3 {
   return new THREE.CatmullRomCurve3(
     ROUTE_POINTS.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
