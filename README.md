@@ -35,6 +35,11 @@ All code in this repository was written after the kickoff on 2026-10-26. Progres
 - [ ] TZ-03 voice → findings
 - [ ] TZ-04 listing image + damage map
 - [ ] TZ-05 agent orchestrator + verifier + report
+- [ ] TZ-06 3D body map (parametric templates, 13 panels, explode view) — branch `tz-06`
+
+## Assets
+- **3D cars**: no third-party or AI-generated 3D models. The sedan / SUV / hatchback used in the 3D body map are generated in code at runtime (`src/components/damage-map-3d/buildCar.ts`), brand-neutral (no badges, logos or brand-specific grilles), written on 2026-10-28.
+- Inspection evidence always uses the original inspection frames; the 3D car is a schematic body template, not a copy of the inspected vehicle.
 
 ## Pre-hackathon
 Nothing from earlier projects is used here. Earlier Hanbridge prototypes (landing page, 3D showroom) live in separate repositories and are not part of this submission.
