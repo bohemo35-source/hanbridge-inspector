@@ -77,6 +77,9 @@ export const ReportSchema = z.object({
     year: z.number().optional(),
     mileageKm: z.number().optional(),
     vin: z.string().optional(),
+    /** 3D template for the damage map (TZ-06); optional, guessed from make/model when absent */
+    bodyType: z.enum(["sedan", "suv", "hatchback"]).optional(),
+    doors: z.union([z.literal(3), z.literal(5)]).optional(),
   }),
   findings: z.array(FindingSchema),
   verdict: VerdictSchema,
