@@ -28,7 +28,7 @@
    - вырезка по боксу главной машины (+5% поля), ≤1280 px;
    - `sparkJson` с точным контрактом (по образцу `src/lib/schema/prompt.ts`): `{ view: front|rear|left|right|front_left|front_right|rear_left|rear_right|detail|interior|engine, panels_visible: Panel[], defects: [{ panel, kind, severity, box:{x1,y1,x2,y2} (в координатах вырезки), description_en, description_ru, confidence }] }`;
    - пересчёт боксов в координаты исходного фото; `Finding` с evidence `{ type:"frame", mediaId: photoId, box, panel }`, `verified:false`;
-   - словарь панелей — общий `src/lib/domain/panels.ts` (13 панелей + `unknown`, как в `prompt.ts`).
+   - словарь панелей — общий `src/lib/domain/panels.ts`. Если ветка `tz-06` (3D-карта) уже в `main`: перенеси `PANELS`/`PanelId`/`panelLabel` из `src/components/damage-map-3d/panels.ts` в `src/lib/domain/panels.ts`, а в 3D-файле оставь реэкспорт (id и порядок не менять, тесты ТЗ-06 должны пройти без правок). Если не влита — создай с теми же 13 id (+ `unknown`), как в `prompt.ts`.
 4. `scripts/inspect-photos.ts` (запуск `npx tsx scripts/inspect-photos.ts <carId> [--limit N]`):
    - берёт фото из `demo-data/<carId>/photos/` (по умолчанию первые 8 по имени, `--limit`), для каждого: `segmentImage` + `findDefects`;
    - пишет `demo-data/<carId>/out/photos.json` (детекции, дефекты, view, время каждого вызова) и оверлеи `demo-data/<carId>/out/overlay/<photoId>.jpg`: бокс машины (тонкий), номер (жёлтый), дефекты (красные с подписью kind/severity), маска машины полупрозрачной заливкой если декодирована. Рисовать через sharp + SVG composite.
