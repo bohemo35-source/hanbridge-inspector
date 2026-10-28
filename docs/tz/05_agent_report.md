@@ -6,9 +6,11 @@
 Агент на Muse Spark сам ведёт осмотр: решает, какие инструменты вызвать и в каком порядке, собирает находки с доказательствами, отдельным проходом проверяет каждую (verifiable agent), выносит вердикт или передаёт менеджеру. Клиент получает ссылку /r/:id с отчётом, картой, трассой агента и чатом.
 
 ## Инструменты агента
-`segment_image`, `transcribe_note`, `read_auction_sheet`, `analyze_paint_readings`, `find_defects`, `read_gauge_video`, `make_listing_photo`, `get_shipping_status`, `estimate_landed_cost`, `handoff_to_manager`, `finalize_report`.
+`segment_image`, `transcribe_note`, `read_auction_sheet` (если есть фото листа), `read_diagnostic_report`, `read_inspector_report`, `analyze_paint_readings`, `find_defects`, `read_gauge_video`, `make_listing_photo`, `get_shipping_status`, `estimate_landed_cost`, `handoff_to_manager`, `finalize_report`.
 - `read_auction_sheet({mediaId})` — Spark vision по фото корейского аукционного листа → `{grade, mileageKm, year, repairMarks: [{panel, code, meaning_en, meaning_ru}], rawKoreanLines[]}`; каждая отметка → evidence `auction_sheet` с дословной строкой.
 - `analyze_paint_readings` — из ТЗ-01 (детерминированно).
+- `read_diagnostic_report({carId, file})` — PDF OBD-диагностики LAUNCH из `demo-data/<carId>/sheets/*.pdf` (есть у BMW 530i и Kia Morning): текст через `pdftotext` (если пусто — страницы в картинки и Spark vision) → `{ systemsChecked, faultCodes: [{ code, system, description }], mileageKm, vin, scanTime }`; каждый код → evidence `{ type:"obd", mediaId:<pdf>, quote }`. 0 кодов → положительная находка «электроника без ошибок» (severity low, info). В отчёт и trace НЕ выводить имена, телефоны и адреса мастерских из PDF; VIN — только с маской последних 6 символов.
+- `read_inspector_report({carId})` — `demo-data/<carId>/inspector_report_ru.txt` (текст инспектора) → утверждения по панелям с цитатой (evidence `transcript`, `quote`), чтобы агент сверял слова инспектора с фото и толщиномером.
 - `get_shipping_status` — из ТЗ-08 (`src/lib/agent/tools/shipping.ts`, фикстура, `source: "demo_fixture"`), этапы `inspection…delivery`.
 - `estimate_landed_cost` — ВСЕГДА `{status:"manager_quote_required"}` (никаких цифр растаможки в демо).
 - `handoff_to_manager({reason})` — ставит `verdict.handoff = true`, причина в отчёт.
