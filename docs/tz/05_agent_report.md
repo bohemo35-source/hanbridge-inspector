@@ -1,11 +1,23 @@
 # ТЗ-05 — Агент-оркестратор, verifier, отчёт /r/:id, прогон на реальном MINI
 
-Перед стартом в `main` должны быть ТЗ-02..04 и PR #1 (ТЗ-06, 3D-карта; ТЗ-07 — если готово). Прочитай AGENTS.md и docs/reports/tz-01..06.md. Tool calling у Spark проверен: **YES** (нативные `tool_calls`), JSON-режим не нужен. Выполни задание целиком; проблемы фиксируй в отчёте.
+В `main` уже есть ТЗ-01..04, 06, 08, 09. Прочитай AGENTS.md, CONTEXT.md, PROJECT-STATUS.md и docs/reports/tz-02.md, tz-03.md, tz-04.md (там сырые прогоны инструментов на реальной MINI). Tool calling у Spark проверен: **YES** (нативные `tool_calls`), JSON-режим не нужен. Выполни задание целиком; проблемы фиксируй в отчёте.
 
 ## Цель
 Агент на Muse Spark сам ведёт осмотр: решает, какие инструменты вызвать и в каком порядке, собирает находки с доказательствами, отдельным проходом проверяет каждую (verifiable agent), выносит вердикт или передаёт менеджеру. Клиент получает ссылку /r/:id с отчётом, картой, трассой агента и чатом.
 
 ## Инструменты агента
+**Уже реализованы — агент их только вызывает, не переписывать:**
+| tool | функция | файл |
+|---|---|---|
+| `segment_image` | `segmentImage` | `src/lib/agent/tools/segment.ts` |
+| `find_defects` | `findDefects` | `src/lib/agent/tools/defects.ts` |
+| `transcribe_note` | `transcribeNote` (голос инспектора из **любого** видео осмотра: в видео всех 5 машин инспектор проговаривает замеры) | `src/lib/agent/tools/voice.ts` |
+| `read_gauge_video` | `readGaugeVideo` (цвет экрана толщиномера; цифры не читаются — это нормально) | `src/lib/agent/tools/gauge.ts` |
+| `make_listing_photo` | `makeListingPhoto`, hero — `getOrCreateHeroImage` | `src/lib/agent/tools/listing.ts` |
+| `get_shipping_status` | `getShippingStatus` | `src/lib/agent/tools/shipping.ts` |
+| `analyze_paint_readings` | `findingsFromPaintReadings` | `src/lib/domain/paint.ts` |
+Новые (сделать в этом ТЗ): `read_diagnostic_report`, `read_inspector_report`, `estimate_landed_cost`, `handoff_to_manager`, `finalize_report`; `read_auction_sheet` — только если у машины есть фото листа (сейчас ни у одной нет — не делать).
+Данные машин: `docs/DEMO_CARS.md`. Видео длинные (3–9 мин): `transcribe_note` вызывать на 1–2 видео машины (агент выбирает), не на всех; `read_gauge_video` — только где есть `paint_gauge.mp4` (MINI). Сверка источников — главное: голос vs цвет экрана vs фото vs текст инспектора; совпадение двух независимых источников повышает confidence, противоречие → `conflict` (пример из tz-03: крыша MINI 161 мкм, инспектор «завод» — объяснение «контрастная крыша»).
 `segment_image`, `transcribe_note`, `read_auction_sheet` (если есть фото листа), `read_diagnostic_report`, `read_inspector_report`, `analyze_paint_readings`, `find_defects`, `read_gauge_video`, `make_listing_photo`, `get_shipping_status`, `estimate_landed_cost`, `handoff_to_manager`, `finalize_report`.
 - `read_auction_sheet({mediaId})` — Spark vision по фото корейского аукционного листа → `{grade, mileageKm, year, repairMarks: [{panel, code, meaning_en, meaning_ru}], rawKoreanLines[]}`; каждая отметка → evidence `auction_sheet` с дословной строкой.
 - `analyze_paint_readings` — из ТЗ-01 (детерминированно).
@@ -24,8 +36,8 @@
 3. Вердикт: детерминированные правила поверх подтверждённых находок (critical → WALK_AWAY; high или ≥3 medium → NEGOTIATE; иначе BUY) + текстовое обоснование от Spark. Правила handoff из AGENTS.md.
 4. Стриминг прогресса: `POST /api/inspections/:id/run` → SSE-события шагов; UI `/inspect/:id` показывает трассу «вживую» (иконка инструмента, why, время). Это ключевой кадр видео.
 5. Отчёт `/r/:id` (публичный, без логина, `noindex`): шапка авто + вердикт крупно; **3D-карта** `<InspectionMap report={report} lang={lang} mediaUrl={(id) => url} />` из ТЗ-06 (`mediaUrl` → URL оригинального кадра в Blob; `report.vehicle.bodyType/doors` выставлять через `guessBodyType(make, model)`); список подтверждённых находок — у каждой миниатюра кадра с маской / цитата с таймкодом (клик → проигрывание аудио с tStart) / замер / строка листа, confidence; раздел Unconfirmed; listing-фото; блок «Agent trace»; чат с экспертом (ТЗ-01) по этому отчёту; вкладка «Доставка» — `<JourneyScene compact currentStage={shipping.stage} bodyType=… />` из ТЗ-08. Переключатель EN/RU. OG-картинка для шеринга.
-6. Хранение: отчёт JSON в Blob по `reports/{id}.json`, id — nanoid(10).
-7. Flow `/inspect/new`: данные авто → загрузка медиа (ТЗ-02/03) → ввод замеров толщиномера (13 полей по панелям) → «Run agent».
+6. Хранение: `src/lib/store/reports.ts` — если есть `BLOB_READ_WRITE_TOKEN`: отчёт JSON в Vercel Blob `reports/{id}.json`, оригиналы медиа (только те кадры/фрагменты, на которые ссылаются evidence; фото — с размытым номером через `makeListingPhoto`-логику, **читаемых номеров в Blob и отчёте быть не должно**) в `media/{carId}/…`; без токена — локально `data/reports/*.json` + `public/generated/` (оба в .gitignore). id — nanoid(10).
+7. (Не делать в этом ТЗ) Flow загрузки `/inspect/new` — демо идёт по готовым машинам из `demo-data`. Вместо этого `/inspect/:carId` запускает агента по машине из каталога и показывает трассу вживую (п. 4).
 8. Каталог: `scripts/e2e/run-cars.mjs [carId…]` — полный прогон агента по каждой машине из `demo-data/<carId>/` (MINI + до 4 машин), загрузка оригиналов в Blob, отчёт в Blob; печатает trace, находки (всего/подтверждено/отклонено), вердикт, URL отчёта, время. Страница `/cars` — список отчётов (фото, марка/модель, вердикт, ссылка на `/r/:id`).
 9. README: обновить «Built during the hackathon» ссылками на PR/коммиты ТЗ-01..05, схема архитектуры (mermaid), какие Meta-модели где используются.
 
