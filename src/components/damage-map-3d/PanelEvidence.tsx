@@ -10,7 +10,7 @@ import { COLORS, panelLabel, PANEL_IDS, type PanelVisual } from "./panels";
 const KIND_RU: Record<string, string> = { scratch: "Царапина", dent: "Вмятина", rust: "Коррозия", repaint: "Перекрас", putty: "Шпатлёвка", panel_replaced: "Замена панели", mechanical: "Механика", other: "Другое" };
 const STATE_RU = { factory: "заводская краска", repaint: "перекрас", putty: "шпатлёвка / ремонт", unconfirmed: "находка не подтверждена", noData: "нет замера" } as const;
 const STATE_EN = { factory: "factory paint", repaint: "repaint", putty: "filler / body repair", unconfirmed: "finding not confirmed", noData: "no reading" } as const;
-const EV_ICON: Record<Evidence["type"], string> = { frame: "КАДР", mask: "SAM", transcript: "ГОЛОС", gauge: "мкм", auction_sheet: "KR" };
+const EV_ICON: Record<Evidence["type"], string> = { frame: "КАДР", mask: "SAM", transcript: "ГОЛОС", gauge: "мкм", auction_sheet: "KR", obd: "OBD" };
 
 const fmtT = (s?: number) => (s === undefined ? "" : `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(Math.floor(s % 60)).padStart(2, "0")}`);
 
@@ -19,6 +19,7 @@ function evidenceTitle(e: Evidence, lang: "en" | "ru") {
     case "gauge": return lang === "ru" ? "Толщиномер" : "Paint gauge";
     case "transcript": return `Muse Voice · ${fmtT(e.tStart)}–${fmtT(e.tEnd)}`;
     case "auction_sheet": return lang === "ru" ? "Аукционный лист · Muse Spark" : "Auction sheet · Muse Spark";
+    case "obd": return lang === "ru" ? "OBD-диагностика LAUNCH" : "LAUNCH OBD diagnostic";
     case "mask": return `SAM 3.1 · ${lang === "ru" ? "кадр" : "frame"} ${e.mediaId}`;
     case "frame": return `${lang === "ru" ? "Кадр" : "Frame"} ${e.mediaId}`;
   }

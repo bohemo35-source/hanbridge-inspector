@@ -36,3 +36,6 @@ public/generated/
 
 # TZ-02 outputs
 demo-data/*/out/
+
+# local reports (TZ-05, no-Blob fallback)
+data/reports/

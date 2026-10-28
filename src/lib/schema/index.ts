@@ -17,7 +17,7 @@ export const MediaSchema = z.object({
 });
 
 export const EvidenceSchema = z.object({
-  type: z.enum(["frame", "mask", "transcript", "gauge", "auction_sheet"]),
+  type: z.enum(["frame", "mask", "transcript", "gauge", "auction_sheet", "obd"]),
   mediaId: z.string(),
   box: BoxSchema.optional(),
   maskRef: z.string().optional(),
@@ -39,6 +39,8 @@ export const FindingSchema = z.object({
   evidence: z.array(EvidenceSchema).min(1),
   verified: z.boolean(),
   verifierNote: z.string().optional(),
+  /** sources contradict each other (e.g. gauge ≤150 µm but voice says repaint) */
+  conflict: z.boolean().optional(),
 });
 
 export const VerdictSchema = z.object({
@@ -55,7 +57,12 @@ export const PaintReadingSchema = z.object({
 });
 
 export const AgentStepSchema = z.object({
+  i: z.number().optional(),
   tool: z.string(),
+  argsSummary: z.string().optional(),
+  why: z.string().optional(),
+  ok: z.boolean().optional(),
+  outputSummary: z.string().optional(),
   input: z.unknown().optional(),
   output: z.unknown().optional(),
   ms: z.number().optional(),
@@ -87,6 +94,13 @@ export const ReportSchema = z.object({
   costEstimate: CostEstimateSchema,
   trace: z.array(AgentStepSchema),
   createdAt: z.string(),
+  carId: z.string().optional(),
+  listingUrl: z.string().optional(),
+  heroUrl: z.string().optional(),
+  shipping: z.object({ stage: z.string(), etaDays: z.number().optional(), source: z.string() }).optional(),
+  /** mediaId -> public (plate-safe) URL for evidence thumbnails */
+  mediaUrls: z.record(z.string(), z.string()).optional(),
+  handoffReason: z.string().optional(),
 });
 
 export const FindingsDraftSchema = z.object({
