@@ -285,11 +285,13 @@ export async function runInspection(opts: {
     if (!ok) {
       const QUARTER = new Set(["front_left", "front_right", "rear_left", "rear_right"]);
       const views = [...photoViews.entries()].sort(([, a], [, b]) => Number(QUARTER.has(b)) - Number(QUARTER.has(a))).map(([pid]) => pid);
-      const candidates = [...new Set([...views, ...spreadPhotos(media.photos, 10)])].filter((pid) => pid !== listingPhotoId).slice(0, 8);
+      const candidates = [...new Set([...views, ...spreadPhotos(media.photos, 16)])].filter((pid) => pid !== listingPhotoId).slice(0, 16);
       const t0 = Date.now();
       let picked: string | undefined;
-      for (const pid of candidates) {
-        try { if (isWholeCar(await segOf(pid))) { picked = pid; break; } } catch { /* next */ }
+      for (let i = 0; i < candidates.length && !picked; i += 4) {
+        const batch = candidates.slice(i, i + 4);
+        const ok4 = await Promise.all(batch.map(async (pid) => { try { return isWholeCar(await segOf(pid)); } catch { return false; } }));
+        picked = batch.find((_, j) => ok4[j]);
       }
       if (picked) {
         try {
