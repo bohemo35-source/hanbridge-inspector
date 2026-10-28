@@ -283,7 +283,7 @@ export default function JourneyScene(props: JourneySceneProps) {
           )}
         </div>
         {currentStage && (
-          <div className="absolute right-4 top-4 flex flex-col gap-1">
+          <div className="absolute right-4 top-4 hidden flex-col gap-1 sm:flex">
             {STAGE_IDS.map((s, i) => (
               <span key={s} className={`rounded px-2 py-0.5 text-right text-[11px] ${i === currentIdx ? "bg-amber-300 font-semibold text-zinc-950" : i < currentIdx ? "text-zinc-400" : "text-zinc-600"}`}>
                 {i < currentIdx ? `${t.done}: ` : ""}{STAGE_LABELS[s][lang]}
