@@ -8,7 +8,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export default async function CarsPage() {
-  const reports = await listReportsAsync();
+  // newest report per car (older test runs stay in storage, hidden from the catalog)
+  const seen = new Set<string>();
+  const reports = (await listReportsAsync()).filter((r) => {
+    const key = r.carId ?? r.id;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   return (
     <main style={{ maxWidth: 980, margin: "0 auto", padding: 24, color: "#e8ebee", fontFamily: "system-ui" }}>
       <p style={{ font: "11px monospace", letterSpacing: ".12em", color: "#8b94a1" }}>HANBRIDGE INSPECTOR</p>
