@@ -1,0 +1,31 @@
+{
+  "created": "2026-10-29",
+  "built_during_hackathon": true,
+  "pipeline": [
+    {
+      "step": "concept image",
+      "model": "muse-image-1.0 (Meta Model API)",
+      "output": "hero-car-source.jpg",
+      "prompt": "a modern compact crossover SUV, deep graphite metallic paint, smooth generic design, no badges, no logos, no licence plate, closed doors, standard alloy wheels, three-quarter front view from the front left at eye level, isolated product shot on a plain light grey seamless studio background, soft even diffuse lighting, no harsh reflections, whole car fully in frame with margin, sharp focus, photorealistic, orthographic-like long lens, no text, no people"
+    },
+    {
+      "step": "image to 3D",
+      "service": "Tripo API (paid API credits; paid users hold all rights to outputs)",
+      "model_version": "v3.1-20260211",
+      "tasks": {
+        "hero-car.glb": { "task_id": "8e71ac9a-913c-4750-ae2e-a3ca32901579", "texture": true, "pbr": true, "texture_quality": "detailed", "geometry_quality": "detailed" },
+        "hero-car-parts.glb": { "task_id": "a4bfb5b4-7337-4908-b346-03f45cecd2d5", "generate_parts": true, "texture": false, "geometry_quality": "detailed" }
+      },
+      "model_seed": 20261029
+    },
+    {
+      "step": "optimize",
+      "tool": "@gltf-transform/cli optimize --compress meshopt --simplify-ratio 0.5 (parts kept separate: --join false --flatten false)",
+      "note": "meshopt-compressed: load with GLTFLoader.setMeshoptDecoder(MeshoptDecoder)"
+    }
+  ],
+  "reference_frames": {
+    "ref-garage-lift.jpg": "muse-image-1.0, mood reference for the inspection garage (not shipped as geometry)",
+    "ref-garage-exploded.jpg": "muse-image-1.0, mood reference for the exploded view"
+  }
+}
