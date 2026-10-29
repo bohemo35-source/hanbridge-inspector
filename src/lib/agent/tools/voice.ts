@@ -159,6 +159,8 @@ export function voicePaintJson(readings: VoiceReading[]): Record<string, number>
   for (const r of mergeVoiceReadings(readings)) {
     const v = r.microns.filter((m) => m > 0 && m < 3000);
     if (!v.length || r.panel === "unknown") continue;
+    // inspector explicitly said "factory" despite >150 µm (e.g. MINI contrast roof): context wins, the numeric rule must not fire
+    if (r.inspectorVerdict === "factory" && median(v) > 150) continue;
     out[r.panel] = median(v);
   }
   return out;

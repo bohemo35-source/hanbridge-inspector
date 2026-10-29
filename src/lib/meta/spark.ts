@@ -8,7 +8,7 @@ import { metaFetch, MetaApiError } from "./client";
 export type ChatPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
-export type ChatMessage = { role: "system" | "user" | "assistant" | "tool"; content: string | ChatPart[]; tool_call_id?: string };
+export type ChatMessage = { role: "system" | "user" | "assistant" | "tool"; content: string | ChatPart[] | null; tool_call_id?: string; tool_calls?: ToolCall[] };
 export type ToolDef = { type: "function"; function: { name: string; description?: string; parameters: Record<string, unknown> } };
 export type ToolCall = { id: string; type: string; function: { name: string; arguments: string } };
 

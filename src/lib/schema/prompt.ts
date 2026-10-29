@@ -15,7 +15,7 @@ export const FINDINGS_DRAFT_SPEC = `Return ONE JSON object with exactly this sha
       "description_ru": "string",
       "confidence": "number 0..1",
       "evidence": [
-        { "type": "one of: frame, mask, transcript, gauge, auction_sheet", "mediaId": "string, the id of the photo or 'gauge'", "panel": "string, optional", "gaugeMicrons": "number, optional", "quote": "string, optional" }
+        { "type": "one of: frame, mask, transcript, gauge, auction_sheet, obd", "mediaId": "string, the id of the photo or 'gauge'", "panel": "string, optional", "gaugeMicrons": "number, optional", "quote": "string, optional" }
       ],
       "verified": false
     }

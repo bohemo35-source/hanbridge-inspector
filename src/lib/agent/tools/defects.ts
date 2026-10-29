@@ -52,7 +52,7 @@ export const DEFECTS_SPEC = `Return ONE JSON object with exactly this shape (no 
     }
   ]
 }
-Only report defects actually visible in the image. If none, return "defects": [].
+Only report defects actually visible in the image (scratch, dent, rust, broken/mechanical, other). Do NOT report repaint, putty/filler or panel replacement from a photo — paint thickness cannot be seen. If none, return "defects": [].
 Example:
 {"view":"rear","panels_visible":["trunk","rear_bumper"],"defects":[{"panel":"trunk","kind":"scratch","severity":"low","box":{"x1":100,"y1":120,"x2":260,"y2":140},"description_en":"Light scratch on the trunk lid.","description_ru":"Лёгкая царапина на крышке багажника.","confidence":0.7}]}`;
 
@@ -143,7 +143,9 @@ export async function findDefects(opts: {
     h: original.h,
   });
 
-  const findings: Finding[] = draft.defects.map((d, i) => ({
+  // paint thickness (repaint / filler) and panel replacement are not provable from a photo — gauge, voice or inspector text only
+  const VISUAL_KINDS = new Set(["scratch", "dent", "rust", "mechanical", "other"]);
+  const findings: Finding[] = draft.defects.filter((d) => VISUAL_KINDS.has(d.kind)).map((d, i) => ({
     id: `${opts.photoId}-defect-${i + 1}`,
     panel: d.panel,
     kind: d.kind,

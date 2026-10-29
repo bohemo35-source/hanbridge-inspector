@@ -13,9 +13,12 @@
 
 - ТЗ-04 (ветка `tz-04`, не запушена, ждёт ревью): `makeListingPhoto` — номер из `segmentImage` (blur σ30 + плашка HANBRIDGE +8%), Muse Image фон с diff-гардом маски авто (порог 10), hero на отчёт (Blob/локальный кэш), `/lab/image`. На демо фон edits отброшен (diff 24.10 / 20.97 > 10 — API маску не принимает, без маски перерисовывает авто) → честный фолбэк. Отчёт `docs/reports/tz-04.md`.
 
+## ТЗ-05 (ветка `tz-05`, не запушена, ждёт ревью)
+Агент-оркестратор (Spark tool calling ≤16 шагов), verifier на open-weight `muse-spark-open-1026` (Baseten, `src/lib/meta/sparkOpen.ts`), детерминированный вердикт + handoff, `/r/:id` (3D-карта + JourneyScene compact + чат + OG), `/cars`, `/inspect/:carId` SSE. Прогон по всем 5 машинам: MINI NEGOTIATE 0.86 (4/4 verified), BMW 530i BUY (OBD 29 систем, 0 ошибок), Audi BUY (3/3), Kia BUY (1/4, 3 в Unconfirmed), BMW X3 BUY conf 0.5 → handoff (0 находок). Отчёт `docs/reports/tz-05.md`, скриншоты `docs/reports/assets/tz05-*`.
+
 ## Следующие шаги
-1. Ревью `tz-09` и `tz-04` → пуш/PR (делает ревьюер).
-2. ТЗ-05: агент + `/r/:id`, подключить `<InspectionMap>` (ТЗ-06) и `<JourneyScene compact currentStage reportSummary>` (ТЗ-08/09), роут `/cars` (кнопка hero уже ведёт туда), `makeListingPhoto` + `getOrCreateHeroImage` в сборку отчёта (listing — не evidence).
+1. Ревью `tz-05` → пуш/PR (делает ревьюер); на Preview проверить `/r/:id` в инкогнито.
+2. Известные дыры ТЗ-05: голос без замеров у X3/Audi/Kia (выбор видео), X3 «заменённая дверь» не стала находкой, прогон 73–151 с (gauge-video 72 с — главное узкое место).
 3. На Preview: полный скролл `/lab/journey` (~50–60 с) для видео, замер FPS на телефоне.
 
 ## Передача в новую сессию
