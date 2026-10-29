@@ -218,7 +218,7 @@ export default function GarageScene(props: GarageSceneProps) {
   const [mobile, setMobile] = useState(false);
   const [beat, setBeat] = useState<Beat>(pinnedBeat ?? 0);
   const [verdictIn, setVerdictIn] = useState(false);
-  const live = useRef({ target: pinnedBeat !== undefined ? progressCenterOfBeat(pinnedBeat) : debugParts ? 0.52 : compact ? progressCenterOfBeat(3) : 0 });
+  const live = useRef({ target: pinnedBeat !== undefined ? (pinnedBeat === 5 ? 0.98 : progressCenterOfBeat(pinnedBeat)) : debugParts ? 0.52 : compact ? progressCenterOfBeat(3) : 0 });
 
   const readings = readingsByPart(report);
   const panelFindings = findingsByPanel(report);
@@ -264,7 +264,7 @@ export default function GarageScene(props: GarageSceneProps) {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
     renderer.setSize(host.clientWidth, host.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
+    renderer.toneMappingExposure = 1.3;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     host.appendChild(renderer.domElement);
@@ -306,7 +306,7 @@ export default function GarageScene(props: GarageSceneProps) {
     const warm = new THREE.SpotLight(0xff9a3c, 22, 45, 0.55, 1);
     warm.position.set(-10, 4.4, -6.5);
     warm.target.position.set(0, 0.8, 0);
-    scene.add(rect1, rect2, key, warm, warm.target, new THREE.HemisphereLight(0x8fa3c4, 0x14100c, 0.65));
+    scene.add(rect1, rect2, key, warm, warm.target, new THREE.HemisphereLight(0x8fa3c4, 0x14100c, 0.9));
 
     const env = buildEnvironment(isMobile);
     scene.add(env.group);
@@ -365,10 +365,10 @@ export default function GarageScene(props: GarageSceneProps) {
       };
       applyNorm(hero);
       heroGroup = hero; carGroup.add(hero);
-      hero.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; m.castShadow = true; (Array.isArray(m.material) ? m.material : [m.material]).forEach((mt) => { mt.transparent = true; const sm = mt as THREE.MeshStandardMaterial; if ("envMapIntensity" in sm) sm.envMapIntensity = 1.25; heroMats.push(mt); }); });
+      hero.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; m.castShadow = true; (Array.isArray(m.material) ? m.material : [m.material]).forEach((mt) => { const sm = mt as THREE.MeshStandardMaterial; if ("envMapIntensity" in sm) sm.envMapIntensity = 0.9; heroMats.push(mt); }); });
       triangles += countTris(hero);
       const sampled = debugParts ? paintBase.clone() : samplePaint(hero);
-      if (!debugParts) paintBase.copy(sampled);
+      if (!debugParts) paintBase.copy(sampled).multiplyScalar(0.88); // parts read slightly brighter than the textured hero under the same light
 
       loader.load("/models/car-v2-parts.glb", (gltf) => {
         if (disposed) return;
@@ -494,8 +494,15 @@ export default function GarageScene(props: GarageSceneProps) {
       }
 
       const heroW = debugParts ? 0 : heroWeight(p);
-      if (heroGroup) { heroGroup.visible = heroW > 0.01; heroMats.forEach((m) => { m.opacity = heroW; m.depthWrite = heroW > 0.6; }); }
-      if (partsGroup) { partsGroup.visible = heroW < 0.99; parts.forEach((r) => r.mats.forEach((m) => { m.opacity = 1 - heroW; m.depthWrite = heroW < 0.4; })); }
+      // transparency only while cross-fading: an always-transparent car sorts badly (dark blotches on the body)
+      const setFade = (m: THREE.Material, o: number) => {
+        const fading = o < 0.999;
+        if (m.transparent !== fading) { m.transparent = fading; m.needsUpdate = true; }
+        m.opacity = o;
+        m.depthWrite = o > 0.5;
+      };
+      if (heroGroup) { heroGroup.visible = heroW > 0.01; heroMats.forEach((m) => setFade(m, heroW)); }
+      if (partsGroup) { partsGroup.visible = heroW < 0.99; parts.forEach((r) => r.mats.forEach((m) => setFade(m, 1 - heroW))); }
       if (debugParts) { camPos.set(6.2, 2.3, 6.0); camTgt.set(0, 0.95, 0); }
       else cameraPose(p, camPos, camTgt, entry);
       camera.position.copy(camPos);
