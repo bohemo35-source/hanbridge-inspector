@@ -142,5 +142,41 @@
     "ms": 20308,
     "bytes": 344606,
     "quality": 82
+  },
+  {
+    "file": "aerial-coast.jpg",
+    "prompt": "Coastal road along the Sea of Japan: dark blue sea with gentle surf and rocky shoreline on the upper-left side of the road, green grassy hills with low shrubs on the other side. Strictly top-down nadir aerial drone photograph, camera pointing straight down at 90 degrees, no perspective, no horizon, no sky. A single empty two-lane asphalt road with faint white edge lines crosses the whole frame diagonally from the bottom-left corner to the top-right corner, the road is about 6 percent of the frame width. No cars, no vehicles, no people, no text, no logos, no signs. Soft natural daylight, photorealistic, sharp detail, muted cinematic colours.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T20:15:59.037Z",
+    "ms": 15024,
+    "bytes": 557164,
+    "quality": 82
+  },
+  {
+    "file": "aerial-forest.jpg",
+    "prompt": "Road through dense Siberian taiga: dark green conifer and birch forest canopy on both sides of the road, a few small clearings. Strictly top-down nadir aerial drone photograph, camera pointing straight down at 90 degrees, no perspective, no horizon, no sky. A single empty two-lane asphalt road with faint white edge lines crosses the whole frame diagonally from the bottom-left corner to the top-right corner, the road is about 6 percent of the frame width. No cars, no vehicles, no people, no text, no logos, no signs. Soft natural daylight, photorealistic, sharp detail, muted cinematic colours.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T20:16:19.324Z",
+    "ms": 18950,
+    "bytes": 567966,
+    "quality": 82
+  },
+  {
+    "file": "aerial-steppe.jpg",
+    "prompt": "Road through the Kazakh steppe: wide dry golden-ochre grassland with subtle texture, dirt tracks and sparse shrubs on both sides, late afternoon soft light with long faint shadows. Strictly top-down nadir aerial drone photograph, camera pointing straight down at 90 degrees, no perspective, no horizon, no sky. A single empty two-lane asphalt road with faint white edge lines crosses the whole frame diagonally from the bottom-left corner to the top-right corner, the road is about 6 percent of the frame width. No cars, no vehicles, no people, no text, no logos, no signs. Soft natural daylight, photorealistic, sharp detail, muted cinematic colours.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T20:16:36.574Z",
+    "ms": 16937,
+    "bytes": 681885,
+    "quality": 82
+  },
+  {
+    "file": "aerial-suburb.jpg",
+    "prompt": "Road through a quiet suburb: small detached houses with grey and dark roofs, gardens, trees and driveways on both sides of the road. Strictly top-down nadir aerial drone photograph, camera pointing straight down at 90 degrees, no perspective, no horizon, no sky. A single empty two-lane asphalt road with faint white edge lines crosses the whole frame diagonally from the bottom-left corner to the top-right corner, the road is about 6 percent of the frame width. No cars, no vehicles, no people, no text, no logos, no signs. Soft natural daylight, photorealistic, sharp detail, muted cinematic colours.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T20:16:56.109Z",
+    "ms": 19416,
+    "bytes": 551334,
+    "quality": 82
   }
 ]
