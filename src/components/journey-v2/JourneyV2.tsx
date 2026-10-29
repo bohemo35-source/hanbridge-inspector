@@ -14,7 +14,7 @@ import SceneBlock from "./SceneBlock";
 import Bridge from "./Bridge";
 import Hud from "./Hud";
 import ReviewsSection, { type ReviewItem } from "./Reviews";
-import { FADE_VH, LEAD_VH } from "./useStageFade";
+import { FADE_VH } from "./useStageFade";
 
 const GarageScene = dynamic(() => import("@/components/garage-3d/GarageScene"), { ssr: false });
 
@@ -30,6 +30,7 @@ const FALLBACK_IMG: Record<string, string> = {
 
 export default function JourneyV2({ report, lang, reviews }: { report?: Report; lang: Lang; reviews: ReviewItem[] }) {
   const [progress, setProgress] = useState(0);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [reduced, setReduced] = useState<boolean | null>(null);
   const [mobile, setMobile] = useState(false);
   const visibleBlocks = useMemo(() => BLOCKS.filter((b) => b.kind !== "reviews" || reviews.length > 0), [reviews]);
@@ -46,6 +47,14 @@ export default function JourneyV2({ report, lang, reviews }: { report?: Report; 
       raf = requestAnimationFrame(() => {
         const max = document.documentElement.scrollHeight - window.innerHeight;
         setProgress(max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0);
+        // HUD/caption follow what is on screen: a crossfading block counts once it is half faded in
+        const vh = window.innerHeight;
+        let id: string | null = null;
+        document.querySelectorAll<HTMLElement>("[data-journey-block]").forEach((el) => {
+          const top = el.getBoundingClientRect().top;
+          if (top <= (el.dataset.lead ? -(vh * FADE_VH) / 200 : vh * 0.5)) id = el.dataset.journeyBlock ?? id;
+        });
+        setActiveId(id);
       });
     };
     onScroll();
@@ -72,8 +81,7 @@ export default function JourneyV2({ report, lang, reviews }: { report?: Report; 
     );
   }
 
-  // a block becomes fully visible (LEAD_VH - FADE_VH) = 100vh before its nominal start: shift the HUD with it
-  const at = blockAt(Math.min(1, progress + (LEAD_VH - FADE_VH) / total), visibleBlocks);
+  const at = { block: visibleBlocks.find((b) => b.id === activeId) ?? blockAt(progress, visibleBlocks).block };
   const captionKey = CAPTION_BY_BLOCK[at.block.id];
   const caption = at.block.id === "garage" || at.block.kind === "bridge" ? "" : captionKey ? CAPTIONS[captionKey][lang] : at.block.id === "handover" ? HANDOVER_CARD[lang] : at.block.kind === "reviews" || at.block.kind === "finale" ? CAPTIONS.finale[lang] : CAPTIONS.seoul[lang];
   return (
@@ -95,7 +103,7 @@ const STICKY = new Set<BlockDef["kind"]>(["scene3d", "bridge", "garage"]);
 function Block({ block, lang, report, reviews, mobileScale, lead, exit }: { block: BlockDef; lang: Lang; report?: Report; reviews: ReviewItem[]; mobileScale: number; lead: boolean; exit: number }) {
   if (block.kind === "scene3d" && block.scene) return <SceneBlock sceneId={block.scene} blockId={block.id} heightVh={block.vh} mobileScale={mobileScale} plate={block.plate} lead={lead} exit={exit} />;
   if (block.kind === "bridge" && block.bridgeImage && block.bridgeStage) return <Bridge id={block.id} image={block.bridgeImage} stage={block.bridgeStage} heightVh={block.vh} mobileScale={mobileScale} lang={lang} lead={lead} exit={exit} />;
-  if (block.kind === "garage") return <div data-journey-block="garage"><GarageScene report={report} lang={lang} lead={lead} exit={exit} /></div>;
+  if (block.kind === "garage") return <div data-journey-block="garage" data-lead={lead ? "1" : undefined}><GarageScene report={report} lang={lang} lead={lead} exit={exit} /></div>;
   if (block.kind === "reviews") return <ReviewsSection reviews={reviews} lang={lang} />;
   return <Finale lang={lang} report={report} />;
 }

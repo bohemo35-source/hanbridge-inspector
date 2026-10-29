@@ -42,7 +42,7 @@ export default function Bridge({ id, image, stage, heightVh, mobileScale, lang, 
     [CONTENT_LABELS.owner[lang], c.owner[lang]], [CONTENT_LABELS.clientSees[lang], c.clientSees[lang]], [CONTENT_LABELS.typical[lang], c.typical[lang]],
   ];
   return (
-    <section ref={ref} data-journey-block={id} className="relative w-full" style={leadStyle(`${heightVh}vh * ${mobileScale}`, lead)}>
+    <section ref={ref} data-journey-block={id} data-lead={lead ? "1" : undefined} className="relative w-full" style={leadStyle(`${heightVh}vh * ${mobileScale}`, lead)}>
       <div ref={stageRef} className="sticky top-0 h-[100svh] w-full overflow-hidden bg-[#07090d]" style={lead ? { opacity: 0 } : undefined}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img ref={imgRef} src={image} alt="" className="absolute inset-0 h-full w-full object-cover will-change-transform" />

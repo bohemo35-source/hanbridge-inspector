@@ -80,7 +80,7 @@ export default function SceneBlock({ sceneId, blockId, heightVh, mobileScale, on
 
   const poster = plate?.image ?? (sceneId === "seoul" ? "/journey-v2/env-seoul-night.jpg" : sceneId === "port" ? "/journey-v2/env-port-night.jpg" : sceneId === "vladivostok" ? "/journey-v2/env-vladivostok-dawn.jpg" : sceneId === "finale" ? "/journey-v2/env-golden-hour.jpg" : "/journey-v2/tex-terrain-forest.jpg");
   return (
-    <section ref={outerRef} data-journey-block={blockId ?? sceneId} className="relative w-full" style={leadStyle(`${heightVh}vh * ${mobileScale}`, lead)}>
+    <section ref={outerRef} data-journey-block={blockId ?? sceneId} data-lead={lead ? "1" : undefined} className="relative w-full" style={leadStyle(`${heightVh}vh * ${mobileScale}`, lead)}>
       <div ref={stageRef} className="sticky top-0 h-[100svh] w-full overflow-hidden bg-[#07090d]" style={lead ? { opacity: 0 } : undefined}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={poster} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
