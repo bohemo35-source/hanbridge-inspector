@@ -34,10 +34,13 @@ export const buildRoad: SceneBuilder = ({ scene, camera, car, tex, mobile }) => 
   const road = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 190), new THREE.MeshStandardMaterial({ map: tex("/journey-v2/tex-asphalt-wet.jpg", [1, 16]), roughness: 0.7, color: 0x777d85 }));
   road.rotation.x = -Math.PI / 2; road.rotation.z = 0.5; road.position.y = 0.03; road.receiveShadow = true; scene.add(road);
   // instanced trees in the forest band
-  const treeGeo = new THREE.ConeGeometry(0.9, 2.6, 6);
-  const trees = new THREE.InstancedMesh(treeGeo, M(0x24402a, 1), mobile ? 120 : 320);
+  // seen from above: round canopies (flattened icosahedra) with colour/size variation, not cones
+  const treeGeo = new THREE.IcosahedronGeometry(1.2, 1); treeGeo.scale(1, 0.55, 1);
+  const trees = new THREE.InstancedMesh(treeGeo, M(0xffffff, 1), mobile ? 160 : 420);
   const dummy = new THREE.Object3D();
-  for (let i = 0; i < trees.count; i++) { dummy.position.set((Math.random() - 0.5) * 170, 1.3, -26 + Math.random() * 48); if (Math.abs(dummy.position.x) < 6) dummy.position.x += 10; dummy.updateMatrix(); trees.setMatrixAt(i, dummy.matrix); }
+  const tc = new THREE.Color();
+  for (let i = 0; i < trees.count; i++) { dummy.position.set((Math.random() - 0.5) * 170, 0.9, -26 + Math.random() * 48); if (Math.abs(dummy.position.x) < 6) dummy.position.x += 10; dummy.scale.setScalar(0.7 + Math.random() * 0.8); dummy.rotation.y = Math.random() * 6.28; dummy.updateMatrix(); trees.setMatrixAt(i, dummy.matrix); trees.setColorAt(i, tc.setHSL(0.27 + Math.random() * 0.06, 0.35 + Math.random() * 0.2, 0.16 + Math.random() * 0.1)); }
+  trees.castShadow = true;
   scene.add(trees);
   // route line, drawn ahead of the car (endgame: closes into the map)
   const routePts = [new THREE.Vector3(52, 0.25, 66), new THREE.Vector3(26, 0.25, 28), new THREE.Vector3(8, 0.25, -6), new THREE.Vector3(-20, 0.25, -32), new THREE.Vector3(-52, 0.25, -58), new THREE.Vector3(-34, 0.25, 10), new THREE.Vector3(-34, 0.25, 30), new THREE.Vector3(-58, 0.25, 42)];

@@ -36,8 +36,10 @@ export function makePlateScene(cfg: PlateConfig, debug: boolean): SceneBuilder {
     bg.position.set(0, 0, -dist); bg.renderOrder = -10;
     camera.add(bg);
     // lights matched to the plate
-    scene.add(new THREE.HemisphereLight(cfg.tint, 0x0a0c10, cfg.night ? 0.55 : 0.9));
-    const key = new THREE.DirectionalLight(cfg.lightColor, cfg.night ? 1.6 : 2.4);
+    // tint the car only lightly: a strong warm tint made the graphite car read beige on dawn/golden-hour plates
+    const soft = (c: number) => new THREE.Color(c).lerp(new THREE.Color(0xffffff), 0.55);
+    scene.add(new THREE.HemisphereLight(soft(cfg.tint), 0x0a0c10, cfg.night ? 0.5 : 0.55));
+    const key = new THREE.DirectionalLight(soft(cfg.lightColor), cfg.night ? 1.5 : 1.7);
     key.position.set(...cfg.lightPos); key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024); key.shadow.camera.left = -25; key.shadow.camera.right = 25; key.shadow.camera.top = 25; key.shadow.camera.bottom = -25; key.shadow.bias = -0.0004;
     scene.add(key);

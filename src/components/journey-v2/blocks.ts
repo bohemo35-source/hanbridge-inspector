@@ -35,8 +35,8 @@ export interface BlockDef {
 export const PLATES: Record<string, PlateConfig> = {
   seoul: { image: "/journey-v2/plate-seoul-bridge.jpg", cameraPos: [0, 1.55, 10], lookAt: [1.2, 1.1, -12], fov: 38, path: [[4.4, 0, 7], [4.0, 0, 1], [4.4, 0, -6], [5.2, 0, -14], [6.0, 0, -22]], night: true, headlights: true, tint: 0x8fb4e8, lightColor: 0xaac8ff, lightPos: [-8, 14, 4], shadowOpacity: 0.42, end: "none" },
   port: { image: "/journey-v2/plate-port-ramp.jpg", cameraPos: [0, 1.65, 11], lookAt: [1.6, 1.4, -12], fov: 38, path: [[0.6, 0, 7], [2.2, 0, 1], [3.8, 0, -5], [7.0, 0.35, -11], [10.0, 0.9, -17]], night: true, headlights: true, tint: 0xffc98a, lightColor: 0xffb066, lightPos: [-10, 16, 2], shadowOpacity: 0.48, end: "hold" },
-  vladivostok: { image: "/journey-v2/plate-vladivostok-quay.jpg", cameraPos: [0, 1.6, 11], lookAt: [0.4, 1.2, -12], fov: 38, path: [[4.6, 0.9, -18], [3.6, 0.35, -10], [2.2, 0, -3], [0.8, 0, 3], [-0.2, 0, 7.5]], night: false, headlights: true, tint: 0xffd9a8, lightColor: 0xffc98a, lightPos: [-12, 10, -6], shadowOpacity: 0.38, end: "none" },
-  finale: { image: "/journey-v2/plate-handover.jpg", cameraPos: [0, 1.55, 11], lookAt: [0, 1.1, -10], fov: 37, path: [[-0.6, 0, -14], [-0.3, 0, -7], [0, 0, -1], [0.1, 0, 3.5]], night: false, headlights: true, tint: 0xffe0b0, lightColor: 0xffbe78, lightPos: [-10, 8, 6], shadowOpacity: 0.4, end: "stop" },
+  vladivostok: { image: "/journey-v2/plate-vladivostok-quay.jpg", cameraPos: [0, 1.6, 11], lookAt: [0.4, 1.2, -12], fov: 38, path: [[4.6, 0.9, -18], [3.6, 0.35, -10], [2.2, 0, -3], [0.8, 0, 3], [-0.2, 0, 7.5]], night: false, headlights: false, tint: 0xffd9a8, lightColor: 0xffc98a, lightPos: [-12, 10, -6], shadowOpacity: 0.38, end: "none" },
+  finale: { image: "/journey-v2/plate-handover.jpg", cameraPos: [0, 1.55, 11], lookAt: [0, 1.1, -10], fov: 37, path: [[-0.6, 0, -16], [-0.35, 0, -10], [-0.1, 0, -5.5], [0, 0, -3]], night: false, headlights: true, tint: 0xffe0b0, lightColor: 0xffbe78, lightPos: [-10, 8, 6], shadowOpacity: 0.4, end: "stop" },
 };
 
 export const BLOCKS: BlockDef[] = [
