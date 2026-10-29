@@ -25,7 +25,8 @@ async function launch() {
     ...(process.env.CHROMIUM_PATH
       ? { executablePath: process.env.CHROMIUM_PATH }
       : { executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" }),
-    args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+    // real GPU on the Mac (60 fps, Reflector + bloom render in time); software GL only for a custom CHROMIUM_PATH (CI/container)
+    args: process.env.CHROMIUM_PATH ? ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] : ["--enable-gpu", "--use-angle=metal"],
   });
   return browser;
 }

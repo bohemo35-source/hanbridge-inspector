@@ -9,7 +9,6 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
 import { Reflector } from "three/addons/objects/Reflector.js";
 import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
 import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
@@ -76,7 +75,7 @@ function cameraPose(p: number, outPos: THREE.Vector3, outTgt: THREE.Vector3, car
   if (p < 0.15) outTgt.x += carX * 0.55; // follow the car while it drives in
 }
 
-function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THREE.Group; reflector: Reflector | null; cones: THREE.Object3D[]; dispose: () => void } {
+function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THREE.Group; reflector: Reflector | null; cones: THREE.Object3D[]; leds: THREE.Object3D[]; dispose: () => void } {
   const group = new THREE.Group();
   const disposables: Array<{ dispose: () => void }> = [];
   const mat = (m: THREE.Material) => { disposables.push(m); return m; };
@@ -89,7 +88,7 @@ function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THRE
       clipBias: 0.003,
       textureWidth: 1024,
       textureHeight: 1024,
-      color: 0x232831,
+      color: 0x15181d,
     });
     reflector.rotation.x = -Math.PI / 2;
     reflector.position.y = -0.02;
@@ -97,9 +96,9 @@ function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THRE
   }
   const floor = new THREE.Mesh(
     geo(new THREE.PlaneGeometry(46, 30)),
-    mat(new THREE.MeshPhysicalMaterial({
-      color: 0x05070a, roughness: mobile ? 0.28 : 0.42, metalness: 0.45,
-      transparent: !mobile, opacity: mobile ? 1 : 0.86, envMapIntensity: 0.2,
+    mat(new THREE.MeshStandardMaterial({
+      color: 0x07090c, roughness: 0.92, metalness: 0.0,
+      transparent: !mobile, opacity: mobile ? 1 : 0.86, envMapIntensity: 0.0,
     })),
   );
   floor.rotation.x = -Math.PI / 2;
@@ -125,10 +124,12 @@ function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THRE
 
   // Ceiling LED strips (emissive) + light cones / haze.
   const cones: THREE.Object3D[] = [];
-  const ledMat = mat(new THREE.MeshBasicMaterial({ color: 0xeaf2ff }));
+  const leds: THREE.Object3D[] = [];
+  const ledMat = mat(new THREE.MeshBasicMaterial({ color: 0xc9d4e3 }));
   for (const z of [-2.6, 0, 2.6]) {
     const led = new THREE.Mesh(geo(new THREE.BoxGeometry(9, 0.06, 0.28)), ledMat);
     led.position.set(0, 4.4, z);
+    leds.push(led);
     group.add(led);
     const cone = new THREE.Mesh(
       geo(new THREE.ConeGeometry(1.7, 4.4, 24, 1, true)),
@@ -141,7 +142,7 @@ function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THRE
 
   // Low scissor platform lift: two runways on X-legs; nothing tall between the camera and the car.
   const lift = new THREE.Group();
-  const postMat = mat(new THREE.MeshStandardMaterial({ color: 0x252a32, roughness: 0.4, metalness: 0.8 }));
+  const postMat = mat(new THREE.MeshStandardMaterial({ color: 0x1d2128, roughness: 0.7, metalness: 0.35, envMapIntensity: 0.25 }));
   const yellowMat = mat(new THREE.MeshStandardMaterial({ color: 0xf5c518, roughness: 0.5, metalness: 0.3 }));
   const basePlate = new THREE.Mesh(geo(new THREE.BoxGeometry(4.6, 0.06, 2.3)), postMat);
   basePlate.position.set(0, 0.03, 0);
@@ -169,7 +170,7 @@ function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THRE
   liftArms.userData.legs = legs;
   group.add(lift);
 
-  return { group, liftArms, reflector, cones, dispose: () => disposables.forEach((d) => d.dispose()) };
+  return { group, liftArms, reflector, cones, leds, dispose: () => disposables.forEach((d) => d.dispose()) };
 }
 
 export default function GarageScene(props: GarageSceneProps) {
@@ -246,7 +247,7 @@ export default function GarageScene(props: GarageSceneProps) {
     const camera = new THREE.PerspectiveCamera(42, host.clientWidth / host.clientHeight, 0.1, 120);
 
     RectAreaLightUniformsLib.init();
-    const rect1 = new THREE.RectAreaLight(0xdfeaff, 2.6, 8, 0.5);
+    const rect1 = new THREE.RectAreaLight(0xdfeaff, 2.0, 8, 0.5);
     rect1.position.set(0, 4.35, -2.4);
     rect1.lookAt(0, 0, -2.4);
     const rect2 = rect1.clone();
@@ -318,13 +319,7 @@ export default function GarageScene(props: GarageSceneProps) {
         else if (kind === "wheel") material = wheelMat.clone();
         else if (kind === "light") material = lightMat.clone();
         else if (kind === "underbody") material = underMat.clone();
-        else material = new THREE.MeshPhysicalMaterial({ color: paintBase.clone(), metalness: 0.45, roughness: 0.36, clearcoat: 1, clearcoatRoughness: 0.07, envMapIntensity: 0.9 });
-        try {
-          const g = mergeVertices(mesh.geometry.deleteAttribute("normal") ?? mesh.geometry, 1e-4);
-          g.computeVertexNormals();
-          mesh.geometry.dispose();
-          mesh.geometry = g;
-        } catch { /* keep original normals */ }
+        else material = new THREE.MeshPhysicalMaterial({ color: paintBase.clone(), metalness: 0.3, roughness: 0.5, clearcoat: 0.55, clearcoatRoughness: 0.22, envMapIntensity: 0.8, sheen: 0.25, sheenRoughness: 0.6 });
         mesh.material = material;
         mesh.castShadow = true;
         mesh.receiveShadow = false;
@@ -451,6 +446,10 @@ export default function GarageScene(props: GarageSceneProps) {
       else cameraPose(p, camPos, camTgt, entry);
       camera.position.copy(camPos);
       camera.lookAt(camTgt);
+      // top-down readings view flies above the ceiling strips: hide them (and their haze) so they never cover the car
+      const aboveCeiling = camPos.y > 4.1;
+      env.leds.forEach((l) => { l.visible = !aboveCeiling; });
+      if (!eco) env.cones.forEach((c) => { c.visible = !aboveCeiling; });
 
       frames++;
       if (!eco && performance.now() - ecoAt > 2000) {
