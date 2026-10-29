@@ -106,5 +106,41 @@
     "ms": 31869,
     "bytes": 965590,
     "quality": 82
+  },
+  {
+    "file": "plate-seoul-bridge.jpg",
+    "prompt": "Night Seoul: a long illuminated bridge across a wide river, skyscraper lights on both banks, wet asphalt, one completely empty right traffic lane leading away into the distance in the foreground. Cinematic premium automotive advertising look, anamorphic lens, soft haze, photorealistic, no people, no text, no logos, no recognizable brands, no cars in the foreground, empty road lane or apron in the foreground where a car will drive, horizon at about 42 percent of frame height, eye-level camera at 1.5 metres, slight three-quarter view.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T16:23:16.963Z",
+    "ms": 28847,
+    "bytes": 367256,
+    "quality": 82
+  },
+  {
+    "file": "plate-port-ramp.jpg",
+    "prompt": "Night container port: portal cranes, rows of shipping containers, wet asphalt with sodium lamp reflections. On the right, the stern of a huge ro-ro car carrier ship with a lowered loading ramp and a brightly lit open hold doorway, empty apron and ramp in the foreground. Cinematic premium automotive advertising look, anamorphic lens, soft haze, photorealistic, no people, no text, no logos, no recognizable brands, no cars in the foreground, empty road lane or apron in the foreground where a car will drive, horizon at about 42 percent of frame height, eye-level camera at 1.5 metres, slight three-quarter view.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T16:23:41.372Z",
+    "ms": 23401,
+    "bytes": 357142,
+    "quality": 82
+  },
+  {
+    "file": "plate-vladivostok-quay.jpg",
+    "prompt": "Dawn in Vladivostok: rounded forested hills (sopki), Russian Far East, a cable-stayed bridge far away in haze, a quay with a ro-ro ship with a lowered ramp beside it, empty quay apron and ramp leading toward the camera in the foreground. Cinematic premium automotive advertising look, anamorphic lens, soft haze, photorealistic, no people, no text, no logos, no recognizable brands, no cars in the foreground, empty road lane or apron in the foreground where a car will drive, horizon at about 42 percent of frame height, eye-level camera at 1.5 metres, slight three-quarter view.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T16:24:25.516Z",
+    "ms": 44020,
+    "bytes": 282794,
+    "quality": 82
+  },
+  {
+    "file": "plate-handover.jpg",
+    "prompt": "Golden hour: a modern client house with a garage, a paved tiled driveway, warm light in the windows, empty driveway in the foreground leading to the house. Cinematic premium automotive advertising look, anamorphic lens, soft haze, photorealistic, no people, no text, no logos, no recognizable brands, no cars in the foreground, empty road lane or apron in the foreground where a car will drive, horizon at about 42 percent of frame height, eye-level camera at 1.5 metres, slight three-quarter view.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T16:24:47.101Z",
+    "ms": 20308,
+    "bytes": 344606,
+    "quality": 82
   }
 ]
