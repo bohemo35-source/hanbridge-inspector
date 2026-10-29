@@ -93,9 +93,15 @@ export const buildRoad: SceneBuilder = ({ scene, camera, car, tex, mobile, setHd
     mapGroup.add(halo, core);
     return [core, halo];
   });
-  const dotTex = blobShadowTexture(); // radial falloff reused as a glow mask
+  const dc = document.createElement("canvas"); dc.width = dc.height = 64;
+  const dg = dc.getContext("2d")!; const rg = dg.createRadialGradient(32, 32, 1, 32, 32, 31);
+  rg.addColorStop(0, "rgba(255,255,255,1)"); rg.addColorStop(0.25, "rgba(255,255,255,0.6)"); rg.addColorStop(1, "rgba(255,255,255,0)");
+  dg.fillStyle = rg; dg.fillRect(0, 0, 64, 64);
+  const dotTex = new THREE.CanvasTexture(dc);
+  // label anchors beside the dots, away from the route lines
+  const LABEL_OFF: Record<string, [number, number]> = { Vladivostok: [-17, 1], Novosibirsk: [19, 1], Almaty: [15, 3], Tashkent: [-8, 6], Moscow: [31, -1] };
   const dots = CITIES.map((c) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTex, color: 0xffe2a8, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); s.scale.setScalar(7); s.position.set(c.x, 0.8, c.z); mapGroup.add(s); return s; });
-  const labels = CITIES.map((c) => { const s = labelSprite(c.name); s.position.set(c.x, 2, c.z + 6.5); mapGroup.add(s); return s; });
+  const labels = CITIES.map((c) => { const s = labelSprite(c.name); const off = LABEL_OFF[c.name.split(" ")[0]] ?? [0, 6]; s.position.set(c.x + off[0], 2, c.z + off[1]); mapGroup.add(s); return s; });
 
   const heading = new THREE.Vector2();
   return {
@@ -136,7 +142,7 @@ export const buildRoad: SceneBuilder = ({ scene, camera, car, tex, mobile, setHd
       const inMap = map > 0;
       camera.fov = inMap ? MAP_FOV : DRIVE_FOV;
       camera.up.set(0, 0, -1);
-      if (inMap) { camera.position.set(-3, mapH, 12.001); camera.lookAt(-3, 0, 12); } else { camera.position.set(0, driveH, 0.001); camera.lookAt(0, 0, 0); }
+      if (inMap) { camera.position.set(-3, mapH, 9.001); camera.lookAt(-3, 0, 9); } else { camera.position.set(0, driveH, 0.001); camera.lookAt(0, 0, 0); }
       camera.updateProjectionMatrix();
       // plates fill the frustum just beyond the far side of the ground
       const d = camera.position.y + 30, fh = 2 * d * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));

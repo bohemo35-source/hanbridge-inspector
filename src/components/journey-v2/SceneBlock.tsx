@@ -37,7 +37,7 @@ export default function SceneBlock({ sceneId, blockId, heightVh, mobileScale, on
   useEffect(() => {
     const outer = outerRef.current, host = hostRef.current;
     if (!outer || !host) return;
-    let disposed = false;
+    let disposed = false, near = false, mounting = false;
     const cfg = BUILDERS[sceneId];
     const updateLocal = () => {
       const r = outer.getBoundingClientRect();
@@ -47,7 +47,8 @@ export default function SceneBlock({ sceneId, blockId, heightVh, mobileScale, on
       onProgress?.(sceneId, localRef.current);
     };
     const tryMount = async () => {
-      if (disposed || mountedRef.current || !cfg || !acquireCanvas()) return;
+      if (disposed || mounting || mountedRef.current || !cfg || !acquireCanvas()) return;
+      mounting = true;
       try {
         const template = await loadCarTemplate();
         if (disposed || mountedRef.current) { releaseCanvas(); return; }
@@ -60,18 +61,19 @@ export default function SceneBlock({ sceneId, blockId, heightVh, mobileScale, on
         }
         mountedRef.current = mountScene(host, builder, car);
         updateLocal();
-      } catch { releaseCanvas(); /* poster fallback stays visible */ }
+      } catch { releaseCanvas(); /* poster fallback stays visible */ } finally { mounting = false; }
     };
     const unmount = () => { mountedRef.current?.dispose(); mountedRef.current = null; releaseCanvas(); };
     const io = new IntersectionObserver((es) => {
-      es.forEach((e) => { if (e.isIntersecting) void tryMount(); });
+      es.forEach((e) => { near = e.isIntersecting; if (near) void tryMount(); });
     }, { rootMargin: "100% 0px 100% 0px" });
     io.observe(outer);
     const ioFar = new IntersectionObserver((es) => {
       es.forEach((e) => { if (!e.isIntersecting) unmount(); });
     }, { rootMargin: "200% 0px 200% 0px" });
     ioFar.observe(outer);
-    const onScroll = () => updateLocal();
+    // a fast jump can hit the 2-canvas cap before the block we left releases its slot: retry while near
+    const onScroll = () => { updateLocal(); if (near && !mountedRef.current) void tryMount(); };
     window.addEventListener("scroll", onScroll, { passive: true });
     updateLocal();
     return () => { disposed = true; io.disconnect(); ioFar.disconnect(); window.removeEventListener("scroll", onScroll); unmount(); };
