@@ -23,3 +23,7 @@
 
 ## Передача в новую сессию
 Читать `CONTEXT.md` + этот файл + новое ТЗ из `docs/tz/`. Ветка: `tz-09` (3 коммита + финальный с отчётом). Локальный сервер в песочнице не слушает порты — нужен `--sandbox-network enabled` или эскалация; скриншоты: `CHROMIUM_PATH=~/Library/Caches/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-mac-arm64/chrome-headless-shell node scripts/journey/capture.mjs http://localhost:3100`.
+
+## ТЗ-11 (ветка `tz-11`, не запушена, ждёт ревью)
+Journey v2 на `/`: цепочка коротких 3D-сцен (Сеул, Пусан, Владивосток, дорога сверху, вручение) + мосты Muse Image + `GarageScene` блоком (без изменений) + реальные отзывы из `public/reviews/manifest.json` (3 шт., положил ревьюер) + финал. HUD этапов, RU/EN, фолбэк-лента. Ассеты: `public/journey-v2/` (12 Muse Image, ≤1 МБ). Проверки: tsc 0, lint 0 err, vitest 99, build OK (в worktree — `.next` основной копии делит живой dev :3100, чужие процессы не трогать), скриншоты `docs/reports/assets/tz11-*`, FPS 60, страница 4150vh ≈ 2:05 скролла (цель 2:45 — высот из ТЗ не хватило). Отчёт `docs/reports/tz-11.md`.
+Следующий шаг: ревью → решить, наращивать ли высоты блоков до 2:45 и чинить рампу порта; запись полного скролла Артуром.
