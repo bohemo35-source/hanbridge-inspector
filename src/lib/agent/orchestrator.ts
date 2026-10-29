@@ -80,7 +80,7 @@ export async function runInspection(opts: {
   };
   const contextOverrides: { panel: string; median: number; quote: string; tStart: number }[] = [];
   const called = new Set<string>();
-  let listingUrl: string | undefined; let listingPhotoId: string | undefined;
+  let listingUrl: string | undefined; let listingPhotoId: string | undefined; let listingDropped = false;
   let handoffReason: string | undefined; let finalized = false;
   let shipping = getShippingStatus(reportId);
 
@@ -299,10 +299,14 @@ export async function runInspection(opts: {
           step("make_listing_photo", picked, Boolean(r.url), r.url ? `re-picked whole-car photo (${photoViews.get(picked) ?? "unlabelled"}): url=${r.url} plateHidden=${r.plateHidden}` : `skipped: ${r.rejectedReason}`, Date.now() - t0);
           if (r.url) { listingUrl = r.url; listingPhotoId = picked; }
         } catch (e) { step("make_listing_photo", picked, false, `re-pick failed: ${(e as Error).message}`, Date.now() - t0); }
-      } else step("make_listing_photo", candidates.join(","), false, "no whole-car photo with a hideable plate among candidates; kept the first listing", Date.now() - t0);
+      } else {
+        // a cab/dashboard/close-up shot is a bad public listing (it can even show the inspector) — drop it, the report uses the generated hero
+        step("make_listing_photo", candidates.join(","), false, `no whole-car photo with a hideable plate among ${candidates.length} candidates; listing dropped (was ${listingPhotoId ?? "none"})`, Date.now() - t0);
+        listingUrl = undefined; listingPhotoId = undefined; listingDropped = true;
+      }
     }
   }
-  if (!listingUrl && suggested[0]) {
+  if (!listingUrl && !listingDropped && suggested[0]) {
     try { const r = await makeListingPhoto({ carId: opts.carId, photoId: suggested[0], imagePath: photoPath(opts.carId, suggested[0]) }); if (r.url) { listingUrl = r.url; listingPhotoId = suggested[0]; } } catch { /* listing is optional */ }
   }
   if (listingUrl) listingUrl = await publishMedia(listingUrl, `media/${opts.carId}/${listingUrl.split("/").pop()}`);
