@@ -2,12 +2,14 @@
 // @project: hanbridge-inspector
 // @purpose: Shared 3D kit for journey-v2 blocks: ACES renderer, PMREM env, desktop bloom, eco mode, full dispose
 // @created: 2026-10-29
+// @updated: 2026-10-30 claude-code (HDRI env via RGBELoader, renderer/viewport in kit)
 "use client";
 import * as THREE from "three";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 
 export interface SceneKit {
   scene: THREE.Scene;
@@ -17,6 +19,11 @@ export interface SceneKit {
   tex: (path: string, repeat?: [number, number]) => THREE.Texture;
   setEnv: (path: string, bgColor?: number) => void;
   envFromTexture: (tex: THREE.Texture) => void;
+  /** CC0 HDRI (public/hdri) -> PMREM -> scene.environment (lighting/reflections only, never the visible background) */
+  setHdri: (path: string) => void;
+  renderer: THREE.WebGLRenderer;
+  /** CSS pixel size of the host (the sticky viewport) */
+  viewport: () => { w: number; h: number };
 }
 export interface SceneHandle { update: (p: number, t: number) => void; triangles: number }
 export type SceneBuilder = (kit: SceneKit) => SceneHandle;
@@ -51,9 +58,24 @@ export function mountScene(host: HTMLElement, build: SceneBuilder, car: THREE.Gr
   const texLoader = new THREE.TextureLoader();
   const disposables: Array<{ dispose: () => void }> = [];
   let envTex: THREE.Texture | null = null;
+  let disposed = false;
 
   const kit: SceneKit = {
-    scene, camera, car, mobile,
+    scene, camera, car, mobile, renderer,
+    viewport: () => ({ w: Math.max(1, host.clientWidth), h: Math.max(1, host.clientHeight) }),
+    setHdri: (path) => {
+      new RGBELoader().setDataType(THREE.FloatType).load(path, (hdr) => {
+        if (disposed) { hdr.dispose(); return; }
+        // clamp the sun: a raw HDRI sun (values in the thousands) blows the car out through bloom even at low intensity
+        const px = (hdr.image as unknown as { data?: Float32Array }).data;
+        if (px) for (let i = 0; i < px.length; i++) if (px[i] > 12) px[i] = 12;
+        hdr.mapping = THREE.EquirectangularReflectionMapping;
+        const env = pmrem.fromEquirectangular(hdr).texture;
+        hdr.dispose();
+        scene.environment?.dispose();
+        scene.environment = env;
+      }, undefined, () => { /* env stays empty: lights still work */ });
+    },
     tex: (path, repeat) => {
       const t = texLoader.load(path);
       t.colorSpace = THREE.SRGBColorSpace;
@@ -92,7 +114,7 @@ export function mountScene(host: HTMLElement, build: SceneBuilder, car: THREE.Gr
   const triangles = countTriangles(scene);
   host.dataset.triangles = String(triangles);
 
-  let disposed = false, raf = 0, progress = 0, frames = 0, fpsVal = 0, lastFpsT = performance.now();
+  let raf = 0, progress = 0, frames = 0, fpsVal = 0, lastFpsT = performance.now();
   const clock = new THREE.Clock();
   const loop = () => {
     if (disposed) return;

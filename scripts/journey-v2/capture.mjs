@@ -18,6 +18,7 @@ const OUT = process.env.OUT_DIR ? process.env.OUT_DIR.replace(/\/?$/, "/") : new
 // PREFIX=tz13 SUFFIX=-before -> tz12-01-seoul becomes tz13-seoul-before (default keeps tz12 names)
 const PREFIX = process.env.PREFIX ?? "", SUFFIX = process.env.SUFFIX ?? "";
 const AT = Number(process.env.AT ?? "0.5");
+const Q = process.env.QUERY ? `&${process.env.QUERY}` : ""; // e.g. QUERY='envint=0.5&exp=1.1' for tuning rounds
 const nm = (n) => (PREFIX ? n.replace(/^tz12-(\d+b?-)?/, `${PREFIX}-`) + SUFFIX : n);
 const errors = [];
 const launchOpts = {
@@ -60,7 +61,7 @@ for (const [name, id] of process.env.SKIP_DESKTOP ? [] : shots) {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => m.type() === "error" && errors.push(m.text().slice(0, 200)));
-  await page.goto(`${BASE}/?lang=ru`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/?lang=ru${Q}`, { waitUntil: "networkidle" });
   await page.waitForTimeout(3500);
   if (name === "tz12-01-seoul") console.log("pageHeight:", await page.evaluate(() => document.documentElement.scrollHeight), "vh:", await page.evaluate(() => document.documentElement.scrollHeight / window.innerHeight * 100));
   await midShot(page, name, id);
@@ -100,7 +101,7 @@ for (const [name, id] of [["tz12-mobile-seoul", "seoul"], ["tz12-mobile-port", "
   await fresh();
   const mob = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   mob.on("pageerror", (e) => errors.push("mobile: " + e.message));
-  await mob.goto(`${BASE}/?lang=ru`, { waitUntil: "networkidle" });
+  await mob.goto(`${BASE}/?lang=ru${Q}`, { waitUntil: "networkidle" });
   await mob.waitForTimeout(3000);
   await midShot(mob, name, id);
   await mob.close().catch(() => undefined);

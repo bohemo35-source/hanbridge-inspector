@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: One 3D block: mounts a WebGL scene only near the viewport (max 2 canvases), fully disposes when far
 // @created: 2026-10-29
+// @updated: 2026-10-30 claude-code (film grade overlay: vignette, tint, grain)
 "use client";
 import { useEffect, useRef } from "react";
 import { mountScene, acquireCanvas, releaseCanvas, type SceneBuilder, type Mounted } from "./sceneKit";
@@ -13,6 +14,7 @@ import { buildRoad } from "./scenes/RoadScene";
 import { buildFinale } from "./scenes/FinaleScene";
 import { makePlateScene } from "./scenes/PlateScene";
 import type { PlateConfig } from "./blocks";
+import FilmGrade from "./FilmGrade";
 
 const BUILDERS: Record<string, { build: SceneBuilder; env?: string }> = {
   seoul: { build: buildSeoul },
@@ -79,6 +81,7 @@ export default function SceneBlock({ sceneId, blockId, heightVh, mobileScale, on
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={poster} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />
         <div ref={hostRef} data-testid={`scene-${sceneId}`} className="absolute inset-0" />
+        <FilmGrade tint={plate?.grade} vignette={sceneId === "road" ? 0.4 : 0.5} />
       </div>
     </section>
   );
