@@ -41,10 +41,10 @@ async function midShot(page, name, blockId) {
 
 const ONLY = process.env.ONLY ?? "";
 const shots = [
-  ["tz11-01-seoul", "seoul"], ["tz11-02-sourcing", "bridge-sourcing"], ["tz11-03-garage", "garage"],
-  ["tz11-04-documents", "bridge-documents"], ["tz11-05-port", "port"], ["tz11-06-sea", "bridge-sea"],
-  ["tz11-07-vladivostok", "vladivostok"], ["tz11-08-customs", "bridge-customs"], ["tz11-09-road", "road"],
-  ["tz11-10-handover", "handover"], ["tz11-11-reviews", "reviews"], ["tz11-12-finale", "finale"],
+  ["tz12-01-seoul", "seoul"], ["tz12-02-sourcing", "bridge-sourcing"], ["tz12-03-garage", "garage"],
+  ["tz12-04-documents", "bridge-documents"], ["tz12-05-port", "port"], ["tz12-06-sea", "bridge-sea"],
+  ["tz12-07-vladivostok", "vladivostok"], ["tz12-08-customs", "bridge-customs"], ["tz12-09-road", "road"],
+  ["tz12-10-handover", "handover"], ["tz12-11-reviews", "reviews"], ["tz12-12-finale", "finale"],
 ];
 for (const [name, id] of shots) {
   if (ONLY && !name.includes(ONLY)) continue;
@@ -53,25 +53,47 @@ for (const [name, id] of shots) {
   page.on("console", (m) => m.type() === "error" && errors.push(m.text().slice(0, 200)));
   await page.goto(`${BASE}/?lang=ru`, { waitUntil: "networkidle" });
   await page.waitForTimeout(3500);
-  if (name === "tz11-01-seoul") console.log("pageHeight:", await page.evaluate(() => document.documentElement.scrollHeight), "vh:", await page.evaluate(() => document.documentElement.scrollHeight / window.innerHeight * 100));
+  if (name === "tz12-01-seoul") console.log("pageHeight:", await page.evaluate(() => document.documentElement.scrollHeight), "vh:", await page.evaluate(() => document.documentElement.scrollHeight / window.innerHeight * 100));
   await midShot(page, name, id);
   await page.close().catch(() => undefined);
 }
 
 if (process.env.SKIP_EXTRA) { console.log("page errors:", JSON.stringify(errors.slice(0, 10))); await browser.close(); process.exit(0); }
+// debug plate overlays (grid + path) for the 4 plates
+for (const id of ["seoul", "port", "vladivostok", "handover"]) {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(`${BASE}/?lang=ru&debug=plate`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(3000);
+  await page.evaluate((bid) => { const el = document.querySelector(`[data-journey-block="${bid}"]`); if (!el) return; const r = el.getBoundingClientRect(); window.scrollTo(0, window.scrollY + r.top + Math.max(0, (r.height - window.innerHeight) / 2)); }, id);
+  await page.waitForTimeout(7000);
+  await page.screenshot({ path: `${OUT}tz12-debug-plate-${id}.png`, timeout: 150000 });
+  console.log("saved", `tz12-debug-plate-${id}`);
+  await page.close().catch(() => undefined);
+}
+// port end: car entering the hold
+{
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(`${BASE}/?lang=ru`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(3000);
+  await page.evaluate(() => { const el = document.querySelector(`[data-journey-block="port"]`); if (!el) return; const r = el.getBoundingClientRect(); window.scrollTo(0, window.scrollY + r.top + Math.max(0, (r.height - window.innerHeight) * 0.92)); });
+  await page.waitForTimeout(7000);
+  await page.screenshot({ path: `${OUT}tz12-05b-port-end.png`, timeout: 150000 });
+  console.log("saved tz12-05b-port-end");
+  await page.close().catch(() => undefined);
+}
 const mob = await browser.newPage({ viewport: { width: 390, height: 844 } });
 mob.on("pageerror", (e) => errors.push("mobile: " + e.message));
 await mob.goto(`${BASE}/?lang=ru`, { waitUntil: "networkidle" });
 await mob.waitForTimeout(3000);
-for (const [name, id] of [["tz11-mobile-seoul", "seoul"], ["tz11-mobile-port", "port"], ["tz11-mobile-road", "road"]]) await midShot(mob, name, id);
+for (const [name, id] of [["tz12-mobile-seoul", "seoul"], ["tz12-mobile-port", "port"], ["tz12-mobile-road", "road"]]) await midShot(mob, name, id);
 await mob.close();
 
 const fb = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 await fb.goto(`${BASE}/?no3d=1&lang=ru`, { waitUntil: "networkidle" });
 await fb.waitForTimeout(2500);
 console.log("fallback blocks:", await fb.locator("[data-fallback-block]").count());
-await fb.screenshot({ path: `${OUT}tz11-fallback.png`, timeout: 150000 });
-console.log("saved tz11-fallback");
+await fb.screenshot({ path: `${OUT}tz12-fallback.png`, timeout: 150000 });
+console.log("saved tz12-fallback");
 await fb.close();
 console.log("page errors:", JSON.stringify(errors.slice(0, 10)));
 await browser.close();

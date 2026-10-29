@@ -11,6 +11,8 @@ import { buildPort } from "./scenes/PortScene";
 import { buildVladivostok } from "./scenes/VladivostokScene";
 import { buildRoad } from "./scenes/RoadScene";
 import { buildFinale } from "./scenes/FinaleScene";
+import { makePlateScene } from "./scenes/PlateScene";
+import type { PlateConfig } from "./blocks";
 
 const BUILDERS: Record<string, { build: SceneBuilder; env?: string }> = {
   seoul: { build: buildSeoul },
@@ -20,7 +22,7 @@ const BUILDERS: Record<string, { build: SceneBuilder; env?: string }> = {
   finale: { build: buildFinale },
 };
 
-export default function SceneBlock({ sceneId, blockId, heightVh, mobileScale, onProgress }: { sceneId: string; blockId?: string; heightVh: number; mobileScale: number; onProgress?: (blockId: string, local: number) => void }) {
+export default function SceneBlock({ sceneId, blockId, heightVh, mobileScale, onProgress, plate }: { sceneId: string; blockId?: string; heightVh: number; mobileScale: number; onProgress?: (blockId: string, local: number) => void; plate?: PlateConfig }) {
   const outerRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const mountedRef = useRef<Mounted | null>(null);
@@ -44,7 +46,13 @@ export default function SceneBlock({ sceneId, blockId, heightVh, mobileScale, on
         const template = await loadCarTemplate();
         if (disposed || mountedRef.current) { releaseCanvas(); return; }
         const car = cloneCar(template);
-        mountedRef.current = mountScene(host, cfg.build, car);
+        let builder = cfg.build;
+        if (plate) {
+          const ok = await new Promise<boolean>((res) => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = plate.image; });
+          if (ok) builder = makePlateScene(plate, new URLSearchParams(window.location.search).has("debug"));
+          // on plate load error the legacy code scene stays as fallback
+        }
+        mountedRef.current = mountScene(host, builder, car);
         updateLocal();
       } catch { releaseCanvas(); /* poster fallback stays visible */ }
     };
@@ -64,7 +72,7 @@ export default function SceneBlock({ sceneId, blockId, heightVh, mobileScale, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneId]);
 
-  const poster = sceneId === "seoul" ? "/journey-v2/env-seoul-night.jpg" : sceneId === "port" ? "/journey-v2/env-port-night.jpg" : sceneId === "vladivostok" ? "/journey-v2/env-vladivostok-dawn.jpg" : sceneId === "finale" ? "/journey-v2/env-golden-hour.jpg" : "/journey-v2/tex-terrain-forest.jpg";
+  const poster = plate?.image ?? (sceneId === "seoul" ? "/journey-v2/env-seoul-night.jpg" : sceneId === "port" ? "/journey-v2/env-port-night.jpg" : sceneId === "vladivostok" ? "/journey-v2/env-vladivostok-dawn.jpg" : sceneId === "finale" ? "/journey-v2/env-golden-hour.jpg" : "/journey-v2/tex-terrain-forest.jpg");
   return (
     <section ref={outerRef} data-journey-block={blockId ?? sceneId} className="relative w-full" style={{ height: `calc(${heightVh}vh * ${mobileScale})` }}>
       <div className="sticky top-0 h-[100svh] w-full overflow-hidden bg-[#07090d]">

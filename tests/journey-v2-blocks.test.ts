@@ -3,14 +3,14 @@
 // @purpose: Journey v2 pure tests: block chain, HUD reachability, copy completeness, empty-reviews hiding
 // @created: 2026-10-29
 import { describe, it, expect } from "vitest";
-import { BLOCKS, HUD_ORDER, blockAt, stageForBlock, startProgressOf, totalVh } from "@/components/journey-v2/blocks";
+import { BLOCKS, HUD_ORDER, PLATES, blockAt, stageForBlock, startProgressOf, totalVh } from "@/components/journey-v2/blocks";
 import { CAPTIONS, HUD_LABELS, FINALE } from "@/components/journey-v2/copy";
 import { STAGE_CONTENT } from "@/components/journey-3d/stageContent";
 
 describe("journey-v2 blocks", () => {
   it("total height is the sum and equals story length", () => {
     expect(totalVh()).toBe(BLOCKS.reduce((s, b) => s + b.vh, 0));
-    expect(totalVh()).toBe(4250);
+    expect(totalVh()).toBe(5500);
   });
   it("blockAt boundaries and monotonicity", () => {
     expect(blockAt(0).index).toBe(0);
@@ -49,6 +49,26 @@ describe("journey-v2 blocks", () => {
     const reviews: unknown[] = [];
     const visible = BLOCKS.filter((b) => b.kind !== "reviews" || reviews.length > 0);
     expect(visible.some((b) => b.kind === "reviews")).toBe(false);
-    expect(totalVh(visible)).toBe(4050);
+    expect(totalVh(visible)).toBe(5300);
+  });
+  it("plates: 4 plate blocks with paths, cameras in 35-40 FOV, port ends in hold", () => {
+    const plated = BLOCKS.filter((b) => b.plate);
+    expect(plated.map((b) => b.id)).toEqual(["seoul", "port", "vladivostok", "handover"]);
+    for (const b of plated) {
+      expect(b.plate!.image).toMatch(/^\/journey-v2\/plate-.*\.jpg$/);
+      expect(b.plate!.path.length).toBeGreaterThanOrEqual(3);
+      expect(b.plate!.fov).toBeGreaterThanOrEqual(35);
+      expect(b.plate!.fov).toBeLessThanOrEqual(40);
+      expect(b.plate!.shadowOpacity).toBeGreaterThanOrEqual(0.35);
+      expect(b.plate!.shadowOpacity).toBeLessThanOrEqual(0.5);
+    }
+    expect(PLATES.port.end).toBe("hold");
+    expect(PLATES.finale.end).toBe("stop");
+    expect(PLATES.seoul.night).toBe(true);
+  });
+  it("HUD: reviews and finale map to delivery in the chain order", () => {
+    const ids = BLOCKS.map((b) => b.id);
+    expect(ids.indexOf("reviews")).toBeGreaterThan(ids.indexOf("road"));
+    expect(ids[ids.length - 1]).toBe("finale");
   });
 });

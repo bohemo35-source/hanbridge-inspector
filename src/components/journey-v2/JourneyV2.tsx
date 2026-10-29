@@ -22,8 +22,8 @@ const HUD_BY_BLOCK: Record<string, string> = {
   port: "port", "bridge-sea": "sea", vladivostok: "arrival", "bridge-customs": "customs", road: "delivery", handover: "delivery", reviews: "delivery", finale: "delivery",
 };
 const FALLBACK_IMG: Record<string, string> = {
-  seoul: "/journey-v2/env-seoul-night.jpg", port: "/journey-v2/env-port-night.jpg", vladivostok: "/journey-v2/env-vladivostok-dawn.jpg",
-  road: "/journey-v2/tex-terrain-forest.jpg", finale: "/journey-v2/env-golden-hour.jpg",
+  seoul: "/journey-v2/plate-seoul-bridge.jpg", port: "/journey-v2/plate-port-ramp.jpg", vladivostok: "/journey-v2/plate-vladivostok-quay.jpg",
+  road: "/journey-v2/tex-terrain-forest.jpg", finale: "/journey-v2/plate-handover.jpg",
 };
 
 export default function JourneyV2({ report, lang, reviews }: { report?: Report; lang: Lang; reviews: ReviewItem[] }) {
@@ -82,7 +82,7 @@ export default function JourneyV2({ report, lang, reviews }: { report?: Report; 
 }
 
 function Block({ block, lang, report, reviews, mobileScale }: { block: BlockDef; lang: Lang; report?: Report; reviews: ReviewItem[]; mobileScale: number }) {
-  if (block.kind === "scene3d" && block.scene) return <SceneBlock sceneId={block.scene} blockId={block.id} heightVh={block.vh} mobileScale={mobileScale} />;
+  if (block.kind === "scene3d" && block.scene) return <SceneBlock sceneId={block.scene} blockId={block.id} heightVh={block.vh} mobileScale={mobileScale} plate={block.plate} />;
   if (block.kind === "bridge" && block.bridgeImage && block.bridgeStage) return <Bridge id={block.id} image={block.bridgeImage} stage={block.bridgeStage} heightVh={block.vh} mobileScale={mobileScale} lang={lang} />;
   if (block.kind === "garage") return <div data-journey-block="garage"><GarageScene report={report} lang={lang} /></div>;
   if (block.kind === "reviews") return <ReviewsSection reviews={reviews} lang={lang} />;

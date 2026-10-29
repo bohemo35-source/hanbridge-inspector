@@ -5,6 +5,21 @@
 import type { StageId } from "@/components/journey-3d/route";
 
 export type BlockKind = "scene3d" | "bridge" | "garage" | "reviews" | "finale";
+/** Plate compositing config (TZ-12): photo background + 3D car. Camera/path tuned per plate by screenshots (?debug=plate). */
+export interface PlateConfig {
+  image: string;
+  cameraPos: [number, number, number];
+  lookAt: [number, number, number];
+  fov: number;
+  path: Array<[number, number, number]>;
+  night: boolean;
+  headlights: boolean;
+  tint: number;
+  lightColor: number;
+  lightPos: [number, number, number];
+  shadowOpacity: number;
+  end: "none" | "hold" | "stop";
+}
 export interface BlockDef {
   id: string;
   kind: BlockKind;
@@ -12,21 +27,29 @@ export interface BlockDef {
   vh: number;
   stage: StageId | null;
   scene?: "seoul" | "port" | "vladivostok" | "road" | "finale";
+  plate?: PlateConfig;
   bridgeImage?: string;
   bridgeStage?: StageId;
 }
 
+export const PLATES: Record<string, PlateConfig> = {
+  seoul: { image: "/journey-v2/plate-seoul-bridge.jpg", cameraPos: [0, 1.55, 10], lookAt: [1.2, 1.1, -12], fov: 38, path: [[2.6, 0, 7], [2.2, 0, 1], [2.6, 0, -6], [3.4, 0, -14], [4.2, 0, -22]], night: true, headlights: true, tint: 0x8fb4e8, lightColor: 0xaac8ff, lightPos: [-8, 14, 4], shadowOpacity: 0.42, end: "none" },
+  port: { image: "/journey-v2/plate-port-ramp.jpg", cameraPos: [0, 1.65, 11], lookAt: [1.6, 1.4, -12], fov: 38, path: [[-2.4, 0, 7], [-0.8, 0, 1], [0.8, 0, -5], [2.0, 0.35, -11], [2.8, 0.9, -17]], night: true, headlights: true, tint: 0xffc98a, lightColor: 0xffb066, lightPos: [-10, 16, 2], shadowOpacity: 0.48, end: "hold" },
+  vladivostok: { image: "/journey-v2/plate-vladivostok-quay.jpg", cameraPos: [0, 1.6, 11], lookAt: [0.4, 1.2, -12], fov: 38, path: [[1.8, 0.9, -18], [1.4, 0.35, -10], [0.8, 0, -3], [0.2, 0, 3], [-0.2, 0, 7.5]], night: false, headlights: true, tint: 0xffd9a8, lightColor: 0xffc98a, lightPos: [-12, 10, -6], shadowOpacity: 0.38, end: "none" },
+  finale: { image: "/journey-v2/plate-handover.jpg", cameraPos: [0, 1.55, 11], lookAt: [0, 1.1, -10], fov: 37, path: [[-0.6, 0, -14], [-0.3, 0, -7], [0, 0, -1], [0.1, 0, 3.5]], night: false, headlights: true, tint: 0xffe0b0, lightColor: 0xffbe78, lightPos: [-10, 8, 6], shadowOpacity: 0.4, end: "stop" },
+};
+
 export const BLOCKS: BlockDef[] = [
-  { id: "seoul", kind: "scene3d", vh: 500, stage: null, scene: "seoul" },
-  { id: "bridge-sourcing", kind: "bridge", vh: 300, stage: "inspection", bridgeImage: "/journey-v2/bridge-sourcing.jpg", bridgeStage: "inspection" },
+  { id: "seoul", kind: "scene3d", vh: 650, stage: null, scene: "seoul", plate: PLATES.seoul },
+  { id: "bridge-sourcing", kind: "bridge", vh: 350, stage: "inspection", bridgeImage: "/journey-v2/bridge-sourcing.jpg", bridgeStage: "inspection" },
   { id: "garage", kind: "garage", vh: 500, stage: "inspection" },
-  { id: "bridge-documents", kind: "bridge", vh: 300, stage: "korea_road", bridgeImage: "/journey-v2/bridge-documents.jpg", bridgeStage: "korea_road" },
-  { id: "port", kind: "scene3d", vh: 450, stage: "port_busan", scene: "port" },
-  { id: "bridge-sea", kind: "bridge", vh: 450, stage: "sea", bridgeImage: "/journey-v2/bridge-sea.jpg", bridgeStage: "sea" },
-  { id: "vladivostok", kind: "scene3d", vh: 400, stage: "vladivostok", scene: "vladivostok" },
-  { id: "bridge-customs", kind: "bridge", vh: 300, stage: "customs", bridgeImage: "/journey-v2/bridge-customs.jpg", bridgeStage: "customs" },
-  { id: "road", kind: "scene3d", vh: 450, stage: "delivery", scene: "road" },
-  { id: "handover", kind: "scene3d", vh: 300, stage: "delivery", scene: "finale" },
+  { id: "bridge-documents", kind: "bridge", vh: 400, stage: "korea_road", bridgeImage: "/journey-v2/bridge-documents.jpg", bridgeStage: "korea_road" },
+  { id: "port", kind: "scene3d", vh: 600, stage: "port_busan", scene: "port", plate: PLATES.port },
+  { id: "bridge-sea", kind: "bridge", vh: 750, stage: "sea", bridgeImage: "/journey-v2/bridge-sea.jpg", bridgeStage: "sea" },
+  { id: "vladivostok", kind: "scene3d", vh: 500, stage: "vladivostok", scene: "vladivostok", plate: PLATES.vladivostok },
+  { id: "bridge-customs", kind: "bridge", vh: 350, stage: "customs", bridgeImage: "/journey-v2/bridge-customs.jpg", bridgeStage: "customs" },
+  { id: "road", kind: "scene3d", vh: 700, stage: "delivery", scene: "road" },
+  { id: "handover", kind: "scene3d", vh: 400, stage: "delivery", scene: "finale", plate: PLATES.finale },
   { id: "reviews", kind: "reviews", vh: 200, stage: null },
   { id: "finale", kind: "finale", vh: 100, stage: null },
 ];

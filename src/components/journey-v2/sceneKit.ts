@@ -16,6 +16,7 @@ export interface SceneKit {
   mobile: boolean;
   tex: (path: string, repeat?: [number, number]) => THREE.Texture;
   setEnv: (path: string, bgColor?: number) => void;
+  envFromTexture: (tex: THREE.Texture) => void;
 }
 export interface SceneHandle { update: (p: number, t: number) => void; triangles: number }
 export type SceneBuilder = (kit: SceneKit) => SceneHandle;
@@ -60,6 +61,7 @@ export function mountScene(host: HTMLElement, build: SceneBuilder, car: THREE.Gr
       disposables.push(t);
       return t;
     },
+    envFromTexture: (tex) => { scene.environment = pmrem.fromEquirectangular(tex).texture; },
     setEnv: (path, bgColor) => {
       texLoader.load(path, (tex) => {
         if (disposed) return;
