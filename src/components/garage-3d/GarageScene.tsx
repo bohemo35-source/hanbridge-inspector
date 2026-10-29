@@ -9,6 +9,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
 import { Reflector } from "three/addons/objects/Reflector.js";
 import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
 import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
@@ -19,7 +20,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import type { Report } from "@/lib/schema";
 import { panelLabel } from "@/lib/domain/panels";
 import {
-  BEAT_CAPTIONS, PART_MAP, beatAt, entryOffset, explodeAmount, explodeOffset, findingsByPanel,
+  BEAT_CAPTIONS, REASSEMBLE_CAPTION, PART_MAP, beatAt, entryOffset, explodeAmount, explodeOffset, findingsByPanel,
   liftAmount, obdInfo, partExplodeT, partIndex, progressCenterOfBeat, readingsByPart, verdictCounts,
   type Beat,
 } from "./parts";
@@ -52,13 +53,14 @@ const smooth = (t: number) => { const x = clamp01(t); return x * x * (3 - 2 * x)
  * [progress, azimuthDeg, radius, height, lookAtY]. 0deg = front (+x), 90deg = right side (+z).
  */
 const CAM_KEYS: Array<[number, number, number, number, number]> = [
-  [0.0, 35, 7.6, 0.7, 0.6],
-  [0.15, 52, 6.8, 1.2, 0.7],
-  [0.3, 74, 5.6, 0.5, 1.05],
-  [0.55, 138, 7.0, 2.5, 1.1],
-  [0.75, 214, 7.2, 2.1, 1.2],
-  [0.88, 266, 6.4, 1.7, 1.0],
-  [1.0, 328, 7.0, 1.35, 0.75],
+  [0.0, 30, 8.2, 0.8, 0.6],
+  [0.15, 58, 7.4, 1.0, 0.75],
+  [0.3, 96, 6.8, 0.45, 1.15],
+  [0.55, 150, 9.0, 3.6, 1.15],
+  [0.66, 182, 6.4, 7.0, 0.9],
+  [0.75, 215, 9.0, 3.8, 1.15],
+  [0.88, 262, 8.2, 2.0, 1.0],
+  [1.0, 322, 7.8, 1.3, 0.75],
 ];
 
 function cameraPose(p: number, outPos: THREE.Vector3, outTgt: THREE.Vector3, carX: number) {
@@ -87,7 +89,7 @@ function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THRE
       clipBias: 0.003,
       textureWidth: 1024,
       textureHeight: 1024,
-      color: 0x39414c,
+      color: 0x232831,
     });
     reflector.rotation.x = -Math.PI / 2;
     reflector.position.y = -0.02;
@@ -96,8 +98,8 @@ function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THRE
   const floor = new THREE.Mesh(
     geo(new THREE.PlaneGeometry(46, 30)),
     mat(new THREE.MeshPhysicalMaterial({
-      color: 0x05070a, roughness: mobile ? 0.25 : 0.38, metalness: 0.5,
-      transparent: !mobile, opacity: mobile ? 1 : 0.78, envMapIntensity: 0.22,
+      color: 0x05070a, roughness: mobile ? 0.28 : 0.42, metalness: 0.45,
+      transparent: !mobile, opacity: mobile ? 1 : 0.86, envMapIntensity: 0.2,
     })),
   );
   floor.rotation.x = -Math.PI / 2;
@@ -137,42 +139,41 @@ function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THRE
     group.add(cone);
   }
 
-  // Two-post lift: posts, crossbar, lifting arms with yellow tips.
+  // Low scissor platform lift: two runways on X-legs; nothing tall between the camera and the car.
   const lift = new THREE.Group();
-  const postMat = mat(new THREE.MeshStandardMaterial({ color: 0x232830, roughness: 0.45, metalness: 0.75 }));
+  const postMat = mat(new THREE.MeshStandardMaterial({ color: 0x252a32, roughness: 0.4, metalness: 0.8 }));
   const yellowMat = mat(new THREE.MeshStandardMaterial({ color: 0xf5c518, roughness: 0.5, metalness: 0.3 }));
-  for (const side of [-1, 1]) {
-    const post = new THREE.Mesh(geo(new THREE.BoxGeometry(0.34, 3.1, 0.3)), postMat);
-    post.position.set(0.25, 1.55, side * 1.62);
-    post.castShadow = true;
-    const base = new THREE.Mesh(geo(new THREE.BoxGeometry(0.7, 0.08, 0.6)), postMat);
-    base.position.set(0.25, 0.04, side * 1.62);
-    lift.add(post, base);
-  }
-  const crossbar = new THREE.Mesh(geo(new THREE.BoxGeometry(0.22, 0.22, 3.3)), postMat);
-  crossbar.position.set(0.25, 3.05, 0);
-  lift.add(crossbar);
+  const basePlate = new THREE.Mesh(geo(new THREE.BoxGeometry(4.6, 0.06, 2.3)), postMat);
+  basePlate.position.set(0, 0.03, 0);
+  basePlate.receiveShadow = true;
+  lift.add(basePlate);
   const liftArms = new THREE.Group();
   for (const side of [-1, 1]) {
-    const carriage = new THREE.Mesh(geo(new THREE.BoxGeometry(0.4, 0.34, 0.22)), postMat);
-    carriage.position.set(0.25, 0, side * 1.5);
-    liftArms.add(carriage);
-    for (const dx of [-0.95, 0.95]) {
-      const arm = new THREE.Mesh(geo(new THREE.BoxGeometry(0.14, 0.06, 0.95)), postMat);
-      arm.position.set(0.25 + dx, 0, side * 1.05);
-      const pad = new THREE.Mesh(geo(new THREE.BoxGeometry(0.24, 0.07, 0.24)), yellowMat);
-      pad.position.set(0.25 + dx, 0.06, side * 0.6);
-      liftArms.add(arm, pad);
-    }
+    const runway = new THREE.Mesh(geo(new THREE.BoxGeometry(4.3, 0.1, 0.55)), postMat);
+    runway.position.set(0, 0, side * 0.78);
+    runway.castShadow = true;
+    const edge = new THREE.Mesh(geo(new THREE.BoxGeometry(4.3, 0.012, 0.06)), yellowMat);
+    edge.position.set(0, 0.056, side * 1.03);
+    liftArms.add(runway, edge);
   }
   lift.add(liftArms);
+  // scissor legs scale with the lift height (updated per frame via userData)
+  const legs = new THREE.Group();
+  for (const side of [-1, 1]) for (const dir of [-1, 1]) {
+    const leg = new THREE.Mesh(geo(new THREE.BoxGeometry(2.6, 0.07, 0.07)), postMat);
+    leg.position.set(0, 0, side * 0.78);
+    leg.userData.dir = dir;
+    legs.add(leg);
+  }
+  lift.add(legs);
+  liftArms.userData.legs = legs;
   group.add(lift);
 
   return { group, liftArms, reflector, cones, dispose: () => disposables.forEach((d) => d.dispose()) };
 }
 
 export default function GarageScene(props: GarageSceneProps) {
-  const { report, lang, paint = "#434a54", compact = false, debugParts = false, pinnedBeat } = props;
+  const { report, lang, paint = "#2b3139", compact = false, debugParts = false, pinnedBeat } = props;
   const outerRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const [webgl, setWebgl] = useState<boolean | null>(null);
@@ -317,7 +318,13 @@ export default function GarageScene(props: GarageSceneProps) {
         else if (kind === "wheel") material = wheelMat.clone();
         else if (kind === "light") material = lightMat.clone();
         else if (kind === "underbody") material = underMat.clone();
-        else material = new THREE.MeshPhysicalMaterial({ color: paintBase.clone(), metalness: 0.3, roughness: 0.4, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.85 });
+        else material = new THREE.MeshPhysicalMaterial({ color: paintBase.clone(), metalness: 0.45, roughness: 0.36, clearcoat: 1, clearcoatRoughness: 0.07, envMapIntensity: 0.9 });
+        try {
+          const g = mergeVertices(mesh.geometry.deleteAttribute("normal") ?? mesh.geometry, 1e-4);
+          g.computeVertexNormals();
+          mesh.geometry.dispose();
+          mesh.geometry = g;
+        } catch { /* keep original normals */ }
         mesh.material = material;
         mesh.castShadow = true;
         mesh.receiveShadow = false;
@@ -349,10 +356,12 @@ export default function GarageScene(props: GarageSceneProps) {
         } else {
           const reading = readings.get(name);
           const fin = def?.panel ? panelFindings.get(def.panel) : undefined;
-          if (reading || fin?.unverified) {
+          if (reading || fin) {
             const bits: string[] = [];
             if (reading) bits.push(`<b style="color:${CLASS_COLOR[reading.cls]}">${reading.microns} ${lang === "ru" ? "мкм" : "µm"}</b>`);
-            if (fin?.unverified) bits.push(`<span style="color:#c4b5fd">${lang === "ru" ? "не подтверждено" : "unconfirmed"}</span>`);
+            if (reading && reading.cls !== "factory") bits.push(`<span style="color:${CLASS_COLOR[reading.cls]}">${CLASS_LABEL[lang][reading.cls]}</span>`);
+            if (fin?.verified) bits.push(`<span style="color:#86efac">✓ ${lang === "ru" ? "подтверждено" : "verified"}</span>`);
+            else if (fin?.unverified) bits.push(`<span style="color:#c4b5fd">${lang === "ru" ? "не подтверждено" : "unconfirmed"}</span>`);
             const { obj, el } = makeLabel(bits.join(" · "), "garage-gauge-label");
             el.style.opacity = "0";
             rec.label = obj; rec.labelEl = el;
@@ -397,9 +406,16 @@ export default function GarageScene(props: GarageSceneProps) {
 
       const entry = entryOffset(p);
       const lift = liftAmount(p);
-      const explode = explodeAmount(p);
+      const explode = explodeAmount(p, !!obd);
       carGroup.position.set(entry, lift, 0);
-      env.liftArms.position.y = 0.2 + lift;
+      env.liftArms.position.y = 0.11 + lift;
+      const legs = env.liftArms.userData.legs as THREE.Group;
+      const h = 0.11 + lift;
+      legs.children.forEach((leg) => {
+        const ang = Math.asin(Math.min(0.95, h / 2.6)) * (leg.userData.dir as number);
+        leg.rotation.z = ang;
+        leg.position.y = h / 2;
+      });
 
       // Beat 3: tint measured panels by paint class; verified findings pulse.
       const tintK = info.beat === 3 ? smooth(info.local * 3) : info.beat === 4 ? 1 : 0;
@@ -412,7 +428,7 @@ export default function GarageScene(props: GarageSceneProps) {
           if (rec.name === "tripo_part_0") { rec.label.position.x += 1.2; rec.label.position.z -= 0.8; }
         }
         if (rec.labelEl) {
-          const show = debugParts ? 1 : info.beat >= 3 && info.beat <= 4 ? clamp01((p - 0.53) / 0.05) * (info.beat === 4 ? 0.55 : 1) : 0;
+          const show = debugParts ? 1 : info.beat === 3 ? clamp01((p - 0.56) / 0.04) : info.beat === 4 && obd ? 0.55 : 0;
           rec.labelEl.style.opacity = String(debugParts ? 1 : show);
         }
         if (!debugParts && def?.kind !== "body") {
@@ -533,9 +549,7 @@ export default function GarageScene(props: GarageSceneProps) {
         {!debugParts && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-5 sm:p-8">
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-400">{beat + 1} / 6</p>
-            {beat === 4 && !obdText ? null : (
-              <h2 className="mt-1 max-w-2xl text-2xl font-semibold text-white sm:text-4xl">{BEAT_CAPTIONS[beat][lang]}</h2>
-            )}
+            <h2 className="mt-1 max-w-2xl text-2xl font-semibold text-white sm:text-4xl">{beat === 4 && !obdText ? REASSEMBLE_CAPTION[lang] : BEAT_CAPTIONS[beat][lang]}</h2>
             {beat === 4 && obdText && <p className="mt-2 inline-block rounded-full bg-emerald-400/15 px-3 py-1 text-sm font-medium text-emerald-300">{obdText}</p>}
             {beat === 3 && readings.size > 0 && (
               <p className="mt-2 text-sm text-zinc-300">

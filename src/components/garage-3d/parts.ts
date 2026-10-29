@@ -26,26 +26,26 @@ export interface PartDef {
  */
 export const PART_MAP: Record<string, PartDef> = {
   tripo_part_0: { panel: "front_left_fender", kind: "body", dir: [0, 0, 0], dist: 0, order: 0 },
-  tripo_part_19: { panel: "hood", kind: "panel", dir: [0.25, 1, 0], dist: 0.95, order: 2 },
-  tripo_part_18: { panel: "front_bumper", kind: "panel", dir: [1, 0.05, 0], dist: 1.05, order: 1 },
-  tripo_part_12: { panel: "front_right_fender", kind: "panel", dir: [0.15, 0.1, 1], dist: 0.85, order: 3 },
-  tripo_part_7: { panel: "front_left_door", kind: "panel", dir: [0, 0.08, -1], dist: 0.95, order: 4 },
-  tripo_part_9: { panel: "rear_left_door", kind: "panel", dir: [0, 0.08, -1], dist: 0.95, order: 5 },
-  tripo_part_20: { panel: "front_right_door", kind: "panel", dir: [0, 0.08, 1], dist: 0.95, order: 4 },
-  tripo_part_21: { panel: "rear_right_door", kind: "panel", dir: [0, 0.08, 1], dist: 0.95, order: 5 },
-  tripo_part_6: { panel: "rear_left_fender", kind: "panel", dir: [-0.45, 0.08, -1], dist: 0.9, order: 6 },
-  tripo_part_10: { panel: "rear_right_fender", kind: "panel", dir: [-0.45, 0.08, 1], dist: 0.9, order: 6 },
-  tripo_part_5: { panel: "rear_bumper", kind: "panel", dir: [-1, 0.05, 0], dist: 1.05, order: 1 },
+  tripo_part_19: { panel: "hood", kind: "panel", dir: [0.35, 1, 0], dist: 1.25, order: 2 },
+  tripo_part_18: { panel: "front_bumper", kind: "panel", dir: [1, 0.05, 0], dist: 1.35, order: 1 },
+  tripo_part_12: { panel: "front_right_fender", kind: "panel", dir: [0.45, 0.1, 1], dist: 1.25, order: 3 },
+  tripo_part_7: { panel: "front_left_door", kind: "panel", dir: [0.2, 0.08, -1], dist: 1.35, order: 4 },
+  tripo_part_9: { panel: "rear_left_door", kind: "panel", dir: [-0.2, 0.08, -1], dist: 1.35, order: 5 },
+  tripo_part_20: { panel: "front_right_door", kind: "panel", dir: [0.2, 0.08, 1], dist: 1.35, order: 4 },
+  tripo_part_21: { panel: "rear_right_door", kind: "panel", dir: [-0.2, 0.08, 1], dist: 1.35, order: 5 },
+  tripo_part_6: { panel: "rear_left_fender", kind: "panel", dir: [-0.7, 0.08, -1], dist: 1.3, order: 6 },
+  tripo_part_10: { panel: "rear_right_fender", kind: "panel", dir: [-0.7, 0.08, 1], dist: 1.3, order: 6 },
+  tripo_part_5: { panel: "rear_bumper", kind: "panel", dir: [-1, 0.05, 0], dist: 1.35, order: 1 },
   tripo_part_16: { panel: "trunk", kind: "panel", dir: [-0.55, 0.75, 0], dist: 0.95, order: 3 },
   tripo_part_8: { panel: "roof", kind: "cabin", dir: [0, 1, 0], dist: 1.15, order: 7 },
   tripo_part_1: { kind: "wheel", dir: [0, -0.05, -1], dist: 0.75, order: 8 },
   tripo_part_2: { kind: "wheel", dir: [0, -0.05, 1], dist: 0.75, order: 8 },
   tripo_part_3: { kind: "wheel", dir: [0, -0.05, 1], dist: 0.75, order: 8 },
   tripo_part_4: { kind: "wheel", dir: [0, -0.05, -1], dist: 0.75, order: 8 },
-  tripo_part_13: { kind: "light", dir: [1, 0.05, -0.15], dist: 1.12, order: 1 },
-  tripo_part_25: { kind: "light", dir: [1, 0.05, 0.15], dist: 1.12, order: 1 },
-  tripo_part_14: { kind: "mirror", dir: [0, 0.1, -1], dist: 1.0, order: 4 },
-  tripo_part_24: { kind: "mirror", dir: [0, 0.1, 1], dist: 1.0, order: 4 },
+  tripo_part_13: { kind: "light", dir: [1, 0.05, -0.15], dist: 1.42, order: 1 },
+  tripo_part_25: { kind: "light", dir: [1, 0.05, 0.15], dist: 1.42, order: 1 },
+  tripo_part_14: { kind: "mirror", dir: [0.2, 0.1, -1], dist: 1.42, order: 4 },
+  tripo_part_24: { kind: "mirror", dir: [0.2, 0.1, 1], dist: 1.42, order: 4 },
   tripo_part_11: { kind: "underbody", dir: [0, -1, 0], dist: 0.3, order: 0 },
   tripo_part_15: { kind: "underbody", dir: [0, -1, 0], dist: 0.3, order: 0 },
 };
@@ -83,6 +83,8 @@ export function beatAt(progress: number): BeatInfo {
 export function progressCenterOfBeat(beat: Beat): number {
   return (BEAT_BOUNDS[beat] + (beat < 5 ? BEAT_BOUNDS[beat + 1] : 1)) / 2;
 }
+
+export const REASSEMBLE_CAPTION = { ru: "Собираем обратно — каждая деталь проверена", en: "Back together — every panel checked" };
 
 export const BEAT_CAPTIONS: Record<Beat, { ru: string; en: string }> = {
   0: { ru: "Осмотр в Корее", en: "Inspection in Korea" },
@@ -178,13 +180,17 @@ export function verdictCounts(report?: Report | null): { total: number; confirme
   return { total: findings.length, confirmed: findings.filter((f) => f.verified).length };
 }
 
-/** Explode amount 0..1 across beats: in during beat 2, held 3-4, reversed during beat 5. */
-export function explodeAmount(progress: number): number {
+/**
+ * Explode amount 0..1 across beats: in during beat 2, held in 3 (and 4 when the report has OBD), reversed in 5.
+ * Without OBD data beat 4 is the reassembly beat (no invented diagnostics on screen).
+ */
+export function explodeAmount(progress: number, hasObd = true): number {
   const { beat, local } = beatAt(progress);
   if (beat < 2) return 0;
   if (beat === 2) return easeInOut(local);
-  if (beat < 5) return 1;
-  return 1 - easeInOut(Math.min(1, local * 1.6));
+  if (beat === 3) return 1;
+  if (beat === 4) return hasObd ? 1 : 1 - easeInOut(local);
+  return hasObd ? 1 - easeInOut(Math.min(1, local * 1.6)) : 0;
 }
 
 /** Lift height in metres: rises in beat 1, holds, lowers at the end of beat 5. */
