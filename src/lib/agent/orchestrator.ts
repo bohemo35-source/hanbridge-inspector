@@ -18,12 +18,15 @@ import { transcribeNote } from "./tools/voice";
 import { readGaugeVideo } from "./tools/gauge";
 import { makeListingPhoto, getOrCreateHeroImage, assertFindingsFreeOfListingEvidence } from "./tools/listing";
 import { getShippingStatus } from "./tools/shipping";
+import { indexPhotos, pickDefectPhotos, pickListingCandidates } from "./tools/photoIndex";
+import { glimmerConfigured } from "@/lib/meta/glimmer";
 import { readDiagnosticReport } from "./tools/diagnostic";
 import { readInspectorReport } from "./tools/inspector";
 import { decideVerdict, detectConflict, verifyFinding } from "./verifier";
 
 export type AgentStep = Report["trace"][number];
 const WHY: Record<string, string> = {
+  index_photos: "Open-weight triage: Muse Glimmer on our own GPU indexes every photo (view, whole car, panels)",
   segment_image: "SAM geometry, car/plate/wheels before any claim",
   find_defects: "Spark defect scan on the SAM car crop",
   transcribe_note: "Inspector voice: spoken gauge readings with verbatim quotes",
@@ -66,7 +69,8 @@ export async function runInspection(opts: {
   if (!car) throw new Error(`unknown carId: ${opts.carId}`);
   const media: CarMedia = carMedia(opts.carId);
   const reportId = opts.reportId ?? `r-${opts.carId}-${Date.now().toString(36)}`;
-  const suggested = spreadPhotos(media.photos, 4);
+  let suggested = spreadPhotos(media.photos, 4);
+  let listingFromIndex: string[] = [];
   const trace: AgentStep[] = [];
   const findings: Finding[] = [];
   const paint = new Map<string, number>();
@@ -88,6 +92,18 @@ export async function runInspection(opts: {
     const s: AgentStep = { i: trace.length + 1, tool, argsSummary: argsSummary.slice(0, 200), why: WHY[tool] ?? "", ms, ok, outputSummary: outputSummary.slice(0, 500) };
     trace.push(s); opts.onStep?.(s); return s;
   };
+  // Open-weight triage first: Muse Glimmer (our Modal GPU) indexes every photo, so Spark/SAM only see the right ones.
+  if (glimmerConfigured() && media.photos.length) {
+    const ts = Date.now();
+    try {
+      const idx = await indexPhotos({ carId: opts.carId, photos: media.photos });
+      const picks = pickDefectPhotos(idx, 3);
+      if (picks.length) suggested = [...picks, ...suggested.filter((p) => !picks.includes(p))].slice(0, 4);
+      listingFromIndex = pickListingCandidates(idx);
+      const views = idx.entries.reduce<Record<string, number>>((m, e) => { m[e.view] = (m[e.view] ?? 0) + 1; return m; }, {});
+      step("index_photos", `${media.photos.length} photos`, idx.entries.length > 0, `model=${idx.model} indexed=${idx.entries.length} failed=${idx.failed.length} wholeCar=${idx.entries.filter((e) => e.whole_car).length} views=${JSON.stringify(views)} picks=${picks.join(",")} listingCandidates=${listingFromIndex.slice(0, 3).join(",")}`, Date.now() - ts);
+    } catch (e) { step("index_photos", `${media.photos.length} photos`, false, `skipped: ${(e as Error).message}`, Date.now() - ts); }
+  }
   const addFindings = (list: Finding[]) => {
     for (const f of list) {
       const key = `${f.panel}:${f.kind}`;
@@ -285,7 +301,7 @@ export async function runInspection(opts: {
     if (!ok) {
       const QUARTER = new Set(["front_left", "front_right", "rear_left", "rear_right"]);
       const views = [...photoViews.entries()].sort(([, a], [, b]) => Number(QUARTER.has(b)) - Number(QUARTER.has(a))).map(([pid]) => pid);
-      const candidates = [...new Set([...views, ...spreadPhotos(media.photos, 24)])].filter((pid) => pid !== listingPhotoId).slice(0, 24);
+      const candidates = [...new Set([...listingFromIndex.slice(0, 6), ...views, ...spreadPhotos(media.photos, 24)])].filter((pid) => pid !== listingPhotoId).slice(0, 24);
       const t0 = Date.now();
       let picked: string | undefined;
       for (let i = 0; i < candidates.length && !picked; i += 6) {
