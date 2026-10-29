@@ -178,7 +178,7 @@ function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THRE
     const stripLed = new THREE.Mesh(geo(new THREE.BoxGeometry(3.2, 0.03, 0.2)), ledMat); stripLed.position.y = -0.055; fixture.add(stripLed);
     fixture.position.set(x, 4.42, z); leds.push(fixture); group.add(fixture);
     if (x === 3.4) {
-      const cone = new THREE.Mesh(geo(new THREE.ConeGeometry(1.7, 4.4, 24, 1, true)), mat(new THREE.MeshBasicMaterial({ color: 0x9db8dd, transparent: true, opacity: 0.008, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })));
+      const cone = new THREE.Mesh(geo(new THREE.ConeGeometry(1.7, 4.4, 24, 1, true)), mat(new THREE.MeshBasicMaterial({ color: 0x9db8dd, transparent: true, opacity: 0.0035, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })));
       cone.position.set(0, 2.2, z); cones.push(cone); group.add(cone);
     }
   }
@@ -197,7 +197,7 @@ function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THRE
     const pad = new THREE.Mesh(geo(new THREE.BoxGeometry(3.9, 0.02, 0.42)), rubberMat); pad.position.set(0, 0.06, side * 0.78);
     liftArms.add(runway, edge, edge2, pad);
   }
-  const cyl = new THREE.Mesh(geo(new THREE.CylinderGeometry(0.055, 0.055, 1.5, 12)), handleMat); cyl.rotation.z = 0.7; cyl.position.set(0, 0.3, 0); liftArms.add(cyl);
+  const cyl = new THREE.Mesh(geo(new THREE.CylinderGeometry(0.045, 0.045, 1.1, 10)), handleMat); cyl.rotation.x = Math.PI / 2; cyl.position.set(0.9, -0.02, 0.78); liftArms.add(cyl);
   lift.add(liftArms);
   const legs = new THREE.Group();
   for (const side of [-1, 1]) for (const dir of [-1, 1]) {
@@ -355,12 +355,14 @@ export default function GarageScene(props: GarageSceneProps) {
     loader.load("/models/car-v2.glb", (heroGltf) => {
       if (disposed) return;
       const hero = heroGltf.scene;
-      const box = new THREE.Box3().setFromObject(hero);
-      const size = box.getSize(new THREE.Vector3());
-      const center = box.getCenter(new THREE.Vector3());
-      const scale = 4.4 / Math.max(size.x, size.z);
-      invScale = 1 / scale;
-      const applyNorm = (m: THREE.Object3D) => { m.scale.setScalar(scale); m.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale); };
+      // Same formula for both models: length (x) -> 4.4 m, wheels on floor, centred on x/z.
+      const applyNorm = (m: THREE.Object3D) => {
+        const b = new THREE.Box3().setFromObject(m);
+        const sz = b.getSize(new THREE.Vector3()); const c = b.getCenter(new THREE.Vector3());
+        const sc = 4.4 / sz.x; invScale = 1 / sc;
+        m.scale.setScalar(sc); m.position.set(-c.x * sc, -b.min.y * sc, -c.z * sc);
+        return sc;
+      };
       applyNorm(hero);
       heroGroup = hero; carGroup.add(hero);
       hero.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; m.castShadow = true; (Array.isArray(m.material) ? m.material : [m.material]).forEach((mt) => { mt.transparent = true; const sm = mt as THREE.MeshStandardMaterial; if ("envMapIntensity" in sm) sm.envMapIntensity = 1.25; heroMats.push(mt); }); });
