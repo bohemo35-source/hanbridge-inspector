@@ -1,0 +1,44 @@
+[
+  {
+    "id": "x3-moscow",
+    "client": "Алексей",
+    "city": "Москва",
+    "car": "BMW X3",
+    "video": "/reviews/x3-moscow.mp4",
+    "poster": "/reviews/x3-moscow.jpg",
+    "quote_ru": "Получил автомобиль, все как было заявлено",
+    "quote_en": "Received the car, everything was as stated",
+    "transcript_ru": "Лилина, добрый день. Получил Получил автомобиль, все как было заявлено, машина доставлена в состоянии выше лучше пахал, хочу выразить вам огромную благодарность, вам лично и всей вашей большой команде за то, что на всем пути покупки покупки вы сопровождали, стойко отвечали на все вопросы, которые возникали, и помогали решать вот собственно огромное вам спасибо надеюсь еще не раз буду обращаться к вам за помощью в покупке автомобиля",
+    "source": "real client video review (published by the company on Instagram/Telegram); transcript by muse-voice-transcribe-1.0, quote picked verbatim by muse-spark-1.3",
+    "client_en": "Alexey",
+    "city_en": "Moscow"
+  },
+  {
+    "id": "bmw5",
+    "client": "Клиент",
+    "city": "",
+    "car": "BMW 5 Series",
+    "video": "/reviews/bmw5.mp4",
+    "poster": "/reviews/bmw5.jpg",
+    "quote_ru": "Все как было было обещано пришло в идеальном состоянии",
+    "quote_en": "Everything as promised arrived in perfect condition",
+    "transcript_ru": "Всем здравствуйте, хотел бы выразить благодарность компании Автоэкспорт и особенно Светлане за автомобиль. Все как было было обещано пришло в идеальном состоянии оказали полную поддержку потому что обнаружился что при транспортировке погнули каким-то образом рычаг компания полностью все оплатила и принесла даже извинения значит двадцать восемь дней шла и и никаких вопросов нет все все супер спасибо огромное?.",
+    "source": "real client video review (published by the company on Instagram/Telegram); transcript by muse-voice-transcribe-1.0, quote picked verbatim by muse-spark-1.3",
+    "client_en": "Client",
+    "city_en": ""
+  },
+  {
+    "id": "palisade",
+    "client": "Клиент",
+    "city": "",
+    "car": "Hyundai Palisade 2022",
+    "video": "/reviews/palisade.mp4",
+    "poster": "/reviews/palisade.jpg",
+    "quote_ru": "Все просто в идеале, можно сказать, машина новая.",
+    "quote_en": "Everything is just perfect, you could say the car is new.",
+    "transcript_ru": "Светлана, здравствуйте. Машинка приехала, все в целости и сохранности. Спасибо вам большое. Вам и компании Автоэкспорт за помощь в приобретении такой шикарной машины. Все просто в идеале, можно сказать, машина новая. Буду рекомендовать вас всем своим знакомым и знакомым и друзьям. Еще раз раз спасибо. Все очень, очень понравилось. Профессионально, быстро, и качественно выполнили выполнили свои услуги. Спасибо.",
+    "source": "real client video review (published by the company on Instagram/Telegram); transcript by muse-voice-transcribe-1.0, quote picked verbatim by muse-spark-1.3",
+    "client_en": "Client",
+    "city_en": ""
+  }
+]

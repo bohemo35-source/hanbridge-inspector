@@ -1,0 +1,146 @@
+[
+  {
+    "file": "env-seoul-night.jpg",
+    "prompt": "2:1 equirectangular night panorama of Seoul across a wide river, a long lit suspension bridge, city lights on both banks, deep blue night sky. Cinematic premium automotive advertising look, anamorphic, soft haze, no people, no text, no logos, no recognizable brands, photorealistic.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T15:19:28.419Z",
+    "ms": 35280,
+    "bytes": 270182,
+    "quality": 82
+  },
+  {
+    "file": "env-port-night.jpg",
+    "prompt": "2:1 equirectangular night panorama of a container port, rows of shipping containers, portal cranes with lights, wet asphalt reflections, dark sea beyond. Cinematic premium automotive advertising look, anamorphic, soft haze, no people, no text, no logos, no recognizable brands, photorealistic.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T15:19:51.463Z",
+    "ms": 21887,
+    "bytes": 352007,
+    "quality": 82
+  },
+  {
+    "file": "env-vladivostok-dawn.jpg",
+    "prompt": "2:1 equirectangular dawn panorama of Vladivostok bay, rounded forested hills (sopki) of the Russian Far East, a cable-stayed bridge in the distance, soft pink and gold sunrise light over calm water. Cinematic premium automotive advertising look, anamorphic, soft haze, no people, no text, no logos, no recognizable brands, photorealistic.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T15:20:16.190Z",
+    "ms": 23512,
+    "bytes": 244923,
+    "quality": 82
+  },
+  {
+    "file": "env-golden-hour.jpg",
+    "prompt": "2:1 equirectangular golden-hour panorama of a quiet residential yard with a private garage, warm low sun, long soft shadows, calm evening sky. Cinematic premium automotive advertising look, anamorphic, soft haze, no people, no text, no logos, no recognizable brands, photorealistic.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T15:20:40.573Z",
+    "ms": 23235,
+    "bytes": 408306,
+    "quality": 82
+  },
+  {
+    "file": "bridge-sourcing.jpg",
+    "prompt": "Night highway leading toward a bright car inspection centre, wet asphalt, headlight trails, city glow ahead, a lone premium car silhouette driving away from camera. Cinematic premium automotive advertising look, anamorphic, soft haze, no people, no text, no logos, no recognizable brands, photorealistic.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T15:21:02.883Z",
+    "ms": 21415,
+    "bytes": 219434,
+    "quality": 82
+  },
+  {
+    "file": "bridge-documents.jpg",
+    "prompt": "A car transporter truck leaving an inspection garage bay at night, warm light spilling from the open bay door, cool blue night outside, documents-ready departure mood. Cinematic premium automotive advertising look, anamorphic, soft haze, no people, no text, no logos, no recognizable brands, photorealistic.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T15:21:23.485Z",
+    "ms": 20404,
+    "bytes": 262955,
+    "quality": 82
+  },
+  {
+    "file": "bridge-sea.jpg",
+    "prompt": "Night sea from the stern of a car carrier vessel, moonlight, glowing wake trailing behind, calm dark water to the horizon, distant ship lights. Cinematic premium automotive advertising look, anamorphic, soft haze, no people, no text, no logos, no recognizable brands, photorealistic.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T15:21:41.269Z",
+    "ms": 17521,
+    "bytes": 276844,
+    "quality": 82
+  },
+  {
+    "file": "bridge-customs.jpg",
+    "prompt": "Customs checkpoint gates at dawn, barrier arms and glass booths without any text, soft sunrise light, a premium car waiting to pass, quiet and orderly. Cinematic premium automotive advertising look, anamorphic, soft haze, no people, no text, no logos, no recognizable brands, photorealistic.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T15:22:04.288Z",
+    "ms": 22850,
+    "bytes": 310642,
+    "quality": 82
+  },
+  {
+    "file": "tex-asphalt-wet.jpg",
+    "prompt": "Seamless tileable texture of wet dark asphalt viewed directly from above, subtle puddle reflections and fine grain, no perspective, no objects, no markings, no text, photorealistic flat texture.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T15:22:24.006Z",
+    "ms": 19412,
+    "bytes": 841787,
+    "quality": 82
+  },
+  {
+    "file": "tex-terrain-coast.jpg",
+    "prompt": "Seamless tileable top-down terrain texture of a coastline edge: sandy shore meeting dark blue-green sea water, viewed directly from above, no perspective, no objects, no text, photorealistic flat texture.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T15:22:49.283Z",
+    "ms": 24986,
+    "bytes": 560944,
+    "quality": 82
+  },
+  {
+    "file": "tex-terrain-forest.jpg",
+    "prompt": "Seamless tileable top-down terrain texture of dense green coniferous forest canopy, viewed directly from above, no perspective, no objects, no text, photorealistic flat texture.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T15:23:09.550Z",
+    "ms": 20088,
+    "bytes": 766930,
+    "quality": 82
+  },
+  {
+    "file": "tex-terrain-steppe.jpg",
+    "prompt": "Seamless tileable top-down terrain texture of dry golden steppe grassland with faint patches of earth, viewed directly from above, no perspective, no objects, no text, photorealistic flat texture.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T15:23:41.687Z",
+    "ms": 31869,
+    "bytes": 965590,
+    "quality": 82
+  },
+  {
+    "file": "plate-seoul-bridge.jpg",
+    "prompt": "Night Seoul: a long illuminated bridge across a wide river, skyscraper lights on both banks, wet asphalt, one completely empty right traffic lane leading away into the distance in the foreground. Cinematic premium automotive advertising look, anamorphic lens, soft haze, photorealistic, no people, no text, no logos, no recognizable brands, no cars in the foreground, empty road lane or apron in the foreground where a car will drive, horizon at about 42 percent of frame height, eye-level camera at 1.5 metres, slight three-quarter view.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T16:23:16.963Z",
+    "ms": 28847,
+    "bytes": 367256,
+    "quality": 82
+  },
+  {
+    "file": "plate-port-ramp.jpg",
+    "prompt": "Night container port: portal cranes, rows of shipping containers, wet asphalt with sodium lamp reflections. On the right, the stern of a huge ro-ro car carrier ship with a lowered loading ramp and a brightly lit open hold doorway, empty apron and ramp in the foreground. Cinematic premium automotive advertising look, anamorphic lens, soft haze, photorealistic, no people, no text, no logos, no recognizable brands, no cars in the foreground, empty road lane or apron in the foreground where a car will drive, horizon at about 42 percent of frame height, eye-level camera at 1.5 metres, slight three-quarter view.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T16:23:41.372Z",
+    "ms": 23401,
+    "bytes": 357142,
+    "quality": 82
+  },
+  {
+    "file": "plate-vladivostok-quay.jpg",
+    "prompt": "Dawn in Vladivostok: rounded forested hills (sopki), Russian Far East, a cable-stayed bridge far away in haze, a quay with a ro-ro ship with a lowered ramp beside it, empty quay apron and ramp leading toward the camera in the foreground. Cinematic premium automotive advertising look, anamorphic lens, soft haze, photorealistic, no people, no text, no logos, no recognizable brands, no cars in the foreground, empty road lane or apron in the foreground where a car will drive, horizon at about 42 percent of frame height, eye-level camera at 1.5 metres, slight three-quarter view.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T16:24:25.516Z",
+    "ms": 44020,
+    "bytes": 282794,
+    "quality": 82
+  },
+  {
+    "file": "plate-handover.jpg",
+    "prompt": "Golden hour: a modern client house with a garage, a paved tiled driveway, warm light in the windows, empty driveway in the foreground leading to the house. Cinematic premium automotive advertising look, anamorphic lens, soft haze, photorealistic, no people, no text, no logos, no recognizable brands, no cars in the foreground, empty road lane or apron in the foreground where a car will drive, horizon at about 42 percent of frame height, eye-level camera at 1.5 metres, slight three-quarter view.",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T16:24:47.101Z",
+    "ms": 20308,
+    "bytes": 344606,
+    "quality": 82
+  }
+]
