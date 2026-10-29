@@ -8,13 +8,11 @@ import modal
 MODEL = "meta-models/Muse-Glimmer-30B"
 PORT = 8000
 
-# official vLLM image: ships the CUDA toolkit (nvcc) that vLLM's JIT kernels need
-image = (
-    modal.Image.from_registry("vllm/vllm-openai:latest")
-    .entrypoint([])
-    .pip_install("huggingface_hub[hf_transfer]")
-    .env({"HF_HUB_ENABLE_HF_TRANSFER": "1"})
-)
+# official vLLM image: ships the CUDA toolkit (nvcc) that vLLM JIT kernels need; Modal needs `python` on PATH
+image = modal.Image.from_registry(
+    "vllm/vllm-openai:latest",
+    setup_dockerfile_commands=["RUN ln -sf $(which python3) /usr/local/bin/python"],
+).entrypoint([])
 hf_cache = modal.Volume.from_name("hf-cache-glimmer", create_if_missing=True)
 vllm_cache = modal.Volume.from_name("vllm-cache-glimmer", create_if_missing=True)
 
