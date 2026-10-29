@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Playwright screenshots of /lab/garage — beats 0-5, debug=parts, mobile, fallback
 // @created: 2026-10-29
+// @updated: 2026-10-30 claude-code (PREFIX/SUFFIX/OUT_DIR env for tz13 before/after rounds)
 // Usage: npm run dev -- -p 3100  &&  node scripts/garage/capture.mjs [baseUrl] [onlyPrefix]
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -17,7 +18,10 @@ try {
 
 const BASE = process.argv[2] ?? "http://localhost:3100";
 const ONLY = process.argv[3] ?? "";
-const OUT = new URL("../../docs/reports/assets/", import.meta.url).pathname;
+const OUT = process.env.OUT_DIR ? process.env.OUT_DIR.replace(/\/?$/, "/") : new URL("../../docs/reports/assets/", import.meta.url).pathname;
+// PREFIX=tz13-garage SUFFIX=-before -> tz10b-beat0 becomes tz13-garage-beat0-before (default keeps tz10b names)
+const PREFIX = process.env.PREFIX ?? "", SUFFIX = process.env.SUFFIX ?? "";
+const nm = (n) => (PREFIX ? n.replace(/^tz10b-/, `${PREFIX}-`) + SUFFIX : n);
 const errors = [];
 let browser = null;
 async function launch() {
@@ -48,8 +52,8 @@ async function shot(name, width, height, query) {
   if (await host.count()) {
     console.log(name, "triangles:", await host.getAttribute("data-triangles"), "parts:", await host.getAttribute("data-parts"), "fps:", await host.getAttribute("data-fps"), "eco:", await host.getAttribute("data-eco"));
   }
-  await page.screenshot({ path: `${OUT}${name}.png`, timeout: 150000 });
-  console.log("saved", name);
+  await page.screenshot({ path: `${OUT}${nm(name)}.png`, timeout: 150000 });
+  console.log("saved", nm(name));
   await page.close();
   await browser.close().catch(() => undefined);
   browser = null; // fresh browser per shot: swiftshader + Reflector is heavy

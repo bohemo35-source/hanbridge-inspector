@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Garage inspection scroll scene: real 32-part car on a lift, exploded view, gauge labels, verdict
 // @created: 2026-10-29
+// @updated: 2026-10-30 claude-code (TZ-13 look: autoshop HDRI reflections, rim + softbox light, metallic parts with dark matte insides, blurred floor reflection)
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -15,6 +16,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import type { Report } from "@/lib/schema";
 import { panelLabel } from "@/lib/domain/panels";
 import {
@@ -22,6 +24,7 @@ import {
   heroWeight, liftAmount, obdInfo, panelLabelOffset, partExplodeT, partIndex, progressCenterOfBeat, readingsByPart, verdictCounts,
   type Beat,
 } from "./parts";
+import { leadStyle, useStageFade } from "@/components/journey-v2/useStageFade";
 
 export interface GarageSceneProps {
   report?: Report;
@@ -31,6 +34,9 @@ export interface GarageSceneProps {
   debugParts?: boolean;
   /** Pin the scene to the middle of a beat (lab captures). */
   pinnedBeat?: Beat;
+  /** Journey chain: overlap + crossfade with the previous block / darken into the next one. */
+  lead?: boolean;
+  exit?: number;
 }
 
 const CLASS_COLOR: Record<string, string> = { factory: "#34d399", repaint: "#fbbf24", putty: "#f87171" };
@@ -80,6 +86,42 @@ function canvasTexture(draw: (g: CanvasRenderingContext2D, w: number, h: number)
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
+/** Reflector with a 9-tap blur and a strength knob: a glossy epoxy floor, not a mirror. */
+const BLUR_REFLECTOR_SHADER = {
+  name: "BlurReflectorShader",
+  uniforms: { color: { value: null }, tDiffuse: { value: null }, textureMatrix: { value: null }, uBlur: { value: 0.006 }, uStrength: { value: 0.45 } },
+  vertexShader: `uniform mat4 textureMatrix; varying vec4 vUv;
+    #include <common>
+    #include <logdepthbuf_pars_vertex>
+    void main() { vUv = textureMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    #include <logdepthbuf_vertex>
+    }`,
+  fragmentShader: `uniform vec3 color; uniform sampler2D tDiffuse; uniform float uBlur; uniform float uStrength; varying vec4 vUv;
+    #include <logdepthbuf_pars_fragment>
+    void main() {
+      #include <logdepthbuf_fragment>
+      vec2 uv = vUv.xy / vUv.w; vec3 acc = vec3(0.0); float wsum = 0.0;
+      for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) { float w = (x == 0 && y == 0) ? 2.0 : 1.0; acc += texture2D(tDiffuse, uv + vec2(float(x), float(y) * 1.6) * uBlur).rgb * w; wsum += w; }
+      gl_FragColor = vec4(color + acc / wsum * uStrength, 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`,
+};
+
+/** Physical material whose back faces render dark and matte: exploded panels never read as empty shells. */
+function withMatteInside<T extends THREE.MeshPhysicalMaterial>(m: T): T {
+  m.side = THREE.DoubleSide;
+  m.onBeforeCompile = (sh) => {
+    sh.fragmentShader = sh.fragmentShader
+      .replace("#include <color_fragment>", "#include <color_fragment>\nif (!gl_FrontFacing) diffuseColor.rgb = vec3(0.025, 0.027, 0.03);")
+      .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nif (!gl_FrontFacing) roughnessFactor = 1.0;")
+      .replace("#include <metalnessmap_fragment>", "#include <metalnessmap_fragment>\nif (!gl_FrontFacing) metalnessFactor = 0.0;")
+      .replace("#include <lights_physical_fragment>", "#include <lights_physical_fragment>\n#ifdef USE_CLEARCOAT\nif (!gl_FrontFacing) material.clearcoat = 0.0;\n#endif\n#ifdef USE_SHEEN\nif (!gl_FrontFacing) material.sheenColor = vec3(0.0);\n#endif");
+  };
+  m.customProgramCacheKey = () => "matte-inside";
+  return m;
+}
+
 function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THREE.Group; reflector: Reflector | null; cones: THREE.Object3D[]; leds: THREE.Object3D[]; dispose: () => void } {
   const group = new THREE.Group();
   const disposables: Array<{ dispose: () => void }> = [];
@@ -91,7 +133,7 @@ function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THRE
   let reflector: Reflector | null = null;
   if (!mobile) {
     reflector = new Reflector(geo(new THREE.PlaneGeometry(46, 30)), {
-      clipBias: 0.003, textureWidth: 1024, textureHeight: 1024, color: 0x0b0d10,
+      clipBias: 0.003, textureWidth: 1024, textureHeight: 1024, color: 0x07080a, shader: BLUR_REFLECTOR_SHADER,
     });
     reflector.rotation.x = -Math.PI / 2; reflector.position.y = -0.02; group.add(reflector);
   }
@@ -100,7 +142,7 @@ function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THRE
   disposables.push(floorTex);
   const floor = new THREE.Mesh(
     geo(new THREE.PlaneGeometry(46, 30)),
-    mat(new THREE.MeshStandardMaterial({ map: floorTex, color: 0x8a8f96, roughness: 0.62, metalness: 0.05, transparent: !mobile, opacity: mobile ? 1 : 0.94, envMapIntensity: 0.25 })),
+    mat(new THREE.MeshStandardMaterial({ map: floorTex, color: 0x80858c, roughness: 0.6, metalness: 0.05, transparent: !mobile, opacity: mobile ? 1 : 0.82, envMapIntensity: 0.25 })),
   );
   floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; group.add(floor);
 
@@ -210,7 +252,7 @@ function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THRE
 }
 
 export default function GarageScene(props: GarageSceneProps) {
-  const { report, lang, paint = "#2b3139", compact = false, debugParts = false, pinnedBeat } = props;
+  const { report, lang, paint = "#2b3139", compact = false, debugParts = false, pinnedBeat, lead = false, exit = 0 } = props;
   const outerRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const [webgl, setWebgl] = useState<boolean | null>(null);
@@ -218,6 +260,10 @@ export default function GarageScene(props: GarageSceneProps) {
   const [mobile, setMobile] = useState(false);
   const [beat, setBeat] = useState<Beat>(pinnedBeat ?? 0);
   const [verdictIn, setVerdictIn] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const veilRef = useRef<HTMLDivElement>(null);
+  const scrolling = !(compact || pinnedBeat !== undefined || debugParts);
+  useStageFade(outerRef, stageRef, veilRef, lead && scrolling, scrolling ? exit : 0);
   const live = useRef({ target: pinnedBeat !== undefined ? (pinnedBeat === 5 ? 0.98 : progressCenterOfBeat(pinnedBeat)) : debugParts ? 0.52 : compact ? progressCenterOfBeat(3) : 0 });
 
   const readings = readingsByPart(report);
@@ -278,11 +324,19 @@ export default function GarageScene(props: GarageSceneProps) {
     scene.background = new THREE.Color(0x0a0c10);
     scene.fog = new THREE.Fog(0x0a0c10, 13, 36);
     const pmrem = new THREE.PMREMGenerator(renderer);
-    // Real garage panorama (Muse Image) as reflections + dimmed far background sphere.
+    // Reflections/ambient: CC0 autoshop HDRI (Poly Haven; 1k on phones). Visible far background stays the Muse Image panorama.
+    new RGBELoader().setDataType(THREE.FloatType).load(isMobile ? "/hdri/autoshop_01_1k.hdr" : "/hdri/autoshop_01_2k.hdr", (hdr) => {
+      if (disposed) { hdr.dispose(); return; }
+      const px = (hdr.image as unknown as { data?: Float32Array }).data;
+      if (px) for (let i = 0; i < px.length; i++) if (px[i] > 16) px[i] = 16; // tame the strip lights: no blown hotspots through bloom
+      hdr.mapping = THREE.EquirectangularReflectionMapping;
+      scene.environment = pmrem.fromEquirectangular(hdr).texture;
+      hdr.dispose();
+    });
+    scene.environmentIntensity = 0.5;
     new THREE.TextureLoader().load("/garage/env-garage.jpg", (tex) => {
       if (disposed) return;
       tex.mapping = THREE.EquirectangularReflectionMapping; tex.colorSpace = THREE.SRGBColorSpace;
-      scene.environment = pmrem.fromEquirectangular(tex).texture;
       const sphere = new THREE.Mesh(new THREE.SphereGeometry(42, 32, 16), new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, color: 0x565b62, fog: false }));
       scene.add(sphere);
     });
@@ -306,7 +360,13 @@ export default function GarageScene(props: GarageSceneProps) {
     const warm = new THREE.SpotLight(0xff9a3c, 22, 45, 0.55, 1);
     warm.position.set(-10, 4.4, -6.5);
     warm.target.position.set(0, 0.8, 0);
-    scene.add(rect1, rect2, key, warm, warm.target, new THREE.HemisphereLight(0x8fa3c4, 0x14100c, 0.9));
+    // big soft top box over the lift: reads as a long highlight along the roof and bonnet
+    const softbox = new THREE.RectAreaLight(0xf4f7ff, 2.4, 6.5, 3.2);
+    softbox.position.set(0, 4.2, 0); softbox.lookAt(0, 0, 0);
+    // cool rim lights low behind both sides: a bright edge along the silhouette from any orbit angle
+    const rimL = new THREE.SpotLight(0xbcd4ff, 26, 22, 0.5, 0.9, 1.6); rimL.position.set(-6.5, 2.2, -5.5); rimL.target.position.set(0, 0.9, 0);
+    const rimR = new THREE.SpotLight(0xbcd4ff, 26, 22, 0.5, 0.9, 1.6); rimR.position.set(6.5, 2.2, 5.5); rimR.target.position.set(0, 0.9, 0);
+    scene.add(rect1, rect2, softbox, key, warm, warm.target, rimL, rimL.target, rimR, rimR.target, new THREE.HemisphereLight(0x9fb2d0, 0x1a1510, 0.8));
 
     const env = buildEnvironment(isMobile);
     scene.add(env.group);
@@ -385,10 +445,11 @@ export default function GarageScene(props: GarageSceneProps) {
           const def = PART_MAP[name]; const kind = def?.kind ?? "detail";
           let material: THREE.MeshPhysicalMaterial;
           if (debugParts) { const hue = (partIndex(name) * 137.5) % 360; material = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(`hsl(${hue},70%,55%)`), roughness: 0.5, metalness: 0.1 }); }
-          else if (kind === "cabin" || kind === "mirror") material = cabinMat.clone();
+          else if (kind === "cabin" || kind === "mirror") material = withMatteInside(cabinMat.clone()); // clone() drops onBeforeCompile: wrap each copy
           else if (kind === "wheel") material = wheelMat.clone();
-          else if (kind === "underbody") material = underMat.clone();
-          else material = new THREE.MeshPhysicalMaterial({ color: paintBase.clone(), metalness: 0.35, roughness: 0.42, clearcoat: 0.7, clearcoatRoughness: 0.18, envMapIntensity: 1.0 });
+          else if (kind === "underbody") material = withMatteInside(underMat.clone());
+          // metallic paint: base metal flake + glossy clearcoat picks up the autoshop HDRI; insides dark matte
+          else material = withMatteInside(new THREE.MeshPhysicalMaterial({ color: paintBase.clone(), metalness: 0.5, roughness: 0.36, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.1 }));
           material.transparent = true;
           mesh.material = material; mesh.castShadow = true;
           const partBox = new THREE.Box3().setFromObject(mesh);
@@ -598,8 +659,8 @@ export default function GarageScene(props: GarageSceneProps) {
     : obd ? "OBD" : null;
 
   return (
-    <div ref={outerRef} data-garage-outer className="relative w-full" style={{ height: compact || pinnedBeat !== undefined || debugParts ? undefined : mobile ? "650vh" : "500vh" }}>
-      <div className={compact ? "relative h-[78vh] min-h-[480px] w-full overflow-hidden" : pinnedBeat !== undefined || debugParts ? "relative h-[100svh] w-full overflow-hidden" : "sticky top-0 h-[100svh] w-full overflow-hidden"}>
+    <div ref={outerRef} data-garage-outer className="relative w-full" style={scrolling ? leadStyle(mobile ? "650vh" : "500vh", lead) : undefined}>
+      <div ref={stageRef} style={lead && scrolling ? { opacity: 0 } : undefined} className={compact ? "relative h-[78vh] min-h-[480px] w-full overflow-hidden" : pinnedBeat !== undefined || debugParts ? "relative h-[100svh] w-full overflow-hidden" : "sticky top-0 h-[100svh] w-full overflow-hidden"}>
         <div ref={hostRef} className="absolute inset-0 bg-[#0a0c10]" data-testid="garage-canvas-host" />
         <style>{`
           .garage-gauge-label{pointer-events:none;background:rgba(8,10,14,.78);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:2px 7px;font:500 11px/1.5 system-ui,sans-serif;color:#e4e7ee;white-space:nowrap;transition:opacity .2s}
@@ -620,7 +681,7 @@ export default function GarageScene(props: GarageSceneProps) {
         )}
 
         {!debugParts && report && (
-          <div className={`absolute bottom-24 right-4 w-[320px] max-w-[82vw] rounded-2xl border border-white/15 bg-black/55 p-4 text-zinc-100 backdrop-blur-md transition-all duration-500 sm:bottom-8 sm:right-8 ${verdictIn ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"}`} aria-hidden={!verdictIn}>
+          <div className={`absolute bottom-24 right-4 w-[320px] max-w-[82vw] rounded-2xl border border-white/15 bg-black/55 p-4 text-zinc-100 backdrop-blur-md transition-all duration-500 sm:bottom-24 sm:right-8 ${verdictIn ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"}`} aria-hidden={!verdictIn}>
             <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">{lang === "ru" ? "Вердикт" : "Verdict"}</p>
             <p className={`mt-1 text-3xl font-bold ${report.verdict.decision === "BUY" ? "text-emerald-300" : report.verdict.decision === "WALK_AWAY" ? "text-red-300" : "text-amber-300"}`}>
               {report.verdict.decision.replace("_", " ")}
@@ -633,6 +694,7 @@ export default function GarageScene(props: GarageSceneProps) {
             </a>
           </div>
         )}
+        <div ref={veilRef} aria-hidden className="pointer-events-none absolute inset-0 bg-black opacity-0" />
         {debugParts && (
           <p className="absolute left-4 top-4 rounded-lg bg-black/60 px-3 py-1.5 font-mono text-xs text-white">debug=parts · tripo_part_0..21</p>
         )}

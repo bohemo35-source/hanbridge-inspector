@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Journey v2 orchestrator: chain of short 3D scenes + Muse Image bridges + garage + reviews + finale, HUD progress
 // @created: 2026-10-29
+// @updated: 2026-10-30 claude-code (soft crossfades between sticky blocks; HUD follows the visible block)
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
@@ -13,6 +14,7 @@ import SceneBlock from "./SceneBlock";
 import Bridge from "./Bridge";
 import Hud from "./Hud";
 import ReviewsSection, { type ReviewItem } from "./Reviews";
+import { FADE_VH } from "./useStageFade";
 
 const GarageScene = dynamic(() => import("@/components/garage-3d/GarageScene"), { ssr: false });
 
@@ -28,6 +30,7 @@ const FALLBACK_IMG: Record<string, string> = {
 
 export default function JourneyV2({ report, lang, reviews }: { report?: Report; lang: Lang; reviews: ReviewItem[] }) {
   const [progress, setProgress] = useState(0);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [reduced, setReduced] = useState<boolean | null>(null);
   const [mobile, setMobile] = useState(false);
   const visibleBlocks = useMemo(() => BLOCKS.filter((b) => b.kind !== "reviews" || reviews.length > 0), [reviews]);
@@ -44,6 +47,14 @@ export default function JourneyV2({ report, lang, reviews }: { report?: Report; 
       raf = requestAnimationFrame(() => {
         const max = document.documentElement.scrollHeight - window.innerHeight;
         setProgress(max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0);
+        // HUD/caption follow what is on screen: a crossfading block counts once it is half faded in
+        const vh = window.innerHeight;
+        let id: string | null = null;
+        document.querySelectorAll<HTMLElement>("[data-journey-block]").forEach((el) => {
+          const top = el.getBoundingClientRect().top;
+          if (top <= (el.dataset.lead ? -(vh * FADE_VH) / 200 : vh * 0.5)) id = el.dataset.journeyBlock ?? id;
+        });
+        setActiveId(id);
       });
     };
     onScroll();
@@ -70,21 +81,29 @@ export default function JourneyV2({ report, lang, reviews }: { report?: Report; 
     );
   }
 
-  const at = blockAt(progress, visibleBlocks);
+  const at = { block: visibleBlocks.find((b) => b.id === activeId) ?? blockAt(progress, visibleBlocks).block };
   const captionKey = CAPTION_BY_BLOCK[at.block.id];
   const caption = at.block.id === "garage" || at.block.kind === "bridge" ? "" : captionKey ? CAPTIONS[captionKey][lang] : at.block.id === "handover" ? HANDOVER_CARD[lang] : at.block.kind === "reviews" || at.block.kind === "finale" ? CAPTIONS.finale[lang] : CAPTIONS.seoul[lang];
   return (
     <main className="relative bg-[#07090d]" data-testid="journey-v2" data-total-vh={total} data-progress={progress.toFixed(3)}>
       <Hud lang={lang} activeKey={HUD_BY_BLOCK[at.block.id] ?? "purchase"} caption={caption} reportId={report?.id} />
-      {visibleBlocks.map((b) => <Block key={b.id} block={b} lang={lang} report={report} reviews={reviews} mobileScale={mobileScale} />)}
+      {visibleBlocks.map((b, i) => {
+        const prev = visibleBlocks[i - 1], next = visibleBlocks[i + 1];
+        const lead = i > 0 && STICKY.has(b.kind) && !!prev && STICKY.has(prev.kind);
+        const exit = next && STICKY.has(b.kind) ? (STICKY.has(next.kind) ? 0.45 : 0.6) : 0;
+        return <Block key={b.id} block={b} lang={lang} report={report} reviews={reviews} mobileScale={mobileScale} lead={lead} exit={exit} />;
+      })}
     </main>
   );
 }
 
-function Block({ block, lang, report, reviews, mobileScale }: { block: BlockDef; lang: Lang; report?: Report; reviews: ReviewItem[]; mobileScale: number }) {
-  if (block.kind === "scene3d" && block.scene) return <SceneBlock sceneId={block.scene} blockId={block.id} heightVh={block.vh} mobileScale={mobileScale} plate={block.plate} />;
-  if (block.kind === "bridge" && block.bridgeImage && block.bridgeStage) return <Bridge id={block.id} image={block.bridgeImage} stage={block.bridgeStage} heightVh={block.vh} mobileScale={mobileScale} lang={lang} />;
-  if (block.kind === "garage") return <div data-journey-block="garage"><GarageScene report={report} lang={lang} /></div>;
+/** blocks with a pinned full-screen stage: these crossfade into each other */
+const STICKY = new Set<BlockDef["kind"]>(["scene3d", "bridge", "garage"]);
+
+function Block({ block, lang, report, reviews, mobileScale, lead, exit }: { block: BlockDef; lang: Lang; report?: Report; reviews: ReviewItem[]; mobileScale: number; lead: boolean; exit: number }) {
+  if (block.kind === "scene3d" && block.scene) return <SceneBlock sceneId={block.scene} blockId={block.id} heightVh={block.vh} mobileScale={mobileScale} plate={block.plate} lead={lead} exit={exit} />;
+  if (block.kind === "bridge" && block.bridgeImage && block.bridgeStage) return <Bridge id={block.id} image={block.bridgeImage} stage={block.bridgeStage} heightVh={block.vh} mobileScale={mobileScale} lang={lang} lead={lead} exit={exit} />;
+  if (block.kind === "garage") return <div data-journey-block="garage" data-lead={lead ? "1" : undefined}><GarageScene report={report} lang={lang} lead={lead} exit={exit} /></div>;
   if (block.kind === "reviews") return <ReviewsSection reviews={reviews} lang={lang} />;
   return <Finale lang={lang} report={report} />;
 }

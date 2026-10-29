@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Journey v2 block chain: order, scroll heights (vh), pure progress mapping
 // @created: 2026-10-29
+// @updated: 2026-10-30 claude-code (plate look: HDRI env, wet mirror, rain, mobile crop focus, CSS grade)
 import type { StageId } from "@/components/journey-3d/route";
 
 export type BlockKind = "scene3d" | "bridge" | "garage" | "reviews" | "finale";
@@ -19,6 +20,17 @@ export interface PlateConfig {
   lightPos: [number, number, number];
   shadowOpacity: number;
   end: "none" | "hold" | "stop";
+  /** TZ-13 look: CC0 HDRI (public/hdri) for car lighting/reflections; Y rotation (rad) puts its key highlight where the plate light is */
+  hdri?: string;
+  envRot?: number;
+  envInt?: number;
+  /** wet asphalt: opacity of the mirrored car under the ground (0/undefined = dry) */
+  wet?: number;
+  rain?: boolean;
+  /** narrow screens: crop centre on the lane, 0..1 of plate width (blended with the car position) */
+  focusX?: number;
+  /** CSS grade over the frame: soft-light tint colour */
+  grade?: string;
 }
 export interface BlockDef {
   id: string;
@@ -33,10 +45,10 @@ export interface BlockDef {
 }
 
 export const PLATES: Record<string, PlateConfig> = {
-  seoul: { image: "/journey-v2/plate-seoul-bridge.jpg", cameraPos: [0, 1.55, 10], lookAt: [1.2, 1.1, -12], fov: 38, path: [[4.4, 0, 7], [4.0, 0, 1], [4.4, 0, -6], [5.2, 0, -14], [6.0, 0, -22]], night: true, headlights: true, tint: 0x8fb4e8, lightColor: 0xaac8ff, lightPos: [-8, 14, 4], shadowOpacity: 0.42, end: "none" },
-  port: { image: "/journey-v2/plate-port-ramp.jpg", cameraPos: [0, 1.65, 11], lookAt: [1.6, 1.4, -12], fov: 38, path: [[0.6, 0, 7], [2.2, 0, 1], [3.8, 0, -5], [7.0, 0.35, -11], [10.0, 0.9, -17]], night: true, headlights: true, tint: 0xffc98a, lightColor: 0xffb066, lightPos: [-10, 16, 2], shadowOpacity: 0.48, end: "hold" },
-  vladivostok: { image: "/journey-v2/plate-vladivostok-quay.jpg", cameraPos: [0, 1.6, 11], lookAt: [0.4, 1.2, -12], fov: 38, path: [[4.6, 0.9, -18], [3.6, 0.35, -10], [2.2, 0, -3], [0.8, 0, 3], [-0.2, 0, 7.5]], night: false, headlights: false, tint: 0xffd9a8, lightColor: 0xffc98a, lightPos: [-12, 10, -6], shadowOpacity: 0.38, end: "none" },
-  finale: { image: "/journey-v2/plate-handover.jpg", cameraPos: [0, 1.55, 11], lookAt: [0, 1.1, -10], fov: 37, path: [[-0.6, 0, -16], [-0.35, 0, -10], [-0.1, 0, -5.5], [0, 0, -3]], night: false, headlights: true, tint: 0xffe0b0, lightColor: 0xffbe78, lightPos: [-10, 8, 6], shadowOpacity: 0.4, end: "stop" },
+  seoul: { image: "/journey-v2/plate-seoul-bridge.jpg", cameraPos: [0, 1.55, 10], lookAt: [1.2, 1.1, -12], fov: 38, path: [[4.4, 0, 7], [4.0, 0, 1], [4.4, 0, -6], [5.2, 0, -14], [6.0, 0, -22]], night: true, headlights: true, tint: 0x8fb4e8, lightColor: 0xaac8ff, lightPos: [-8, 14, 4], shadowOpacity: 0.42, end: "none", hdri: "/hdri/shanghai_bund_1k.hdr", envRot: 3.14, envInt: 0.35, wet: 0.42, rain: true, focusX: 0.62, grade: "#3a5a8c" },
+  port: { image: "/journey-v2/plate-port-ramp.jpg", cameraPos: [0, 1.65, 11], lookAt: [1.6, 1.4, -12], fov: 38, path: [[0.6, 0, 7], [2.2, 0, 1], [3.8, 0, -5], [7.0, 0.35, -11], [10.0, 0.9, -17]], night: true, headlights: true, tint: 0xffc98a, lightColor: 0xffb066, lightPos: [-10, 16, 2], shadowOpacity: 0.48, end: "hold", hdri: "/hdri/golden_bay_1k.hdr", envRot: 0, envInt: 0.35, wet: 0.36, focusX: 0.6, grade: "#8c5a2a" },
+  vladivostok: { image: "/journey-v2/plate-vladivostok-quay.jpg", cameraPos: [0, 1.6, 11], lookAt: [0.4, 1.2, -12], fov: 38, path: [[4.6, 0.9, -18], [3.6, 0.35, -10], [2.2, 0, -3], [0.8, 0, 3], [-0.2, 0, 7.5]], night: false, headlights: false, tint: 0xffd9a8, lightColor: 0xffc98a, lightPos: [-12, 10, -6], shadowOpacity: 0.46, end: "none", hdri: "/hdri/dusseldorf_bridge_1k.hdr", envRot: 1.57, envInt: 0.3, focusX: 0.6, grade: "#8c7a6a" },
+  finale: { image: "/journey-v2/plate-handover.jpg", cameraPos: [0, 1.55, 11], lookAt: [0, 1.1, -10], fov: 37, path: [[-0.6, 0, -16], [-0.35, 0, -10], [-0.1, 0, -5.5], [0, 0, -3]], night: false, headlights: true, tint: 0xffe0b0, lightColor: 0xffbe78, lightPos: [-10, 8, 6], shadowOpacity: 0.4, end: "stop", hdri: "/hdri/evening_road_01_1k.hdr", envRot: 0, envInt: 0.4, focusX: 0.5, grade: "#a0703a" },
 };
 
 export const BLOCKS: BlockDef[] = [

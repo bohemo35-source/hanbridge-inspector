@@ -2,12 +2,14 @@
 // @project: hanbridge-inspector
 // @purpose: Shared 3D kit for journey-v2 blocks: ACES renderer, PMREM env, desktop bloom, eco mode, full dispose
 // @created: 2026-10-29
+// @updated: 2026-10-30 claude-code (HDRI env via RGBELoader, renderer/viewport in kit)
 "use client";
 import * as THREE from "three";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 
 export interface SceneKit {
   scene: THREE.Scene;
@@ -17,6 +19,11 @@ export interface SceneKit {
   tex: (path: string, repeat?: [number, number]) => THREE.Texture;
   setEnv: (path: string, bgColor?: number) => void;
   envFromTexture: (tex: THREE.Texture) => void;
+  /** CC0 HDRI (public/hdri) -> PMREM -> scene.environment (lighting/reflections only, never the visible background) */
+  setHdri: (path: string) => void;
+  renderer: THREE.WebGLRenderer;
+  /** CSS pixel size of the host (the sticky viewport) */
+  viewport: () => { w: number; h: number };
 }
 export interface SceneHandle { update: (p: number, t: number) => void; triangles: number }
 export type SceneBuilder = (kit: SceneKit) => SceneHandle;
@@ -24,7 +31,10 @@ export type SceneBuilder = (kit: SceneKit) => SceneHandle;
 const MAX_CANVASES = 2;
 let liveCanvases = 0;
 export function acquireCanvas(): boolean { if (liveCanvases >= MAX_CANVASES) return false; liveCanvases++; return true; }
-export function releaseCanvas() { liveCanvases = Math.max(0, liveCanvases - 1); }
+const freedListeners = new Set<() => void>();
+/** called when a slot frees up: blocks that hit the cap while near retry their mount */
+export function onCanvasFreed(cb: () => void): () => void { freedListeners.add(cb); return () => { freedListeners.delete(cb); }; }
+export function releaseCanvas() { liveCanvases = Math.max(0, liveCanvases - 1); queueMicrotask(() => freedListeners.forEach((cb) => cb())); }
 
 export function countTriangles(scene: THREE.Scene): number {
   let n = 0;
@@ -51,9 +61,24 @@ export function mountScene(host: HTMLElement, build: SceneBuilder, car: THREE.Gr
   const texLoader = new THREE.TextureLoader();
   const disposables: Array<{ dispose: () => void }> = [];
   let envTex: THREE.Texture | null = null;
+  let disposed = false;
 
   const kit: SceneKit = {
-    scene, camera, car, mobile,
+    scene, camera, car, mobile, renderer,
+    viewport: () => ({ w: Math.max(1, host.clientWidth), h: Math.max(1, host.clientHeight) }),
+    setHdri: (path) => {
+      new RGBELoader().setDataType(THREE.FloatType).load(path, (hdr) => {
+        if (disposed) { hdr.dispose(); return; }
+        // clamp the sun: a raw HDRI sun (values in the thousands) blows the car out through bloom even at low intensity
+        const px = (hdr.image as unknown as { data?: Float32Array }).data;
+        if (px) for (let i = 0; i < px.length; i++) if (px[i] > 12) px[i] = 12;
+        hdr.mapping = THREE.EquirectangularReflectionMapping;
+        const env = pmrem.fromEquirectangular(hdr).texture;
+        hdr.dispose();
+        scene.environment?.dispose();
+        scene.environment = env;
+      }, undefined, () => { /* env stays empty: lights still work */ });
+    },
     tex: (path, repeat) => {
       const t = texLoader.load(path);
       t.colorSpace = THREE.SRGBColorSpace;
@@ -92,7 +117,7 @@ export function mountScene(host: HTMLElement, build: SceneBuilder, car: THREE.Gr
   const triangles = countTriangles(scene);
   host.dataset.triangles = String(triangles);
 
-  let disposed = false, raf = 0, progress = 0, frames = 0, fpsVal = 0, lastFpsT = performance.now();
+  let raf = 0, progress = 0, frames = 0, fpsVal = 0, lastFpsT = performance.now();
   const clock = new THREE.Clock();
   const loop = () => {
     if (disposed) return;
@@ -113,7 +138,14 @@ export function mountScene(host: HTMLElement, build: SceneBuilder, car: THREE.Gr
     dispose: () => {
       disposed = true; cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
-      scene.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.geometry?.dispose(); const mat = m.material as THREE.Material | THREE.Material[]; (Array.isArray(mat) ? mat : [mat]).forEach((x) => x?.dispose()); } });
+      // material.dispose() keeps its map alive: free canvas textures (decals, labels, map) explicitly; sprites too
+      // only our canvas textures: the car's GLTF maps are shared with the cached template and must survive
+      const freeMat = (x: THREE.Material | undefined) => { if (!x) return; const map = (x as THREE.MeshBasicMaterial).map as THREE.CanvasTexture | null; if (map?.isCanvasTexture) map.dispose(); x.dispose(); };
+      scene.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (m.isMesh) { m.geometry?.dispose(); const mat = m.material as THREE.Material | THREE.Material[]; (Array.isArray(mat) ? mat : [mat]).forEach(freeMat); }
+        else if ((o as THREE.Sprite).isSprite) freeMat((o as THREE.Sprite).material);
+      });
       disposables.forEach((d) => d.dispose());
       envTex?.dispose(); scene.environment?.dispose(); pmrem.dispose();
       composer?.dispose();
