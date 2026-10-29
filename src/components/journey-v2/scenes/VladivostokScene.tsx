@@ -32,7 +32,7 @@ export const buildVladivostok: SceneBuilder = ({ scene, camera, car, setEnv }) =
   ship.add(box(15, 7, 46, M(0x3a5068, 0.45, 0.6), 0, 4.2, 0), box(13, 5, 36, M(0xcfd6dd, 0.5, 0.3), 0, 10.2, 1));
   const rampPivot = new THREE.Group(); rampPivot.position.set(-7.5, 4.4, 6);
   rampPivot.add(box(11, 0.35, 6.5, M(0x3a4552, 0.5, 0.6), -5.5, 0, 0));
-  ship.add(rampPivot); ship.position.set(2, 0, -28); scene.add(ship);
+  ship.add(rampPivot); ship.position.set(-6, 0, -36); scene.add(ship);
   if (car) setHeadlights(car, true);
   return {
     triangles: 0,
