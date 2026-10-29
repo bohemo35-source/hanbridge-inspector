@@ -139,7 +139,8 @@ export function mountScene(host: HTMLElement, build: SceneBuilder, car: THREE.Gr
       disposed = true; cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
       // material.dispose() keeps its map alive: free canvas textures (decals, labels, map) explicitly; sprites too
-      const freeMat = (x: THREE.Material | undefined) => { if (!x) return; (x as THREE.MeshBasicMaterial).map?.dispose(); x.dispose(); };
+      // only our canvas textures: the car's GLTF maps are shared with the cached template and must survive
+      const freeMat = (x: THREE.Material | undefined) => { if (!x) return; const map = (x as THREE.MeshBasicMaterial).map as THREE.CanvasTexture | null; if (map?.isCanvasTexture) map.dispose(); x.dispose(); };
       scene.traverse((o) => {
         const m = o as THREE.Mesh;
         if (m.isMesh) { m.geometry?.dispose(); const mat = m.material as THREE.Material | THREE.Material[]; (Array.isArray(mat) ? mat : [mat]).forEach(freeMat); }

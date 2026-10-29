@@ -220,6 +220,8 @@ export function makePlateScene(cfg: PlateConfig, debug: boolean): SceneBuilder {
       for (const p of cfg.path) { const s = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff0000 })); s.position.set(p[0], p[1] + 0.1, p[2]); scene.add(s); }
     }
     if (car) setHeadlights(car, cfg.headlights);
+    // in daylight the lamp sprites read as glowing balls: keep them small and faint, the pools carry the light
+    if (car && !cfg.night) (car.userData.glows as THREE.Sprite[] | undefined)?.forEach((g) => { g.scale.setScalar(0.13); g.material.opacity = 0.3; });
     camera.position.set(...cfg.cameraPos);
     camera.lookAt(...cfg.lookAt);
     const tmp = new THREE.Vector3();
