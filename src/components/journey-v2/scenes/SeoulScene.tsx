@@ -34,16 +34,18 @@ export const buildSeoul: SceneBuilder = ({ scene, camera, car, setEnv }) => {
   const traffic = points(260, [8, 0.6, 180], 0.8, 0xffe2a0, 0.45); scene.add(traffic);
   const lampMat = new THREE.MeshBasicMaterial({ color: 0xffd9a0 });
   for (let z = -105; z < 65; z += 15) for (const x of [-4.6, 4.6]) { const s = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), lampMat); s.position.set(x, 2.2, z); scene.add(s); scene.add(box(0.08, 2.2, 0.08, rail, x, 1.1, z)); }
+  const carLight = new THREE.PointLight(0xffd9a0, 60, 22); scene.add(carLight);
   if (car) { setHeadlights(car, true); face(car, 0, -1); }
   return {
     triangles: 0,
     update: (p, t) => {
       const z = lerp(55, -85, p);
       if (car) { car.position.set(1.8, 0.28, z); vibrate(car, 1, t); }
+      carLight.position.set(1.8, 3.2, z + 3);
       traffic.position.z = Math.sin(t * 0.15) * 2;
       const rise = seg(p, 0.55, 1);
-      camera.position.set(lerp(6.8, 14, rise), lerp(1.15, 12, rise), z + lerp(6.5, 15, rise));
-      camera.lookAt(1.2, lerp(0.8, 1.5, rise), z - lerp(7, 12, rise));
+      camera.position.set(lerp(4.4, 13, rise), lerp(1.35, 12, rise), z + lerp(7, 15, rise));
+      camera.lookAt(1.4, lerp(0.8, 1.5, rise), z - lerp(6, 12, rise));
       camera.fov = 46; camera.updateProjectionMatrix();
     },
   };

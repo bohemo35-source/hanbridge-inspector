@@ -29,7 +29,7 @@ export const buildVladivostok: SceneBuilder = ({ scene, camera, car, setEnv }) =
   scene.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(cablePts), new THREE.LineBasicMaterial({ color: 0x8a7a68 })));
   // ship at pier, ramp lowers, car drives off
   const ship = new THREE.Group();
-  ship.add(box(15, 7, 46, M(0x24313e, 0.45, 0.6), 0, 4.2, 0), box(13, 5, 36, M(0xcfd6dd, 0.5, 0.3), 0, 10.2, 1));
+  ship.add(box(15, 7, 46, M(0x3a5068, 0.45, 0.6), 0, 4.2, 0), box(13, 5, 36, M(0xcfd6dd, 0.5, 0.3), 0, 10.2, 1));
   const rampPivot = new THREE.Group(); rampPivot.position.set(-7.5, 4.4, 6);
   rampPivot.add(box(11, 0.35, 6.5, M(0x3a4552, 0.5, 0.6), -5.5, 0, 0));
   ship.add(rampPivot); ship.position.set(2, 0, -28); scene.add(ship);
@@ -46,8 +46,8 @@ export const buildVladivostok: SceneBuilder = ({ scene, camera, car, setEnv }) =
         vibrate(car, off > 0 && off < 1 ? 1 : 0, t);
         setHeadlights(car, p < 0.9);
       }
-      camera.position.set(lerp(-24, 8, p), lerp(4, 7, p), lerp(26, 30, p));
-      camera.lookAt(lerp(0, 30, p), 2.2, lerp(-24, -4, p));
+      camera.position.set(lerp(-16, 20, p), lerp(3.6, 6.5, p), lerp(22, 26, p));
+      camera.lookAt(lerp(2, 32, p), 2.4, lerp(-20, -4, p));
     },
   };
 };

@@ -58,6 +58,7 @@ for (const [name, id] of shots) {
   await page.close().catch(() => undefined);
 }
 
+if (process.env.SKIP_EXTRA) { console.log("page errors:", JSON.stringify(errors.slice(0, 10))); await browser.close(); process.exit(0); }
 const mob = await browser.newPage({ viewport: { width: 390, height: 844 } });
 mob.on("pageerror", (e) => errors.push("mobile: " + e.message));
 await mob.goto(`${BASE}/?lang=ru`, { waitUntil: "networkidle" });
