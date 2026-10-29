@@ -1,0 +1,61 @@
+{
+  "created": "2026-10-29",
+  "built_during_hackathon": true,
+  "pipeline": [
+    {
+      "step": "concept image",
+      "model": "muse-image-1.0 (Meta Model API)",
+      "output": "hero-car-source.jpg",
+      "prompt": "a modern compact crossover SUV, deep graphite metallic paint, smooth generic design, no badges, no logos, no licence plate, closed doors, standard alloy wheels, three-quarter front view from the front left at eye level, isolated product shot on a plain light grey seamless studio background, soft even diffuse lighting, no harsh reflections, whole car fully in frame with margin, sharp focus, photorealistic, orthographic-like long lens, no text, no people"
+    },
+    {
+      "step": "image to 3D",
+      "service": "Tripo API (paid API credits; paid users hold all rights to outputs)",
+      "model_version": "v3.1-20260211",
+      "tasks": {
+        "hero-car.glb": {
+          "task_id": "8e71ac9a-913c-4750-ae2e-a3ca32901579",
+          "texture": true,
+          "pbr": true,
+          "texture_quality": "detailed",
+          "geometry_quality": "detailed"
+        },
+        "hero-car-parts.glb": {
+          "task_id": "a4bfb5b4-7337-4908-b346-03f45cecd2d5",
+          "generate_parts": true,
+          "texture": false,
+          "geometry_quality": "detailed"
+        }
+      },
+      "model_seed": 20261029
+    },
+    {
+      "step": "optimize",
+      "tool": "@gltf-transform/cli optimize --compress meshopt --simplify-ratio 0.5 (parts kept separate: --join false --flatten false)",
+      "note": "meshopt-compressed: load with GLTFLoader.setMeshoptDecoder(MeshoptDecoder)"
+    }
+  ],
+  "reference_frames": {
+    "ref-garage-lift.jpg": "muse-image-1.0, mood reference for the inspection garage (not shipped as geometry)",
+    "ref-garage-exploded.jpg": "muse-image-1.0, mood reference for the exploded view"
+  },
+  "v2": {
+    "created": "2026-10-29",
+    "why": "v1 was built from a single view (wavy back/sides). v2: Tripo generates 4 consistent views from the same Muse Image frame, then multiview_to_model.",
+    "source_image": "hero-car-source.jpg (muse-image-1.0)",
+    "multiview_task": "48e7d25e-1a22-4950-9434-a5813f03b0cc",
+    "model_version": "v3.1-20260211",
+    "model_seed": 20261030,
+    "files": {
+      "car-v2.glb": {
+        "desc": "single mesh, PBR textures (detailed), geometry_quality detailed",
+        "note": "meshopt + webp 2048"
+      },
+      "car-v2-parts.glb": {
+        "desc": "generate_parts: 22 separate parts (tripo_part_0..21), no textures",
+        "note": "meshopt, parts kept separate"
+      }
+    },
+    "tripo_credits_used": 175
+  }
+}
