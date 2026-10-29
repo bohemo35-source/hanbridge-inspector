@@ -61,7 +61,11 @@ export function mountScene(host: HTMLElement, build: SceneBuilder, car: THREE.Gr
       disposables.push(t);
       return t;
     },
-    envFromTexture: (tex) => { scene.environment = pmrem.fromEquirectangular(tex).texture; },
+    envFromTexture: (tex) => {
+      const apply = () => { try { scene.environment = pmrem.fromEquirectangular(tex).texture; } catch { /* env stays default */ } };
+      if ((tex.image as { width?: number } | undefined)?.width) apply();
+      else { const iv = setInterval(() => { if ((tex.image as { width?: number } | undefined)?.width) { clearInterval(iv); apply(); } }, 300); setTimeout(() => clearInterval(iv), 12000); }
+    },
     setEnv: (path, bgColor) => {
       texLoader.load(path, (tex) => {
         if (disposed) return;

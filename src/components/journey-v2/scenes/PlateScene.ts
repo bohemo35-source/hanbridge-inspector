@@ -19,7 +19,7 @@ export function blobShadowTexture(): THREE.Texture {
 }
 
 export function makePlateScene(cfg: PlateConfig, debug: boolean): SceneBuilder {
-  return ({ scene, camera, car, tex, envFromTexture }) => {
+  return ({ scene, camera, car, tex, envFromTexture, mobile }) => {
     camera.fov = cfg.fov; camera.updateProjectionMatrix();
     const plateTex = tex(cfg.image);
     plateTex.colorSpace = THREE.SRGBColorSpace;
@@ -55,7 +55,8 @@ export function makePlateScene(cfg: PlateConfig, debug: boolean): SceneBuilder {
         s.scale.setScalar(0.5); s.position.set(-2.25, 0.68, off); s.visible = false; car.add(s); tails.push(s);
       }
     }
-    const curve = new THREE.CatmullRomCurve3(cfg.path.map((p) => new THREE.Vector3(...p)));
+    const mx = mobile ? 0.42 : 1; // narrow viewport: pull the path toward the frame centre
+    const curve = new THREE.CatmullRomCurve3(cfg.path.map((p) => new THREE.Vector3(p[0] * mx, p[1], p[2])));
     if (debug) {
       scene.add(new THREE.GridHelper(60, 60, 0xff4444, 0x446644));
       const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(60)), new THREE.LineBasicMaterial({ color: 0xffcc00 }));

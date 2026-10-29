@@ -61,6 +61,8 @@ for (const [name, id] of shots) {
 if (process.env.SKIP_EXTRA) { console.log("page errors:", JSON.stringify(errors.slice(0, 10))); await browser.close(); process.exit(0); }
 // debug plate overlays (grid + path) for the 4 plates
 for (const id of ["seoul", "port", "vladivostok", "handover"]) {
+  if (ONLY && !id.includes(ONLY)) continue;
+  try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await page.goto(`${BASE}/?lang=ru&debug=plate`, { waitUntil: "networkidle" });
   await page.waitForTimeout(3000);
@@ -69,9 +71,10 @@ for (const id of ["seoul", "port", "vladivostok", "handover"]) {
   await page.screenshot({ path: `${OUT}tz12-debug-plate-${id}.png`, timeout: 150000 });
   console.log("saved", `tz12-debug-plate-${id}`);
   await page.close().catch(() => undefined);
+  } catch (e) { console.log("debug failed", id, String(e).slice(0, 120)); }
 }
 // port end: car entering the hold
-{
+try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await page.goto(`${BASE}/?lang=ru`, { waitUntil: "networkidle" });
   await page.waitForTimeout(3000);
@@ -80,7 +83,7 @@ for (const id of ["seoul", "port", "vladivostok", "handover"]) {
   await page.screenshot({ path: `${OUT}tz12-05b-port-end.png`, timeout: 150000 });
   console.log("saved tz12-05b-port-end");
   await page.close().catch(() => undefined);
-}
+} catch (e) { console.log("port-end failed", String(e).slice(0, 120)); }
 const mob = await browser.newPage({ viewport: { width: 390, height: 844 } });
 mob.on("pageerror", (e) => errors.push("mobile: " + e.message));
 await mob.goto(`${BASE}/?lang=ru`, { waitUntil: "networkidle" });
