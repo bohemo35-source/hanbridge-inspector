@@ -16,7 +16,7 @@ export const buildSeoul: SceneBuilder = ({ scene, camera, car, setEnv }) => {
   // river + bridge deck
   const river = new THREE.Mesh(new THREE.PlaneGeometry(300, 220), M(0x0a1626, 0.25, 0.4));
   river.rotation.x = -Math.PI / 2; river.position.y = -3; scene.add(river);
-  const deck = box(10, 0.5, 190, M(0x151a21, 0.6), 0, 0, -20); scene.add(deck);
+  const deck = box(10, 0.5, 190, M(0x27313e, 0.55), 0, 0, -20); scene.add(deck);
   const rail = M(0x2b3542, 0.5, 0.5);
   for (const x of [-5, 5]) scene.add(box(0.25, 1, 190, rail, x, 0.9, -20));
   for (let z = -110; z < 70; z += 9) for (const x of [-5, 5]) { const p = box(0.12, 0.9, 0.12, rail, x, 0.7, z); scene.add(p); }
@@ -33,7 +33,7 @@ export const buildSeoul: SceneBuilder = ({ scene, camera, car, setEnv }) => {
   const cityR = points(700, [60, 14, 170], 0, 0x9fc2ff, 0.5); cityR.position.set(45, 0, -20); scene.add(cityR);
   const traffic = points(260, [8, 0.6, 180], 0.8, 0xffe2a0, 0.45); scene.add(traffic);
   const lampMat = new THREE.MeshBasicMaterial({ color: 0xffd9a0 });
-  for (let z = -105; z < 65; z += 15) for (const x of [-4.6, 4.6]) { const s = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), lampMat); s.position.set(x, 2.2, z); scene.add(s); scene.add(box(0.08, 2.2, 0.08, rail, x, 1.1, z)); }
+  for (let z = -105; z < 65; z += 15) for (const x of [-4.6, 4.6]) { const s = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), lampMat); s.position.set(x, 2.2, z); scene.add(s); scene.add(box(0.08, 2.2, 0.08, rail, x, 1.1, z)); }
   if (car) { setHeadlights(car, true); face(car, 0, -1); }
   return {
     triangles: 0,
@@ -42,8 +42,8 @@ export const buildSeoul: SceneBuilder = ({ scene, camera, car, setEnv }) => {
       if (car) { car.position.set(1.8, 0.28, z); vibrate(car, 1, t); }
       traffic.position.z = Math.sin(t * 0.15) * 2;
       const rise = seg(p, 0.55, 1);
-      camera.position.set(lerp(9, 15, rise), lerp(1.1, 13, rise), z + lerp(7, 16, rise));
-      camera.lookAt(0, lerp(0.8, 1.5, rise), z - 10);
+      camera.position.set(lerp(6.8, 14, rise), lerp(1.15, 12, rise), z + lerp(6.5, 15, rise));
+      camera.lookAt(1.2, lerp(0.8, 1.5, rise), z - lerp(7, 12, rise));
       camera.fov = 46; camera.updateProjectionMatrix();
     },
   };

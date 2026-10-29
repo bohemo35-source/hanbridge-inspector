@@ -39,20 +39,24 @@ async function midShot(page, name, blockId) {
   console.log("saved", name);
 }
 
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-page.on("pageerror", (e) => errors.push(e.message));
-page.on("console", (m) => m.type() === "error" && errors.push(m.text().slice(0, 200)));
-await page.goto(`${BASE}/?lang=ru`, { waitUntil: "networkidle" });
-await page.waitForTimeout(4000);
-console.log("pageHeight:", await page.evaluate(() => document.documentElement.scrollHeight), "vh:", await page.evaluate(() => document.documentElement.scrollHeight / window.innerHeight * 100));
+const ONLY = process.env.ONLY ?? "";
 const shots = [
   ["tz11-01-seoul", "seoul"], ["tz11-02-sourcing", "bridge-sourcing"], ["tz11-03-garage", "garage"],
   ["tz11-04-documents", "bridge-documents"], ["tz11-05-port", "port"], ["tz11-06-sea", "bridge-sea"],
   ["tz11-07-vladivostok", "vladivostok"], ["tz11-08-customs", "bridge-customs"], ["tz11-09-road", "road"],
   ["tz11-10-handover", "handover"], ["tz11-11-reviews", "reviews"], ["tz11-12-finale", "finale"],
 ];
-for (const [name, id] of shots) await midShot(page, name, id);
-await page.close();
+for (const [name, id] of shots) {
+  if (ONLY && !name.includes(ONLY)) continue;
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text().slice(0, 200)));
+  await page.goto(`${BASE}/?lang=ru`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(3500);
+  if (name === "tz11-01-seoul") console.log("pageHeight:", await page.evaluate(() => document.documentElement.scrollHeight), "vh:", await page.evaluate(() => document.documentElement.scrollHeight / window.innerHeight * 100));
+  await midShot(page, name, id);
+  await page.close().catch(() => undefined);
+}
 
 const mob = await browser.newPage({ viewport: { width: 390, height: 844 } });
 mob.on("pageerror", (e) => errors.push("mobile: " + e.message));

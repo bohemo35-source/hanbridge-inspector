@@ -43,7 +43,7 @@ export default function Bridge({ id, image, stage, heightVh, mobileScale, lang }
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/40" />
         {id === "bridge-customs" && <div className="absolute left-1/2 top-[22%] -translate-x-1/2 rotate-[-6deg] rounded-lg border-4 border-emerald-300/90 px-6 py-2 text-3xl font-black uppercase tracking-widest text-emerald-300/90" style={{ animation: "jv2-stamp 1s ease both" }}>Cleared</div>}
         <style>{`@keyframes jv2-stamp{from{opacity:0;transform:translateX(-50%) scale(1.6) rotate(-6deg)}to{opacity:1;transform:translateX(-50%) scale(1) rotate(-6deg)}}`}</style>
-        <div className="absolute inset-x-0 bottom-0 mx-auto grid w-full max-w-5xl gap-3 p-5 sm:grid-cols-2 sm:p-8">
+        <div className="absolute inset-x-0 bottom-0 mx-auto grid w-full max-w-5xl gap-3 p-5 pb-36 sm:grid-cols-2 sm:p-8 sm:pb-8 sm:pl-[24rem]">
           <article className="rounded-2xl border border-white/20 bg-black/45 p-5 text-zinc-100 backdrop-blur-md">
             <p className="text-[11px] uppercase tracking-[0.2em] text-amber-200/90">{STAGE_LABELS[stage][lang]}</p>
             <dl className="mt-3 space-y-2 text-sm">
