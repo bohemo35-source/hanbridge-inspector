@@ -436,7 +436,7 @@ export default function GarageScene(props: GarageSceneProps) {
         applyNorm(model);
         partsGroup = model; carGroup.add(model);
         model.updateMatrixWorld(true);
-        const cabinMat = (new THREE.MeshPhysicalMaterial({ color: 0x0a0c10, metalness: 0.35, roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.5 }));
+        const cabinMat = new THREE.MeshPhysicalMaterial({ color: 0x0a0c10, metalness: 0.35, roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.5 });
         const wheelMat = new THREE.MeshPhysicalMaterial({ color: 0x141518, metalness: 0.3, roughness: 0.9, clearcoat: 0.2 });
         const underMat = new THREE.MeshPhysicalMaterial({ color: 0x191b1e, metalness: 0.2, roughness: 1, envMapIntensity: 0.3 });
         model.traverse((o) => {
@@ -681,7 +681,7 @@ export default function GarageScene(props: GarageSceneProps) {
         )}
 
         {!debugParts && report && (
-          <div className={`absolute bottom-24 right-4 w-[320px] max-w-[82vw] rounded-2xl border border-white/15 bg-black/55 p-4 text-zinc-100 backdrop-blur-md transition-all duration-500 sm:bottom-8 sm:right-8 ${verdictIn ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"}`} aria-hidden={!verdictIn}>
+          <div className={`absolute bottom-24 right-4 w-[320px] max-w-[82vw] rounded-2xl border border-white/15 bg-black/55 p-4 text-zinc-100 backdrop-blur-md transition-all duration-500 sm:bottom-24 sm:right-8 ${verdictIn ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"}`} aria-hidden={!verdictIn}>
             <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-400">{lang === "ru" ? "Вердикт" : "Verdict"}</p>
             <p className={`mt-1 text-3xl font-bold ${report.verdict.decision === "BUY" ? "text-emerald-300" : report.verdict.decision === "WALK_AWAY" ? "text-red-300" : "text-amber-300"}`}>
               {report.verdict.decision.replace("_", " ")}

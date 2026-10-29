@@ -14,4 +14,15 @@ Everything else in this repository was created during the Meta Global AI Develop
 | HDRI "Evening Road 01" | `public/hdri/evening_road_01_1k.hdr` | Poly Haven — https://polyhaven.com/a/evening_road_01 | CC0 |
 | HDRI "Autoshop 01" | `public/hdri/autoshop_01_1k.hdr`, `autoshop_01_2k.hdr` | Poly Haven — https://polyhaven.com/a/autoshop_01 | CC0 |
 
+Own generated images added in TZ-13 (not third-party, listed for traceability):
+
+| Asset | Path | Author / source | License |
+|---|---|---|---|
+| Aerial plate "coast" | `public/journey-v2/aerial-coast.jpg` | Muse Image `muse-image-1.0` (Meta), prompt in `public/journey-v2/prompts.json`, script `scripts/journey-v2/generate-aerials.mjs` | generated for this project |
+| Aerial plate "forest" | `public/journey-v2/aerial-forest.jpg` | same | generated for this project |
+| Aerial plate "steppe" | `public/journey-v2/aerial-steppe.jpg` | same | generated for this project |
+| Aerial plate "suburb" | `public/journey-v2/aerial-suburb.jpg` | same | generated for this project |
+
+HDRI use (TZ-13): Shanghai Bund — Seoul plate; Golden Bay — port; Düsseldorf Bridge — Vladivostok and top-down road; Evening Road 01 — handover; Autoshop 01 — garage (2k desktop, 1k phones). Reflections/lighting only; visible backgrounds stay Muse Image.
+
 Libraries are listed in `package.json` (three.js — MIT, Next.js — MIT, etc.).

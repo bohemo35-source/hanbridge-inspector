@@ -31,7 +31,10 @@ export type SceneBuilder = (kit: SceneKit) => SceneHandle;
 const MAX_CANVASES = 2;
 let liveCanvases = 0;
 export function acquireCanvas(): boolean { if (liveCanvases >= MAX_CANVASES) return false; liveCanvases++; return true; }
-export function releaseCanvas() { liveCanvases = Math.max(0, liveCanvases - 1); }
+const freedListeners = new Set<() => void>();
+/** called when a slot frees up: blocks that hit the cap while near retry their mount */
+export function onCanvasFreed(cb: () => void): () => void { freedListeners.add(cb); return () => { freedListeners.delete(cb); }; }
+export function releaseCanvas() { liveCanvases = Math.max(0, liveCanvases - 1); queueMicrotask(() => freedListeners.forEach((cb) => cb())); }
 
 export function countTriangles(scene: THREE.Scene): number {
   let n = 0;
@@ -135,7 +138,13 @@ export function mountScene(host: HTMLElement, build: SceneBuilder, car: THREE.Gr
     dispose: () => {
       disposed = true; cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
-      scene.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.geometry?.dispose(); const mat = m.material as THREE.Material | THREE.Material[]; (Array.isArray(mat) ? mat : [mat]).forEach((x) => x?.dispose()); } });
+      // material.dispose() keeps its map alive: free canvas textures (decals, labels, map) explicitly; sprites too
+      const freeMat = (x: THREE.Material | undefined) => { if (!x) return; (x as THREE.MeshBasicMaterial).map?.dispose(); x.dispose(); };
+      scene.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (m.isMesh) { m.geometry?.dispose(); const mat = m.material as THREE.Material | THREE.Material[]; (Array.isArray(mat) ? mat : [mat]).forEach(freeMat); }
+        else if ((o as THREE.Sprite).isSprite) freeMat((o as THREE.Sprite).material);
+      });
       disposables.forEach((d) => d.dispose());
       envTex?.dispose(); scene.environment?.dispose(); pmrem.dispose();
       composer?.dispose();

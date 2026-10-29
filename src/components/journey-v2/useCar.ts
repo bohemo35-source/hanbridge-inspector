@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Shared car-v2.glb loader: one GLTF cached per page, each block clones + normalizes to 4.4 m
 // @created: 2026-10-29
+// @updated: 2026-10-30 claude-code (smaller, softer headlight glow sprites)
 "use client";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
@@ -36,13 +37,13 @@ export function cloneCar(template: THREE.Group): THREE.Group {
   grad.addColorStop(0, "rgba(255,240,200,1)"); grad.addColorStop(0.35, "rgba(255,220,150,0.55)"); grad.addColorStop(1, "rgba(255,210,120,0)");
   gg.fillStyle = grad; gg.fillRect(0, 0, 64, 64);
   const glowTex = new THREE.CanvasTexture(gc);
-  const glowMat = new THREE.SpriteMaterial({ map: glowTex, color: 0xf2f5ff, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending });
+  const glowMat = new THREE.SpriteMaterial({ map: glowTex, color: 0xf2f5ff, transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending });
   const glows: THREE.Sprite[] = [];
   const axisX = wrap.userData.lengthAxis === "x";
   const front = axisX ? 2.2 : 1.0;
   for (const off of [-0.62, 0.62]) {
     const sp = new THREE.Sprite(glowMat.clone());
-    sp.scale.setScalar(0.38);
+    sp.scale.setScalar(0.24);
     if (axisX) sp.position.set(front, 0.62, off); else sp.position.set(off, 0.62, front);
     sp.name = "headlight-glow";
     wrap.add(sp); glows.push(sp);

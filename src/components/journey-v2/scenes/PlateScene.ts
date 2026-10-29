@@ -30,9 +30,10 @@ function canvasTex(w: number, h: number, draw: (g: CanvasRenderingContext2D) => 
 /** Ambient occlusion under the body: soft rounded rectangle, darkest in the middle. */
 function aoTexture(): THREE.Texture {
   return canvasTex(256, 128, (g) => {
-    g.filter = "blur(10px)";
-    g.fillStyle = "rgba(0,0,0,0.9)";
-    g.beginPath(); g.roundRect(34, 30, 188, 68, 30); g.fill();
+    // body footprint 4.6 x 2.0 m on a 5.2 x 2.6 m plane, soft edge peeking out around the wheels
+    g.filter = "blur(9px)";
+    g.fillStyle = "rgba(0,0,0,0.92)";
+    g.beginPath(); g.roundRect(14, 16, 228, 96, 34); g.fill();
   });
 }
 /** Wheel contact: small dark radial spot. */
@@ -93,7 +94,7 @@ function mirrorMaterial(src: THREE.Material, opacity: number): THREE.Material {
     sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying float vWY;")
       .replace("#include <begin_vertex>", "#include <begin_vertex>\nvWY = (modelMatrix * vec4(transformed, 1.0)).y;");
     sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vWY;")
-      .replace("#include <dithering_fragment>", "#include <dithering_fragment>\ngl_FragColor.a *= clamp(1.0 + vWY / 1.1, 0.0, 1.0);");
+      .replace("#include <dithering_fragment>", "#include <dithering_fragment>\ngl_FragColor.a *= clamp(1.0 + vWY / 1.6, 0.0, 1.0);");
   };
   m.customProgramCacheKey = () => "plate-mirror";
   return m;
@@ -149,14 +150,14 @@ export function makePlateScene(cfg: PlateConfig, debug: boolean): SceneBuilder {
       m.rotation.x = -Math.PI / 2; m.position.set(x, 0.015 + order * 0.002, z); m.renderOrder = order; fx.add(m); return m;
     };
     const blob = decal(blobShadowTexture(), 6.4, 3.4, 0, 0, 0xffffff, 0.9, false, 3);
-    const ao = decal(aoTexture(), 5.0, 2.5, 0, 0, 0xffffff, 0.95, false, 4);
+    const ao = decal(aoTexture(), 5.2, 2.6, 0, 0, 0xffffff, 0.95, false, 4);
     const dotTex = dotTexture();
-    const dots = [[1.38, 0.8], [1.38, -0.8], [-1.38, 0.8], [-1.38, -0.8]].map(([x, z]) => decal(dotTex, 0.9, 0.7, x, z, 0xffffff, 0.9, false, 5));
+    const dots = [[1.38, 0.8], [1.38, -0.8], [-1.38, 0.8], [-1.38, -0.8]].map(([x, z]) => decal(dotTex, 1.1, 0.8, x, z * 1.08, 0xffffff, 0.95, false, 5));
     // headlight pools (forward = +x in car space) and brake spill (behind)
     const beamTex = beamTexture(), glowTex = glowTexture();
     const night = cfg.night;
     const pools = [-0.55, 0.55].map((z) => decal(beamTex, 9, 3.6, 2.2 + 4.3, z * 1.6, 0xffe2b8, night ? 0.5 : 0.18, true, 6));
-    const brake = decal(glowTex, 2.6, 3.0, -2.8, 0, 0xff2414, night ? 0.4 : 0, true, 6);
+    const brake = decal(glowTex, 2.6, 3.0, -2.8, 0, 0xff2414, night ? 0.28 : 0, true, 6);
     // long soft shadow along the key light direction (world-space orientation, fixed) — main cue on mobile (no shadow map)
     const lightDir = new THREE.Vector2(-cfg.lightPos[0], -cfg.lightPos[2]).normalize();
     const longShadow = new THREE.Mesh(new THREE.PlaneGeometry(7, 2.6), new THREE.MeshBasicMaterial({ map: longShadowTexture(), transparent: true, opacity: mobile ? 0.45 : 0.22, depthWrite: false }));
@@ -218,7 +219,7 @@ export function makePlateScene(cfg: PlateConfig, debug: boolean): SceneBuilder {
       line.position.y = 0.05; scene.add(line);
       for (const p of cfg.path) { const s = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff0000 })); s.position.set(p[0], p[1] + 0.1, p[2]); scene.add(s); }
     }
-        if (car) setHeadlights(car, cfg.headlights);
+    if (car) setHeadlights(car, cfg.headlights);
     camera.position.set(...cfg.cameraPos);
     camera.lookAt(...cfg.lookAt);
     const tmp = new THREE.Vector3();
@@ -293,7 +294,7 @@ export function makePlateScene(cfg: PlateConfig, debug: boolean): SceneBuilder {
         fx.scale.setScalar(shrink); fx.visible = car.visible;
         longShadow.visible = car.visible; longShadow.scale.setScalar(shrink);
         blob.material.opacity = 0.9 * shrink; ao.material.opacity = 0.95 * shrink; dots.forEach((d) => { d.material.opacity = 0.9 * shrink; });
-        pools.forEach((m) => { m.visible = lightsOn && !(off & 2); m.material.opacity = (night ? 0.5 : 0.18) * (facingCam ? 1 : 0.4); });
+        pools.forEach((m) => { m.visible = lightsOn && !(off & 2); m.material.opacity = (night ? 0.5 : 0.18) * (facingCam ? 1 : 0.75); });
         cones.forEach((c) => { c.visible = lightsOn && !(off & 1); });
         if (mirror) {
           car.updateMatrix();

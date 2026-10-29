@@ -5,7 +5,7 @@
 // @updated: 2026-10-30 claude-code (film grade overlay: vignette, tint, grain; crossfade with the previous block)
 "use client";
 import { useEffect, useRef } from "react";
-import { mountScene, acquireCanvas, releaseCanvas, type SceneBuilder, type Mounted } from "./sceneKit";
+import { mountScene, acquireCanvas, releaseCanvas, onCanvasFreed, type SceneBuilder, type Mounted } from "./sceneKit";
 import { loadCarTemplate, cloneCar } from "./useCar";
 import { buildSeoul } from "./scenes/SeoulScene";
 import { buildPort } from "./scenes/PortScene";
@@ -37,7 +37,7 @@ export default function SceneBlock({ sceneId, blockId, heightVh, mobileScale, on
   useEffect(() => {
     const outer = outerRef.current, host = hostRef.current;
     if (!outer || !host) return;
-    let disposed = false, near = false, mounting = false;
+    let disposed = false, near = false, mounting = false, holdsSlot = false, gen = 0;
     const cfg = BUILDERS[sceneId];
     const updateLocal = () => {
       const r = outer.getBoundingClientRect();
@@ -48,10 +48,13 @@ export default function SceneBlock({ sceneId, blockId, heightVh, mobileScale, on
     };
     const tryMount = async () => {
       if (disposed || mounting || mountedRef.current || !cfg || !acquireCanvas()) return;
-      mounting = true;
+      mounting = true; holdsSlot = true;
+      const my = ++gen;
+      const stale = () => disposed || my !== gen || !near || !!mountedRef.current;
+      const giveBack = () => { if (holdsSlot) { holdsSlot = false; releaseCanvas(); } };
       try {
         const template = await loadCarTemplate();
-        if (disposed || mountedRef.current) { releaseCanvas(); return; }
+        if (stale()) { giveBack(); return; }
         const car = cloneCar(template);
         let builder = cfg.build;
         if (plate) {
@@ -59,11 +62,13 @@ export default function SceneBlock({ sceneId, blockId, heightVh, mobileScale, on
           if (ok) builder = makePlateScene(plate, new URLSearchParams(window.location.search).has("debug"));
           // on plate load error the legacy code scene stays as fallback
         }
+        if (stale()) { giveBack(); return; }
         mountedRef.current = mountScene(host, builder, car);
         updateLocal();
-      } catch { releaseCanvas(); /* poster fallback stays visible */ } finally { mounting = false; }
+      } catch { giveBack(); /* poster fallback stays visible */ } finally { mounting = false; }
     };
-    const unmount = () => { mountedRef.current?.dispose(); mountedRef.current = null; releaseCanvas(); };
+    // only a block that holds a slot gives one back (the first ioFar callback of a far block must not)
+    const unmount = () => { gen++; mountedRef.current?.dispose(); mountedRef.current = null; if (holdsSlot && !mounting) { holdsSlot = false; releaseCanvas(); } };
     const io = new IntersectionObserver((es) => {
       es.forEach((e) => { near = e.isIntersecting; if (near) void tryMount(); });
     }, { rootMargin: "100% 0px 100% 0px" });
@@ -75,8 +80,9 @@ export default function SceneBlock({ sceneId, blockId, heightVh, mobileScale, on
     // a fast jump can hit the 2-canvas cap before the block we left releases its slot: retry while near
     const onScroll = () => { updateLocal(); if (near && !mountedRef.current) void tryMount(); };
     window.addEventListener("scroll", onScroll, { passive: true });
+    const offFreed = onCanvasFreed(() => { if (near && !mountedRef.current) void tryMount(); });
     updateLocal();
-    return () => { disposed = true; io.disconnect(); ioFar.disconnect(); window.removeEventListener("scroll", onScroll); unmount(); };
+    return () => { disposed = true; offFreed(); io.disconnect(); ioFar.disconnect(); window.removeEventListener("scroll", onScroll); unmount(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneId]);
 

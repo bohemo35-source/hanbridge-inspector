@@ -33,7 +33,8 @@ export function useStageFade(sectionRef: RefObject<HTMLElement | null>, stageRef
       const fin = lead ? smooth(-r.top / o) : 1;
       const fout = exit ? smooth(1 - (r.bottom - vh) / o) : 0;
       stage.style.opacity = fin >= 0.999 ? "" : fin.toFixed(3);
-      stage.style.pointerEvents = fin < 0.99 ? "none" : "";
+      // the section itself (margin −118vh) overlaps the previous block: it must not catch clicks either
+      stage.style.pointerEvents = el.style.pointerEvents = fin < 0.99 ? "none" : "";
       if (veil) veil.style.opacity = Math.max(DIP * (1 - fin), exit * fout).toFixed(3);
     };
     const onScroll = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(run); };
