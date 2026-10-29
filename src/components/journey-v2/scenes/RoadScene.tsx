@@ -39,7 +39,7 @@ export const buildRoad: SceneBuilder = ({ scene, camera, car, tex, mobile }) => 
   const trees = new THREE.InstancedMesh(treeGeo, M(0xffffff, 1), mobile ? 160 : 420);
   const dummy = new THREE.Object3D();
   const tc = new THREE.Color();
-  for (let i = 0; i < trees.count; i++) { dummy.position.set((Math.random() - 0.5) * 170, 0.9, -26 + Math.random() * 48); if (Math.abs(dummy.position.x) < 6) dummy.position.x += 10; dummy.scale.setScalar(0.7 + Math.random() * 0.8); dummy.rotation.y = Math.random() * 6.28; dummy.updateMatrix(); trees.setMatrixAt(i, dummy.matrix); trees.setColorAt(i, tc.setHSL(0.27 + Math.random() * 0.06, 0.35 + Math.random() * 0.2, 0.16 + Math.random() * 0.1)); }
+  for (let i = 0; i < trees.count; i++) { dummy.position.set((Math.random() - 0.5) * 170, 0.9, -26 + Math.random() * 48); if (Math.abs(dummy.position.x) < 6) dummy.position.x += 10; dummy.scale.setScalar(0.7 + Math.random() * 0.8); dummy.rotation.y = Math.random() * 6.28; dummy.updateMatrix(); trees.setMatrixAt(i, dummy.matrix); trees.setColorAt(i, tc.setHSL(0.28 + Math.random() * 0.05, 0.3 + Math.random() * 0.15, 0.05 + Math.random() * 0.05)); }
   trees.castShadow = true;
   scene.add(trees);
   // route line, drawn ahead of the car (endgame: closes into the map)
