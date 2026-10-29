@@ -2,16 +2,22 @@
 // @project: hanbridge-inspector
 // @purpose: Bridge between 3D blocks: full-screen Muse Image with slow push-in + parallax and glass stage cards
 // @created: 2026-10-29
+// @updated: 2026-10-30 claude-code (crossfade with neighbour blocks, film grade overlay)
 "use client";
 import { useEffect, useRef } from "react";
 import { STAGE_CONTENT, CONTENT_LABELS, type Lang } from "@/components/journey-3d/stageContent";
 import type { StageId } from "@/components/journey-3d/route";
 import { STAGE_LABELS } from "@/components/journey-3d/route";
 import { EXTRA_CARDS } from "./copy";
+import FilmGrade from "./FilmGrade";
+import { leadStyle, useStageFade } from "./useStageFade";
 
-export default function Bridge({ id, image, stage, heightVh, mobileScale, lang }: { id: string; image: string; stage: StageId; heightVh: number; mobileScale: number; lang: Lang }) {
+export default function Bridge({ id, image, stage, heightVh, mobileScale, lang, lead = false, exit = 0 }: { id: string; image: string; stage: StageId; heightVh: number; mobileScale: number; lang: Lang; lead?: boolean; exit?: number }) {
   const ref = useRef<HTMLElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const veilRef = useRef<HTMLDivElement>(null);
+  useStageFade(ref, stageRef, veilRef, lead, exit);
   useEffect(() => {
     let raf = 0;
     const onScroll = () => {
@@ -36,11 +42,12 @@ export default function Bridge({ id, image, stage, heightVh, mobileScale, lang }
     [CONTENT_LABELS.owner[lang], c.owner[lang]], [CONTENT_LABELS.clientSees[lang], c.clientSees[lang]], [CONTENT_LABELS.typical[lang], c.typical[lang]],
   ];
   return (
-    <section ref={ref} data-journey-block={id} className="relative w-full" style={{ height: `calc(${heightVh}vh * ${mobileScale})` }}>
-      <div className="sticky top-0 h-[100svh] w-full overflow-hidden bg-[#07090d]">
+    <section ref={ref} data-journey-block={id} className="relative w-full" style={leadStyle(`${heightVh}vh * ${mobileScale}`, lead)}>
+      <div ref={stageRef} className="sticky top-0 h-[100svh] w-full overflow-hidden bg-[#07090d]" style={lead ? { opacity: 0 } : undefined}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img ref={imgRef} src={image} alt="" className="absolute inset-0 h-full w-full object-cover will-change-transform" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/40" />
+        <FilmGrade vignette={0.35} />
         {id === "bridge-customs" && <div className="absolute left-1/2 top-[22%] -translate-x-1/2 rotate-[-6deg] rounded-lg border-4 border-emerald-300/90 px-6 py-2 text-3xl font-black uppercase tracking-widest text-emerald-300/90" style={{ animation: "jv2-stamp 1s ease both" }}>Cleared</div>}
         <style>{`@keyframes jv2-stamp{from{opacity:0;transform:translateX(-50%) scale(1.6) rotate(-6deg)}to{opacity:1;transform:translateX(-50%) scale(1) rotate(-6deg)}}`}</style>
         <div className="absolute inset-x-0 bottom-0 mx-auto grid w-full max-w-5xl gap-3 p-5 pb-36 sm:grid-cols-2 sm:p-8 sm:pb-8 sm:pl-[24rem]">
@@ -57,6 +64,7 @@ export default function Bridge({ id, image, stage, heightVh, mobileScale, lang }
             </article>
           ))}
         </div>
+        <div ref={veilRef} aria-hidden className="pointer-events-none absolute inset-0 bg-black opacity-0" />
       </div>
     </section>
   );

@@ -68,6 +68,18 @@ for (const [name, id] of process.env.SKIP_DESKTOP ? [] : shots) {
   await page.close().catch(() => undefined);
 }
 
+// TRANS=bridge-sourcing,port: frames in the middle of the crossfade into each listed block (FRAC of the 18vh fade)
+for (const id of (process.env.TRANS ?? "").split(",").filter(Boolean)) {
+  await fresh();
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.goto(`${BASE}/?lang=ru${Q}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(3000);
+  await page.evaluate(({ id, frac }) => { const el = document.querySelector(`[data-journey-block="${id}"]`); if (!el) return; const r = el.getBoundingClientRect(); window.scrollTo(0, window.scrollY + r.top + window.innerHeight * 0.18 * frac); }, { id, frac: Number(process.env.FRAC ?? "0.5") });
+  await page.waitForTimeout(7000);
+  await page.screenshot({ path: `${OUT}${PREFIX || "tz12"}-trans-${id}${SUFFIX}.png`, timeout: 150000 });
+  console.log("saved trans", id);
+  await page.close().catch(() => undefined);
+}
 if (process.env.SKIP_EXTRA) { console.log("page errors:", JSON.stringify(errors.slice(0, 10))); await browser.close(); process.exit(0); }
 // debug plate overlays (grid + path) for the 4 plates
 for (const id of process.env.SKIP_DEBUG ? [] : ["seoul", "port", "vladivostok", "handover"]) {

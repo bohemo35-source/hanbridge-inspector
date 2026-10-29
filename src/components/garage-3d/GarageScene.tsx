@@ -24,6 +24,7 @@ import {
   heroWeight, liftAmount, obdInfo, panelLabelOffset, partExplodeT, partIndex, progressCenterOfBeat, readingsByPart, verdictCounts,
   type Beat,
 } from "./parts";
+import { leadStyle, useStageFade } from "@/components/journey-v2/useStageFade";
 
 export interface GarageSceneProps {
   report?: Report;
@@ -33,6 +34,9 @@ export interface GarageSceneProps {
   debugParts?: boolean;
   /** Pin the scene to the middle of a beat (lab captures). */
   pinnedBeat?: Beat;
+  /** Journey chain: overlap + crossfade with the previous block / darken into the next one. */
+  lead?: boolean;
+  exit?: number;
 }
 
 const CLASS_COLOR: Record<string, string> = { factory: "#34d399", repaint: "#fbbf24", putty: "#f87171" };
@@ -248,7 +252,7 @@ function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THRE
 }
 
 export default function GarageScene(props: GarageSceneProps) {
-  const { report, lang, paint = "#2b3139", compact = false, debugParts = false, pinnedBeat } = props;
+  const { report, lang, paint = "#2b3139", compact = false, debugParts = false, pinnedBeat, lead = false, exit = 0 } = props;
   const outerRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const [webgl, setWebgl] = useState<boolean | null>(null);
@@ -256,6 +260,10 @@ export default function GarageScene(props: GarageSceneProps) {
   const [mobile, setMobile] = useState(false);
   const [beat, setBeat] = useState<Beat>(pinnedBeat ?? 0);
   const [verdictIn, setVerdictIn] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const veilRef = useRef<HTMLDivElement>(null);
+  const scrolling = !(compact || pinnedBeat !== undefined || debugParts);
+  useStageFade(outerRef, stageRef, veilRef, lead && scrolling, scrolling ? exit : 0);
   const live = useRef({ target: pinnedBeat !== undefined ? (pinnedBeat === 5 ? 0.98 : progressCenterOfBeat(pinnedBeat)) : debugParts ? 0.52 : compact ? progressCenterOfBeat(3) : 0 });
 
   const readings = readingsByPart(report);
@@ -651,8 +659,8 @@ export default function GarageScene(props: GarageSceneProps) {
     : obd ? "OBD" : null;
 
   return (
-    <div ref={outerRef} data-garage-outer className="relative w-full" style={{ height: compact || pinnedBeat !== undefined || debugParts ? undefined : mobile ? "650vh" : "500vh" }}>
-      <div className={compact ? "relative h-[78vh] min-h-[480px] w-full overflow-hidden" : pinnedBeat !== undefined || debugParts ? "relative h-[100svh] w-full overflow-hidden" : "sticky top-0 h-[100svh] w-full overflow-hidden"}>
+    <div ref={outerRef} data-garage-outer className="relative w-full" style={scrolling ? leadStyle(mobile ? "650vh" : "500vh", lead) : undefined}>
+      <div ref={stageRef} style={lead && scrolling ? { opacity: 0 } : undefined} className={compact ? "relative h-[78vh] min-h-[480px] w-full overflow-hidden" : pinnedBeat !== undefined || debugParts ? "relative h-[100svh] w-full overflow-hidden" : "sticky top-0 h-[100svh] w-full overflow-hidden"}>
         <div ref={hostRef} className="absolute inset-0 bg-[#0a0c10]" data-testid="garage-canvas-host" />
         <style>{`
           .garage-gauge-label{pointer-events:none;background:rgba(8,10,14,.78);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:2px 7px;font:500 11px/1.5 system-ui,sans-serif;color:#e4e7ee;white-space:nowrap;transition:opacity .2s}
@@ -686,6 +694,7 @@ export default function GarageScene(props: GarageSceneProps) {
             </a>
           </div>
         )}
+        <div ref={veilRef} aria-hidden className="pointer-events-none absolute inset-0 bg-black opacity-0" />
         {debugParts && (
           <p className="absolute left-4 top-4 rounded-lg bg-black/60 px-3 py-1.5 font-mono text-xs text-white">debug=parts · tripo_part_0..21</p>
         )}
