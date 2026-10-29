@@ -64,6 +64,21 @@ async function oriented(image: Buffer): Promise<{ buf: Buffer; w: number; h: num
   return { buf: data, w: info.width, h: info.height };
 }
 
+/** Plates of other cars in the background: strong blur over each expanded box (no badge — they are not our car). */
+export async function blurPlates(image: Buffer, boxes: SamBox[]): Promise<Buffer> {
+  if (!boxes.length) return image;
+  const { buf, w, h } = await oriented(image);
+  const layers: { input: Buffer; left: number; top: number }[] = [];
+  for (const b of boxes) {
+    const box = expandPlateBox(b, { w, h }, 0.2);
+    const bw = box.x2 - box.x1, bh = box.y2 - box.y1;
+    if (bw <= 2 || bh <= 2) continue;
+    const input = await sharp(buf).extract({ left: box.x1, top: box.y1, width: bw, height: bh }).blur(Math.max(8, Math.min(30, bh / 2))).toBuffer();
+    layers.push({ input, left: box.x1, top: box.y1 });
+  }
+  return layers.length ? sharp(buf).composite(layers).jpeg({ quality: 90 }).toBuffer() : image;
+}
+
 /** Deterministic plate hiding: blur (sigma 30 >= 25) + HANBRIDGE plate over the expanded box. */
 export async function hidePlate(image: Buffer, plateBox: SamBox): Promise<Buffer> {
   const { buf, w, h } = await oriented(image);
@@ -210,7 +225,10 @@ export async function makeListingPhoto(opts: {
     };
   }
 
-  let hidden = await hidePlate(image, plate.box);
+  const otherPlates = (segment.byConcept["license plate"] ?? []).map((i) => i.box)
+    .filter((b) => !(b.x1 === plate.box.x1 && b.y1 === plate.box.y1 && b.x2 === plate.box.x2 && b.y2 === plate.box.y2));
+  let hidden = await blurPlates(await hidePlate(image, plate.box), otherPlates);
+  if (otherPlates.length) trace.push(`background_plates_blurred: ${otherPlates.length}`);
   trace.push(`plate_hidden: box ${plate.box.x1},${plate.box.y1}-${plate.box.x2},${plate.box.y2} (+8%, blur sigma 30, HANBRIDGE plate)`);
 
   let backgroundEdited = false;
@@ -250,7 +268,7 @@ export async function makeListingPhoto(opts: {
       } else {
         // the generator may redraw a readable plate: hide it again on the accepted result
         const restored = await sharp(edited.image).resize(w, h, { fit: "fill" }).jpeg({ quality: 90 }).toBuffer();
-        hidden = await hidePlate(restored, plate.box);
+        hidden = await blurPlates(await hidePlate(restored, plate.box), otherPlates);
         backgroundEdited = true;
         trace.push("background: accepted, plate re-hidden on edited image");
       }
