@@ -1,0 +1,29 @@
+[
+  {
+    "file": "env-garage.jpg",
+    "prompt": "Wide 2:1 panoramic interior of a modern clean car inspection garage at night, linear LED ceiling light strips, dark panel walls, tool cabinets along the back wall, warm soft light glowing from the depth, empty centre with no car, no people, no text, no logos, photorealistic, cinematic",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T10:12:55.810Z",
+    "ms": 28977,
+    "bytes": 188080,
+    "quality": 82
+  },
+  {
+    "file": "floor-epoxy.jpg",
+    "prompt": "Seamless tileable texture of dark polished concrete and epoxy garage floor viewed directly from above, subtle mottling and faint reflections, no perspective, no objects, no markings, no text, photorealistic flat texture",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T10:13:22.559Z",
+    "ms": 25256,
+    "bytes": 161076,
+    "quality": 82
+  },
+  {
+    "file": "wall-panel.jpg",
+    "prompt": "Seamless tileable texture of dark brushed metal wall panels with fine vertical seams, matte industrial surface, viewed straight on, no perspective, no objects, no text, no logos, photorealistic flat texture",
+    "model": "muse-image-1.0",
+    "date": "2026-10-29T10:13:41.374Z",
+    "ms": 18744,
+    "bytes": 83371,
+    "quality": 82
+  }
+]

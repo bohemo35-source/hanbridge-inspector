@@ -9,8 +9,8 @@ import type { Report } from "../../lib/schema";
 export type PartKind = "body" | "panel" | "cabin" | "wheel" | "light" | "mirror" | "underbody" | "detail";
 
 export interface PartDef {
-  /** panel this part carries a gauge reading for; front_left_fender lives on the body shell */
-  panel?: PanelId;
+  /** panels this part carries gauge readings for (one part may carry several) */
+  panels: PanelId[];
   kind: PartKind;
   /** explode direction (not normalised) and distance in metres at t=1 */
   dir: readonly [number, number, number];
@@ -20,38 +20,33 @@ export interface PartDef {
 }
 
 /**
- * Map verified against the GLB node positions (x front, y up, -z left):
- * wheels 1 rear-left, 2 rear-right, 3 front-right, 4 front-left;
- * mirrors 14 left / 24 right; headlights 13 left / 25 right.
+ * v2 map (car-v2-parts.glb, 22 parts), verified by reviewer render:
+ * +X front, +Y up, left side -Z. One part may carry several panels (15, 3).
  */
 export const PART_MAP: Record<string, PartDef> = {
-  tripo_part_0: { panel: "front_left_fender", kind: "body", dir: [0, 0, 0], dist: 0, order: 0 },
-  tripo_part_19: { panel: "hood", kind: "panel", dir: [0.35, 1, 0], dist: 1.25, order: 2 },
-  tripo_part_18: { panel: "front_bumper", kind: "panel", dir: [1, 0.05, 0], dist: 1.35, order: 1 },
-  tripo_part_12: { panel: "front_right_fender", kind: "panel", dir: [0.45, 0.1, 1], dist: 1.25, order: 3 },
-  tripo_part_7: { panel: "front_left_door", kind: "panel", dir: [0.2, 0.08, -1], dist: 1.35, order: 4 },
-  tripo_part_9: { panel: "rear_left_door", kind: "panel", dir: [-0.2, 0.08, -1], dist: 1.35, order: 5 },
-  tripo_part_20: { panel: "front_right_door", kind: "panel", dir: [0.2, 0.08, 1], dist: 1.35, order: 4 },
-  tripo_part_21: { panel: "rear_right_door", kind: "panel", dir: [-0.2, 0.08, 1], dist: 1.35, order: 5 },
-  tripo_part_6: { panel: "rear_left_fender", kind: "panel", dir: [-0.7, 0.08, -1], dist: 1.3, order: 6 },
-  tripo_part_10: { panel: "rear_right_fender", kind: "panel", dir: [-0.7, 0.08, 1], dist: 1.3, order: 6 },
-  tripo_part_5: { panel: "rear_bumper", kind: "panel", dir: [-1, 0.05, 0], dist: 1.35, order: 1 },
-  tripo_part_16: { panel: "trunk", kind: "panel", dir: [-0.55, 0.75, 0], dist: 0.95, order: 3 },
-  tripo_part_8: { panel: "roof", kind: "cabin", dir: [0, 1, 0], dist: 1.15, order: 7 },
-  tripo_part_1: { kind: "wheel", dir: [0, -0.05, -1], dist: 0.75, order: 8 },
-  tripo_part_2: { kind: "wheel", dir: [0, -0.05, 1], dist: 0.75, order: 8 },
-  tripo_part_3: { kind: "wheel", dir: [0, -0.05, 1], dist: 0.75, order: 8 },
-  tripo_part_4: { kind: "wheel", dir: [0, -0.05, -1], dist: 0.75, order: 8 },
-  tripo_part_13: { kind: "light", dir: [1, 0.05, -0.15], dist: 1.42, order: 1 },
-  tripo_part_25: { kind: "light", dir: [1, 0.05, 0.15], dist: 1.42, order: 1 },
-  tripo_part_14: { kind: "mirror", dir: [0.2, 0.1, -1], dist: 1.42, order: 4 },
-  tripo_part_24: { kind: "mirror", dir: [0.2, 0.1, 1], dist: 1.42, order: 4 },
-  tripo_part_11: { kind: "underbody", dir: [0, -1, 0], dist: 0.3, order: 0 },
-  tripo_part_15: { kind: "underbody", dir: [0, -1, 0], dist: 0.3, order: 0 },
+  tripo_part_0: { panels: ["roof"], kind: "cabin", dir: [0, 1, 0], dist: 1.15, order: 7 },
+  tripo_part_1: { panels: [], kind: "wheel", dir: [0, -0.05, 1], dist: 0.75, order: 8 },
+  tripo_part_2: { panels: [], kind: "wheel", dir: [0, -0.05, 1], dist: 0.75, order: 8 },
+  tripo_part_3: { panels: ["rear_left_fender", "rear_right_fender", "trunk"], kind: "panel", dir: [-1, 0.08, 0], dist: 1.15, order: 6 },
+  tripo_part_4: { panels: [], kind: "wheel", dir: [0, -0.05, -1], dist: 0.75, order: 8 },
+  tripo_part_5: { panels: [], kind: "wheel", dir: [0, -0.05, -1], dist: 0.75, order: 8 },
+  tripo_part_6: { panels: [], kind: "underbody", dir: [0, -1, 0], dist: 0.3, order: 0 },
+  tripo_part_7: { panels: ["rear_left_door"], kind: "panel", dir: [-0.2, 0.08, -1], dist: 1.35, order: 5 },
+  tripo_part_8: { panels: [], kind: "underbody", dir: [0, -1, 0], dist: 0.3, order: 0 },
+  tripo_part_9: { panels: ["hood"], kind: "panel", dir: [0.35, 1, 0], dist: 1.25, order: 2 },
+  tripo_part_10: { panels: [], kind: "mirror", dir: [0.2, 0.1, 1], dist: 1.42, order: 4 },
+  tripo_part_11: { panels: ["front_right_door"], kind: "panel", dir: [0.2, 0.08, 1], dist: 1.35, order: 4 },
+  tripo_part_12: { panels: ["front_left_door"], kind: "panel", dir: [0.2, 0.08, -1], dist: 1.35, order: 4 },
+  tripo_part_13: { panels: ["rear_bumper"], kind: "panel", dir: [-1, 0.05, 0], dist: 1.5, order: 1 },
+  tripo_part_14: { panels: [], kind: "panel", dir: [-1, 0.28, 0], dist: 1.25, order: 6 },
+  tripo_part_15: { panels: ["front_left_fender", "front_right_fender"], kind: "panel", dir: [1, 0.05, 0], dist: 1.0, order: 3 },
+  tripo_part_16: { panels: ["front_bumper"], kind: "panel", dir: [1, 0.05, 0], dist: 1.35, order: 1 },
+  tripo_part_17: { panels: ["rear_right_door"], kind: "panel", dir: [-0.2, 0.08, 1], dist: 1.35, order: 5 },
+  tripo_part_18: { panels: [], kind: "mirror", dir: [0.2, 0.1, -1], dist: 1.42, order: 4 },
+  tripo_part_19: { panels: [], kind: "detail", dir: [-1, 0.05, 0], dist: 1.5, order: 1 },
+  tripo_part_20: { panels: [], kind: "detail", dir: [-1, 0.05, 0], dist: 1.5, order: 1 },
+  tripo_part_21: { panels: [], kind: "detail", dir: [1, 0.05, 0], dist: 1.35, order: 1 },
 };
-
-const DETAIL_PARTS = ["tripo_part_17", "tripo_part_22", "tripo_part_23", "tripo_part_26", "tripo_part_27", "tripo_part_28", "tripo_part_29", "tripo_part_30", "tripo_part_31"];
-for (const name of DETAIL_PARTS) PART_MAP[name] = { kind: "detail", dir: [0, 0, 0], dist: 0, order: 0 };
 
 export const PART_NAMES = Object.keys(PART_MAP).sort((a, b) => partIndex(a) - partIndex(b));
 
@@ -60,10 +55,28 @@ export function partIndex(name: string): number {
   return Number.isFinite(n) ? n : 999;
 }
 
-/** panel -> GLB node name (front_left_fender is part of the body shell tripo_part_0). */
+/** panel -> GLB node name (several panels may share one part, e.g. both front fenders on tripo_part_15). */
 export const PANEL_TO_PART: Record<PanelId, string> = Object.fromEntries(
-  Object.entries(PART_MAP).filter(([, d]) => d.panel).map(([name, d]) => [d.panel as PanelId, name]),
+  Object.entries(PART_MAP).flatMap(([name, d]) => d.panels.map((panel) => [panel, name] as const)),
 ) as Record<PanelId, string>;
+
+/** part -> panels it carries. */
+export const PART_PANELS: Record<string, PanelId[]> = Object.fromEntries(
+  Object.entries(PART_MAP).map(([name, d]) => [name, d.panels]),
+);
+
+/**
+ * Label anchor offset (metres, car space) for one panel on a shared part:
+ * left panels sit at the left edge of the part, right at the right edge,
+ * trunk at the rear face. size = part bbox size in car space.
+ */
+export function panelLabelOffset(panel: PanelId, size: { x: number; z: number }): { x: number; z: number } {
+  let x = 0; let z = 0;
+  if (panel.includes("left")) z = -size.z * 0.32;
+  else if (panel.includes("right")) z = size.z * 0.32;
+  if (panel === "trunk") x = -size.x * 0.32;
+  return { x, z };
+}
 
 // ---------------------------------------------------------------- beats
 export const BEAT_BOUNDS = [0, 0.15, 0.3, 0.55, 0.75, 0.88, 1] as const;
@@ -125,17 +138,38 @@ export function paintClass(microns: number): PaintClass {
 
 export interface PartReading { part: string; panel: PanelId; microns: number; cls: PaintClass }
 
-/** report.paintReadings mapped panel -> GLB part. Readings for unknown panels are dropped. */
-export function readingsByPart(report?: Report | null): Map<string, PartReading> {
-  const out = new Map<string, PartReading>();
+/** report.paintReadings mapped panel -> GLB part; a shared part keeps one reading per panel. Unknown panels dropped. */
+export function readingsByPart(report?: Report | null): Map<string, PartReading[]> {
+  const out = new Map<string, PartReading[]>();
   if (!report) return out;
   for (const r of report.paintReadings ?? []) {
     if (!(PANEL_IDS as readonly string[]).includes(r.panel)) continue;
     const panel = r.panel as PanelId;
     const part = PANEL_TO_PART[panel];
-    if (part) out.set(part, { part, panel, microns: r.microns, cls: paintClass(r.microns) });
+    if (!part) continue;
+    const arr = out.get(part) ?? [];
+    arr.push({ part, panel, microns: r.microns, cls: paintClass(r.microns) });
+    out.set(part, arr);
   }
   return out;
+}
+
+/** Flat list of all readings (fallback cards). */
+export function allReadings(report?: Report | null): PartReading[] {
+  return [...readingsByPart(report).values()].flat();
+}
+
+/**
+ * Hero <-> parts crossfade: hero at beats 0-1 and at the end of beat 5;
+ * parts fade in over the first 12% of beat 2 and back out once reassembly
+ * finishes in beat 5 (explode reaches 0 at local~0.625). Returns hero weight 0..1.
+ */
+export function heroWeight(progress: number): number {
+  const { beat, local } = beatAt(progress);
+  if (beat < 2) return 1;
+  if (beat === 2) return 1 - easeInOut(local / 0.12);
+  if (beat < 5) return 0;
+  return easeInOut((local - 0.62) / 0.23);
 }
 
 export interface PanelFindingInfo { verified: boolean; unverified: boolean }

@@ -8,7 +8,6 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
-import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { Reflector } from "three/addons/objects/Reflector.js";
 import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
 import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
@@ -19,8 +18,8 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import type { Report } from "@/lib/schema";
 import { panelLabel } from "@/lib/domain/panels";
 import {
-  BEAT_CAPTIONS, REASSEMBLE_CAPTION, PART_MAP, beatAt, entryOffset, explodeAmount, explodeOffset, findingsByPanel,
-  liftAmount, obdInfo, partExplodeT, partIndex, progressCenterOfBeat, readingsByPart, verdictCounts,
+  BEAT_CAPTIONS, REASSEMBLE_CAPTION, PART_MAP, allReadings, beatAt, entryOffset, explodeAmount, explodeOffset, findingsByPanel,
+  heroWeight, liftAmount, obdInfo, panelLabelOffset, partExplodeT, partIndex, progressCenterOfBeat, readingsByPart, verdictCounts,
   type Beat,
 } from "./parts";
 
@@ -52,14 +51,14 @@ const smooth = (t: number) => { const x = clamp01(t); return x * x * (3 - 2 * x)
  * [progress, azimuthDeg, radius, height, lookAtY]. 0deg = front (+x), 90deg = right side (+z).
  */
 const CAM_KEYS: Array<[number, number, number, number, number]> = [
-  [0.0, 30, 8.2, 0.8, 0.6],
-  [0.15, 58, 7.4, 1.0, 0.75],
+  [0.0, 32, 6.6, 0.85, 0.6],
+  [0.15, 58, 6.1, 1.0, 0.75],
   [0.3, 96, 6.8, 0.45, 1.15],
   [0.55, 150, 9.0, 3.6, 1.15],
-  [0.66, 182, 6.4, 7.0, 0.9],
+  [0.66, 182, 6.4, 7.2, 0.9],
   [0.75, 215, 9.0, 3.8, 1.15],
-  [0.88, 262, 8.2, 2.0, 1.0],
-  [1.0, 322, 7.8, 1.3, 0.75],
+  [0.88, 262, 6.9, 1.9, 1.0],
+  [1.0, 322, 6.3, 1.25, 0.75],
 ];
 
 function cameraPose(p: number, outPos: THREE.Vector3, outTgt: THREE.Vector3, carX: number) {
@@ -75,100 +74,137 @@ function cameraPose(p: number, outPos: THREE.Vector3, outTgt: THREE.Vector3, car
   if (p < 0.15) outTgt.x += carX * 0.55; // follow the car while it drives in
 }
 
+function canvasTexture(draw: (g: CanvasRenderingContext2D, w: number, h: number) => void, w = 128, h = 128): THREE.CanvasTexture {
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const g = c.getContext("2d"); if (g) draw(g, w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
 function buildEnvironment(mobile: boolean): { group: THREE.Group; liftArms: THREE.Group; reflector: Reflector | null; cones: THREE.Object3D[]; leds: THREE.Object3D[]; dispose: () => void } {
   const group = new THREE.Group();
   const disposables: Array<{ dispose: () => void }> = [];
   const mat = (m: THREE.Material) => { disposables.push(m); return m; };
   const geo = <T extends THREE.BufferGeometry>(g: T) => { disposables.push(g); return g; };
+  const texLoader = new THREE.TextureLoader();
 
-  // Floor: real mirror under a dark glossy epoxy layer (desktop), plain glossy plane on mobile.
+  // Floor: Muse Image epoxy texture over a weakened Reflector (desktop), plain textured plane on mobile.
   let reflector: Reflector | null = null;
   if (!mobile) {
     reflector = new Reflector(geo(new THREE.PlaneGeometry(46, 30)), {
-      clipBias: 0.003,
-      textureWidth: 1024,
-      textureHeight: 1024,
-      color: 0x15181d,
+      clipBias: 0.003, textureWidth: 1024, textureHeight: 1024, color: 0x0b0d10,
     });
-    reflector.rotation.x = -Math.PI / 2;
-    reflector.position.y = -0.02;
-    group.add(reflector);
+    reflector.rotation.x = -Math.PI / 2; reflector.position.y = -0.02; group.add(reflector);
   }
+  const floorTex = texLoader.load("/garage/floor-epoxy.jpg");
+  floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping; floorTex.repeat.set(6, 4); floorTex.colorSpace = THREE.SRGBColorSpace;
+  disposables.push(floorTex);
   const floor = new THREE.Mesh(
     geo(new THREE.PlaneGeometry(46, 30)),
-    mat(new THREE.MeshStandardMaterial({
-      color: 0x07090c, roughness: 0.92, metalness: 0.0,
-      transparent: !mobile, opacity: mobile ? 1 : 0.86, envMapIntensity: 0.0,
-    })),
+    mat(new THREE.MeshStandardMaterial({ map: floorTex, color: 0x8a8f96, roughness: 0.62, metalness: 0.05, transparent: !mobile, opacity: mobile ? 1 : 0.94, envMapIntensity: 0.25 })),
   );
-  floor.rotation.x = -Math.PI / 2;
-  floor.receiveShadow = true;
-  group.add(floor);
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; group.add(floor);
 
-  // Walls + tool cabinets as dark silhouettes.
-  const wallMat = mat(new THREE.MeshStandardMaterial({ color: 0x14171c, roughness: 0.95 }));
-  const cabMat = mat(new THREE.MeshStandardMaterial({ color: 0x1a1e25, roughness: 0.8, metalness: 0.35 }));
-  const backWall = new THREE.Mesh(geo(new THREE.BoxGeometry(46, 7, 0.3)), wallMat);
-  backWall.position.set(0, 3.5, -7.5);
-  const leftWall = new THREE.Mesh(geo(new THREE.BoxGeometry(0.3, 7, 30)), wallMat);
-  leftWall.position.set(-13, 3.5, 0);
-  group.add(backWall, leftWall);
+  // Yellow lift-zone marking + drain grate (geometry over the floor texture).
+  const markMat = mat(new THREE.MeshStandardMaterial({ color: 0xd8a812, roughness: 0.7 }));
+  const mark = (w: number, d: number, x: number, z: number) => { const m = new THREE.Mesh(geo(new THREE.BoxGeometry(w, 0.012, d)), markMat); m.position.set(x, 0.008, z); group.add(m); };
+  mark(5.4, 0.09, 0, -1.55); mark(5.4, 0.09, 0, 1.55); mark(0.09, 3.2, -2.7, 0); mark(0.09, 3.2, 2.7, 0);
+  const drain = new THREE.Mesh(geo(new THREE.BoxGeometry(3.6, 0.014, 0.42)), mat(new THREE.MeshStandardMaterial({ color: 0x101216, roughness: 0.9, metalness: 0.4 })));
+  drain.position.set(0, 0.009, 2.35); group.add(drain);
+  for (let i = 0; i < 9; i++) { const s = new THREE.Mesh(geo(new THREE.BoxGeometry(0.05, 0.016, 0.36)), mat(new THREE.MeshStandardMaterial({ color: 0x2c3036, metalness: 0.6, roughness: 0.5 }))); s.position.set(-1.6 + i * 0.4, 0.01, 2.35); group.add(s); }
+
+  // Contact shadow under the car (radial gradient).
+  const contactTex = canvasTexture((g, w, h) => { const r = g.createRadialGradient(w / 2, h / 2, 8, w / 2, h / 2, w / 2); r.addColorStop(0, "rgba(0,0,0,0.85)"); r.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = r; g.fillRect(0, 0, w, h); }, 256, 256);
+  disposables.push(contactTex);
+  const contact = new THREE.Mesh(geo(new THREE.PlaneGeometry(5.6, 3.0)), mat(new THREE.MeshBasicMaterial({ map: contactTex, transparent: true, depthWrite: false, opacity: 0.75 })));
+  contact.rotation.x = -Math.PI / 2; contact.position.y = 0.015; group.add(contact);
+
+  // Walls with Muse Image panel texture.
+  const wallTex = texLoader.load("/garage/wall-panel.jpg");
+  wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping; wallTex.repeat.set(8, 2); wallTex.colorSpace = THREE.SRGBColorSpace;
+  disposables.push(wallTex);
+  const wallMat = mat(new THREE.MeshStandardMaterial({ map: wallTex, color: 0x777d85, roughness: 0.85, metalness: 0.3 }));
+  const backWall = new THREE.Mesh(geo(new THREE.BoxGeometry(46, 7, 0.3)), wallMat); backWall.position.set(0, 3.5, -7.5);
+  const leftWall = new THREE.Mesh(geo(new THREE.BoxGeometry(0.3, 7, 30)), wallMat); leftWall.position.set(-13, 3.5, 0);
+  const rightWall = new THREE.Mesh(geo(new THREE.BoxGeometry(0.3, 7, 30)), wallMat); rightWall.position.set(13, 3.5, 0);
+  group.add(backWall, leftWall, rightWall);
+  // Glowing strip + textless icon signs on the back wall.
+  const strip = new THREE.Mesh(geo(new THREE.BoxGeometry(20, 0.07, 0.05)), mat(new THREE.MeshBasicMaterial({ color: 0x7dd3fc })));
+  strip.position.set(0, 3.15, -7.32); group.add(strip);
+  const signDraws: Array<(g: CanvasRenderingContext2D) => void> = [
+    (g) => { g.fillStyle = "#0ea5e9"; g.beginPath(); g.moveTo(18, 32); g.lineTo(46, 32); g.lineTo(46, 22); g.lineTo(64, 40); g.lineTo(46, 58); g.lineTo(46, 48); g.lineTo(18, 48); g.fill(); },
+    (g) => { g.strokeStyle = "#34d399"; g.lineWidth = 9; g.beginPath(); g.moveTo(18, 42); g.lineTo(34, 56); g.lineTo(62, 24); g.stroke(); },
+    (g) => { g.strokeStyle = "#fbbf24"; g.lineWidth = 8; g.beginPath(); g.arc(34, 34, 16, 0.6, 5.2); g.stroke(); g.beginPath(); g.moveTo(46, 46); g.lineTo(62, 62); g.stroke(); },
+  ];
+  signDraws.forEach((draw, i) => {
+    const t = canvasTexture((g, w, h) => { g.fillStyle = "#0b1220"; g.fillRect(0, 0, w, h); g.save(); g.scale(w / 80, h / 80); draw(g); g.restore(); }, 96, 96);
+    disposables.push(t);
+    const sign = new THREE.Mesh(geo(new THREE.PlaneGeometry(0.55, 0.55)), mat(new THREE.MeshBasicMaterial({ map: t })));
+    sign.position.set(-3.2 + i * 3.2, 2.55, -7.33); group.add(sign);
+  });
+
+  // Detailed cabinets (drawers + handles), tyre stack, workbench, compressor, OBD stand along the back wall.
+  const cabMat = mat(new THREE.MeshStandardMaterial({ color: 0x232830, roughness: 0.65, metalness: 0.45 }));
+  const darkMat = mat(new THREE.MeshStandardMaterial({ color: 0x14161a, roughness: 0.9, metalness: 0.2 }));
+  const handleMat = mat(new THREE.MeshStandardMaterial({ color: 0x9aa3ad, roughness: 0.35, metalness: 0.8 }));
   for (let i = 0; i < 5; i++) {
-    const cab = new THREE.Mesh(geo(new THREE.BoxGeometry(1.7, 2.1, 0.55)), cabMat);
-    cab.position.set(-6.4 + i * 1.85, 1.05, -7.05);
-    group.add(cab);
-    const strip = new THREE.Mesh(geo(new THREE.BoxGeometry(1.5, 0.03, 0.03)), mat(new THREE.MeshBasicMaterial({ color: 0x2c3542 })));
-    strip.position.set(-6.4 + i * 1.85, 1.7, -6.76);
-    group.add(strip);
+    const x = -7.2 + i * 1.85;
+    const cab = new THREE.Mesh(geo(new THREE.BoxGeometry(1.7, 2.1, 0.55)), cabMat); cab.position.set(x, 1.05, -7.05); cab.castShadow = true; group.add(cab);
+    for (let d = 0; d < 3; d++) {
+      const front = new THREE.Mesh(geo(new THREE.BoxGeometry(1.5, 0.5, 0.03)), darkMat); front.position.set(x, 0.45 + d * 0.6, -6.76); group.add(front);
+      const handle = new THREE.Mesh(geo(new THREE.BoxGeometry(0.6, 0.035, 0.03)), handleMat); handle.position.set(x, 0.62 + d * 0.6, -6.74); group.add(handle);
+    }
+  }
+  for (let i = 0; i < 4; i++) { const tyre = new THREE.Mesh(geo(new THREE.TorusGeometry(0.34, 0.13, 10, 24)), darkMat); tyre.rotation.x = Math.PI / 2; tyre.position.set(3.4, 0.14 + i * 0.26, -6.9); group.add(tyre); }
+  const bench = new THREE.Mesh(geo(new THREE.BoxGeometry(2.4, 0.08, 0.7)), cabMat); bench.position.set(5.6, 0.95, -7.0); group.add(bench);
+  for (const dx of [-1.05, 1.05]) { const legB = new THREE.Mesh(geo(new THREE.BoxGeometry(0.07, 0.95, 0.6)), darkMat); legB.position.set(5.6 + dx, 0.48, -7.0); group.add(legB); }
+  const tank = new THREE.Mesh(geo(new THREE.CylinderGeometry(0.32, 0.32, 1.1, 18)), mat(new THREE.MeshStandardMaterial({ color: 0x7a2e22, roughness: 0.55, metalness: 0.5 })));
+  tank.rotation.z = Math.PI / 2; tank.position.set(7.6, 0.36, -7.0); group.add(tank);
+  // OBD stand: pole + glowing graph screen (no digits/text).
+  const obdScreenTex = canvasTexture((g, w, h) => { g.fillStyle = "#03130c"; g.fillRect(0, 0, w, h); g.strokeStyle = "#34d399"; g.lineWidth = 3; g.beginPath(); for (let x = 0; x < w; x += 6) { const y = h * 0.55 - Math.sin(x * 0.09) * 14 - (x > w * 0.6 ? 10 : 0); if (x === 0) g.moveTo(x, y); else g.lineTo(x, y); } g.stroke(); g.strokeStyle = "rgba(52,211,153,0.35)"; for (let y = 16; y < h; y += 18) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } }, 160, 100);
+  disposables.push(obdScreenTex);
+  const pole = new THREE.Mesh(geo(new THREE.CylinderGeometry(0.035, 0.05, 1.25, 10)), handleMat); pole.position.set(2.6, 0.62, -6.55); group.add(pole);
+  const screen = new THREE.Mesh(geo(new THREE.BoxGeometry(0.62, 0.42, 0.04)), darkMat); screen.position.set(2.6, 1.4, -6.55); screen.rotation.x = -0.18; group.add(screen);
+  const screenFace = new THREE.Mesh(geo(new THREE.PlaneGeometry(0.56, 0.36)), mat(new THREE.MeshBasicMaterial({ map: obdScreenTex }))); screenFace.position.set(2.6, 1.41, -6.52); screenFace.rotation.x = -0.18; group.add(screenFace);
+
+  // Ceiling: beam grid + 6 linear fixtures with housings (emissive strip inside a dark case).
+  const cones: THREE.Object3D[] = []; const leds: THREE.Object3D[] = [];
+  const beamMat = mat(new THREE.MeshStandardMaterial({ color: 0x191d23, roughness: 0.85, metalness: 0.4 }));
+  for (const z of [-3.4, -1.15, 1.15, 3.4]) { const beam = new THREE.Mesh(geo(new THREE.BoxGeometry(14, 0.16, 0.14)), beamMat); beam.position.set(0, 4.55, z); group.add(beam); }
+  for (const x of [-5, 0, 5]) { const beam = new THREE.Mesh(geo(new THREE.BoxGeometry(0.14, 0.16, 8.5)), beamMat); beam.position.set(x, 4.55, 0); group.add(beam); }
+  const ledMat = mat(new THREE.MeshBasicMaterial({ color: 0xdce8fa }));
+  for (const z of [-2.6, 0, 2.6]) for (const x of [-3.4, 3.4]) {
+    const fixture = new THREE.Group();
+    const housing = new THREE.Mesh(geo(new THREE.BoxGeometry(3.4, 0.09, 0.34)), beamMat); fixture.add(housing);
+    const stripLed = new THREE.Mesh(geo(new THREE.BoxGeometry(3.2, 0.03, 0.2)), ledMat); stripLed.position.y = -0.055; fixture.add(stripLed);
+    fixture.position.set(x, 4.42, z); leds.push(fixture); group.add(fixture);
+    if (x === 3.4) {
+      const cone = new THREE.Mesh(geo(new THREE.ConeGeometry(1.7, 4.4, 24, 1, true)), mat(new THREE.MeshBasicMaterial({ color: 0x9db8dd, transparent: true, opacity: 0.008, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })));
+      cone.position.set(0, 2.2, z); cones.push(cone); group.add(cone);
+    }
   }
 
-  // Ceiling LED strips (emissive) + light cones / haze.
-  const cones: THREE.Object3D[] = [];
-  const leds: THREE.Object3D[] = [];
-  const ledMat = mat(new THREE.MeshBasicMaterial({ color: 0xc9d4e3 }));
-  for (const z of [-2.6, 0, 2.6]) {
-    const led = new THREE.Mesh(geo(new THREE.BoxGeometry(9, 0.06, 0.28)), ledMat);
-    led.position.set(0, 4.4, z);
-    leds.push(led);
-    group.add(led);
-    const cone = new THREE.Mesh(
-      geo(new THREE.ConeGeometry(1.7, 4.4, 24, 1, true)),
-      mat(new THREE.MeshBasicMaterial({ color: 0x9db8dd, transparent: true, opacity: 0.01, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })),
-    );
-    cone.position.set(0, 2.2, z);
-    cones.push(cone);
-    group.add(cone);
-  }
-
-  // Low scissor platform lift: two runways on X-legs; nothing tall between the camera and the car.
+  // Scissor lift: bevel-ish stacked platforms, hydraulic cylinder, yellow ends, rubber pads.
   const lift = new THREE.Group();
-  const postMat = mat(new THREE.MeshStandardMaterial({ color: 0x1d2128, roughness: 0.7, metalness: 0.35, envMapIntensity: 0.25 }));
+  const postMat = mat(new THREE.MeshStandardMaterial({ color: 0x22262e, roughness: 0.6, metalness: 0.4, envMapIntensity: 0.3 }));
   const yellowMat = mat(new THREE.MeshStandardMaterial({ color: 0xf5c518, roughness: 0.5, metalness: 0.3 }));
-  const basePlate = new THREE.Mesh(geo(new THREE.BoxGeometry(4.6, 0.06, 2.3)), postMat);
-  basePlate.position.set(0, 0.03, 0);
-  basePlate.receiveShadow = true;
-  lift.add(basePlate);
+  const rubberMat = mat(new THREE.MeshStandardMaterial({ color: 0x0c0d0f, roughness: 1 }));
+  const basePlate = new THREE.Mesh(geo(new THREE.BoxGeometry(4.6, 0.06, 2.3)), postMat); basePlate.position.set(0, 0.03, 0); basePlate.receiveShadow = true; lift.add(basePlate);
   const liftArms = new THREE.Group();
   for (const side of [-1, 1]) {
-    const runway = new THREE.Mesh(geo(new THREE.BoxGeometry(4.3, 0.1, 0.55)), postMat);
-    runway.position.set(0, 0, side * 0.78);
-    runway.castShadow = true;
-    const edge = new THREE.Mesh(geo(new THREE.BoxGeometry(4.3, 0.012, 0.06)), yellowMat);
-    edge.position.set(0, 0.056, side * 1.03);
-    liftArms.add(runway, edge);
+    const runway = new THREE.Mesh(geo(new THREE.BoxGeometry(4.3, 0.1, 0.55)), postMat); runway.position.set(0, 0, side * 0.78); runway.castShadow = true;
+    const edge = new THREE.Mesh(geo(new THREE.BoxGeometry(0.18, 0.11, 0.57)), yellowMat); edge.position.set(2.1, 0, side * 0.78);
+    const edge2 = edge.clone(); edge2.position.x = -2.1;
+    const pad = new THREE.Mesh(geo(new THREE.BoxGeometry(3.9, 0.02, 0.42)), rubberMat); pad.position.set(0, 0.06, side * 0.78);
+    liftArms.add(runway, edge, edge2, pad);
   }
+  const cyl = new THREE.Mesh(geo(new THREE.CylinderGeometry(0.055, 0.055, 1.5, 12)), handleMat); cyl.rotation.z = 0.7; cyl.position.set(0, 0.3, 0); liftArms.add(cyl);
   lift.add(liftArms);
-  // scissor legs scale with the lift height (updated per frame via userData)
   const legs = new THREE.Group();
   for (const side of [-1, 1]) for (const dir of [-1, 1]) {
     const leg = new THREE.Mesh(geo(new THREE.BoxGeometry(2.6, 0.07, 0.07)), postMat);
-    leg.position.set(0, 0, side * 0.78);
-    leg.userData.dir = dir;
-    legs.add(leg);
+    leg.position.set(0, 0, side * 0.78); leg.userData.dir = dir; legs.add(leg);
   }
-  lift.add(legs);
-  liftArms.userData.legs = legs;
-  group.add(lift);
+  lift.add(legs); liftArms.userData.legs = legs; group.add(lift);
 
   return { group, liftArms, reflector, cones, leds, dispose: () => disposables.forEach((d) => d.dispose()) };
 }
@@ -240,9 +276,16 @@ export default function GarageScene(props: GarageSceneProps) {
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0a0c10);
-    scene.fog = new THREE.Fog(0x0a0c10, 14, 34);
+    scene.fog = new THREE.Fog(0x0a0c10, 13, 36);
     const pmrem = new THREE.PMREMGenerator(renderer);
-    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    // Real garage panorama (Muse Image) as reflections + dimmed far background sphere.
+    new THREE.TextureLoader().load("/garage/env-garage.jpg", (tex) => {
+      if (disposed) return;
+      tex.mapping = THREE.EquirectangularReflectionMapping; tex.colorSpace = THREE.SRGBColorSpace;
+      scene.environment = pmrem.fromEquirectangular(tex).texture;
+      const sphere = new THREE.Mesh(new THREE.SphereGeometry(42, 32, 16), new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, color: 0x565b62, fog: false }));
+      scene.add(sphere);
+    });
 
     const camera = new THREE.PerspectiveCamera(42, host.clientWidth / host.clientHeight, 0.1, 120);
 
@@ -268,104 +311,113 @@ export default function GarageScene(props: GarageSceneProps) {
     const env = buildEnvironment(isMobile);
     scene.add(env.group);
 
-    // Car: wrapper (normalised metres) -> liftGroup (entry drive + lift) handled here.
+    // Car: v2 hero (textured) + v2 parts, same coords; hero bbox defines one shared normalisation.
     const carGroup = new THREE.Group();
     scene.add(carGroup);
     const paintBase = new THREE.Color(paint);
+    interface LabelRec { obj: CSS2DObject; el: HTMLDivElement; offX: number; offZ: number }
     interface PartRec {
       node: THREE.Object3D; name: string; orig: THREE.Vector3;
       mats: THREE.MeshPhysicalMaterial[]; baseColors: THREE.Color[];
-      center: THREE.Vector3; label?: CSS2DObject; labelEl?: HTMLDivElement;
+      center: THREE.Vector3; labels: LabelRec[];
     }
     const parts: PartRec[] = [];
+    const heroMats: THREE.Material[] = [];
+    let heroGroup: THREE.Group | null = null;
+    let partsGroup: THREE.Group | null = null;
     let triangles = 0;
     let invScale = 1;
     let disposed = false;
 
+    const countTris = (root: THREE.Object3D) => { let t = 0; root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { const idx = m.geometry.getIndex(); t += (idx ? idx.count : m.geometry.getAttribute("position").count) / 3; } }); return t; };
+    const samplePaint = (root: THREE.Object3D): THREE.Color => {
+      let found: THREE.Color | null = null;
+      root.traverse((o) => {
+        if (found) return;
+        const mesh = o as THREE.Mesh; if (!mesh.isMesh) return;
+        const mtl = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
+        const img = mtl?.map?.image as CanvasImageSource & { width: number; height: number } | undefined;
+        if (!img?.width) return;
+        try {
+          const c = document.createElement("canvas"); c.width = 16; c.height = 16;
+          const g = c.getContext("2d"); if (!g) return;
+          g.drawImage(img, 0, 0, 16, 16);
+          const d = g.getImageData(0, 0, 16, 16).data; let r = 0, gg = 0, b = 0, n = 0;
+          for (let i = 0; i < d.length; i += 4) { const lum = (d[i] + d[i + 1] + d[i + 2]) / 765; if (lum < 0.12 || lum > 0.88) continue; r += d[i]; gg += d[i + 1]; b += d[i + 2]; n++; }
+          if (n > 8) found = new THREE.Color(r / n / 255, gg / n / 255, b / n / 255);
+        } catch { /* keep fallback paint */ }
+      });
+      return found ?? paintBase.clone();
+    };
+
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
-    loader.load("/models/hero-car-parts.glb", (gltf) => {
+    loader.load("/models/car-v2.glb", (heroGltf) => {
       if (disposed) return;
-      const model = gltf.scene;
-      const box = new THREE.Box3().setFromObject(model);
+      const hero = heroGltf.scene;
+      const box = new THREE.Box3().setFromObject(hero);
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
-      const scale = 4.4 / size.x;
+      const scale = 4.4 / Math.max(size.x, size.z);
       invScale = 1 / scale;
-      model.scale.setScalar(scale);
-      model.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale);
-      carGroup.add(model);
-      model.updateMatrixWorld(true);
+      const applyNorm = (m: THREE.Object3D) => { m.scale.setScalar(scale); m.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale); };
+      applyNorm(hero);
+      heroGroup = hero; carGroup.add(hero);
+      hero.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; m.castShadow = true; (Array.isArray(m.material) ? m.material : [m.material]).forEach((mt) => { mt.transparent = true; const sm = mt as THREE.MeshStandardMaterial; if ("envMapIntensity" in sm) sm.envMapIntensity = 1.25; heroMats.push(mt); }); });
+      triangles += countTris(hero);
+      const sampled = debugParts ? paintBase.clone() : samplePaint(hero);
+      if (!debugParts) paintBase.copy(sampled);
 
-      const cabinMat = new THREE.MeshPhysicalMaterial({ color: 0x0a0c10, metalness: 0.35, roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.5 });
-      const wheelMat = new THREE.MeshPhysicalMaterial({ color: 0x141518, metalness: 0.3, roughness: 0.9, clearcoat: 0.2 });
-      const lightMat = new THREE.MeshPhysicalMaterial({ color: 0xcfe0ff, emissive: 0xaecbf5, emissiveIntensity: 1.1, metalness: 0.1, roughness: 0.25 });
-      const underMat = new THREE.MeshPhysicalMaterial({ color: 0x191b1e, metalness: 0.2, roughness: 1, envMapIntensity: 0.3 });
-
-      let meshIdx = 0;
-      model.traverse((o) => {
-        const mesh = o as THREE.Mesh;
-        if (!mesh.isMesh) return;
-        const rawName = mesh.name || o.parent?.name || "";
-        const name = PART_MAP[rawName] ? rawName : `tripo_part_${meshIdx}`;
-        meshIdx++;
-        const def = PART_MAP[name];
-        const kind = def?.kind ?? "detail";
-        let material: THREE.MeshPhysicalMaterial;
-        if (debugParts) {
-          const hue = (partIndex(name) * 137.5) % 360;
-          material = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(`hsl(${hue},70%,55%)`), roughness: 0.5, metalness: 0.1 });
-        } else if (kind === "cabin" || kind === "mirror") material = cabinMat.clone();
-        else if (kind === "wheel") material = wheelMat.clone();
-        else if (kind === "light") material = lightMat.clone();
-        else if (kind === "underbody") material = underMat.clone();
-        else material = new THREE.MeshPhysicalMaterial({ color: paintBase.clone(), metalness: 0.3, roughness: 0.5, clearcoat: 0.55, clearcoatRoughness: 0.22, envMapIntensity: 0.8, sheen: 0.25, sheenRoughness: 0.6 });
-        mesh.material = material;
-        mesh.castShadow = true;
-        mesh.receiveShadow = false;
-        const idx = mesh.geometry.getIndex();
-        triangles += (idx ? idx.count : mesh.geometry.getAttribute("position").count) / 3;
-
-        const partBox = new THREE.Box3().setFromObject(mesh);
-        const partCenter = partBox.getCenter(new THREE.Vector3());
-        carGroup.worldToLocal(partCenter);
-        const rec: PartRec = {
-          node: mesh, name, orig: mesh.position.clone(),
-          mats: [material], baseColors: [material.color.clone()],
-          center: partCenter,
-        };
-        // Gauge / debug labels anchored in carGroup space; they follow the part via per-frame offset.
-        const makeLabel = (html: string, cls: string) => {
-          const el = document.createElement("div");
-          el.className = cls;
-          el.innerHTML = html;
-          const obj = new CSS2DObject(el);
-          obj.position.copy(partCenter).y += name === "tripo_part_0" ? 0.25 : 0.32;
-          if (name === "tripo_part_0") { obj.position.x += size.x * scale * 0.28; obj.position.z -= 0.8; }
-          carGroup.add(obj);
-          return { obj, el };
-        };
-        if (debugParts) {
-          const { obj, el } = makeLabel(`<b>${name}</b>`, "garage-debug-label");
-          rec.label = obj; rec.labelEl = el;
-        } else {
-          const reading = readings.get(name);
-          const fin = def?.panel ? panelFindings.get(def.panel) : undefined;
-          if (reading || fin) {
+      loader.load("/models/car-v2-parts.glb", (gltf) => {
+        if (disposed) return;
+        const model = gltf.scene;
+        applyNorm(model);
+        partsGroup = model; carGroup.add(model);
+        model.updateMatrixWorld(true);
+        const cabinMat = new THREE.MeshPhysicalMaterial({ color: 0x0a0c10, metalness: 0.35, roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.5 });
+        const wheelMat = new THREE.MeshPhysicalMaterial({ color: 0x141518, metalness: 0.3, roughness: 0.9, clearcoat: 0.2 });
+        const underMat = new THREE.MeshPhysicalMaterial({ color: 0x191b1e, metalness: 0.2, roughness: 1, envMapIntensity: 0.3 });
+        model.traverse((o) => {
+          const mesh = o as THREE.Mesh; if (!mesh.isMesh) return;
+          const name = mesh.name || o.parent?.name || "";
+          const def = PART_MAP[name]; const kind = def?.kind ?? "detail";
+          let material: THREE.MeshPhysicalMaterial;
+          if (debugParts) { const hue = (partIndex(name) * 137.5) % 360; material = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(`hsl(${hue},70%,55%)`), roughness: 0.5, metalness: 0.1 }); }
+          else if (kind === "cabin" || kind === "mirror") material = cabinMat.clone();
+          else if (kind === "wheel") material = wheelMat.clone();
+          else if (kind === "underbody") material = underMat.clone();
+          else material = new THREE.MeshPhysicalMaterial({ color: paintBase.clone(), metalness: 0.35, roughness: 0.42, clearcoat: 0.7, clearcoatRoughness: 0.18, envMapIntensity: 1.0 });
+          material.transparent = true;
+          mesh.material = material; mesh.castShadow = true;
+          const partBox = new THREE.Box3().setFromObject(mesh);
+          const partCenter = partBox.getCenter(new THREE.Vector3()); carGroup.worldToLocal(partCenter);
+          const partSize = partBox.getSize(new THREE.Vector3());
+          const rec: PartRec = { node: mesh, name, orig: mesh.position.clone(), mats: [material], baseColors: [material.color.clone()], center: partCenter, labels: [] };
+          const makeLabel = (html: string, cls: string, offX: number, offZ: number) => {
+            const el = document.createElement("div"); el.className = cls; el.innerHTML = html;
+            const obj = new CSS2DObject(el); obj.position.set(partCenter.x + offX, partCenter.y + 0.32, partCenter.z + offZ);
+            carGroup.add(obj); rec.labels.push({ obj, el, offX, offZ });
+          };
+          if (debugParts) makeLabel(`<b>${name}</b>`, "garage-debug-label", 0, 0);
+          else for (const panel of def?.panels ?? []) {
+            const reading = readings.get(name)?.find((r) => r.panel === panel);
+            const fin = panelFindings.get(panel);
+            if (!reading && !fin) continue;
             const bits: string[] = [];
             if (reading) bits.push(`<b style="color:${CLASS_COLOR[reading.cls]}">${reading.microns} ${lang === "ru" ? "мкм" : "µm"}</b>`);
             if (reading && reading.cls !== "factory") bits.push(`<span style="color:${CLASS_COLOR[reading.cls]}">${CLASS_LABEL[lang][reading.cls]}</span>`);
             if (fin?.verified) bits.push(`<span style="color:#86efac">✓ ${lang === "ru" ? "подтверждено" : "verified"}</span>`);
             else if (fin?.unverified) bits.push(`<span style="color:#c4b5fd">${lang === "ru" ? "не подтверждено" : "unconfirmed"}</span>`);
-            const { obj, el } = makeLabel(bits.join(" · "), "garage-gauge-label");
-            el.style.opacity = "0";
-            rec.label = obj; rec.labelEl = el;
+            const lo = panelLabelOffset(panel, partSize);
+            makeLabel(bits.join(" · "), "garage-gauge-label", lo.x, lo.z);
+            rec.labels[rec.labels.length - 1].el.style.opacity = "0";
           }
-        }
-        parts.push(rec);
-      });
-      host.dataset.triangles = String(Math.round(triangles));
-      host.dataset.parts = String(parts.length);
+          parts.push(rec);
+        });
+        triangles += countTris(model);
+        host.dataset.triangles = String(Math.round(triangles));
+        host.dataset.parts = String(parts.length);
+      }, undefined, () => { host.dataset.modelError = "1"; });
     }, undefined, () => { host.dataset.modelError = "1"; });
 
     let composer: EffectComposer | null = null;
@@ -418,17 +470,14 @@ export default function GarageScene(props: GarageSceneProps) {
         const def = PART_MAP[rec.name];
         const off = def ? explodeOffset(rec.name, partExplodeT(def, explode)) : { x: 0, y: 0, z: 0 };
         rec.node.position.set(rec.orig.x + off.x * invScale, rec.orig.y + off.y * invScale, rec.orig.z + off.z * invScale);
-        if (rec.label) {
-          rec.label.position.set(rec.center.x + off.x, rec.center.y + off.y + (rec.name === "tripo_part_0" ? 0.25 : 0.32), rec.center.z + off.z);
-          if (rec.name === "tripo_part_0") { rec.label.position.x += 1.2; rec.label.position.z -= 0.8; }
-        }
-        if (rec.labelEl) {
+        for (const lab of rec.labels) {
+          lab.obj.position.set(rec.center.x + off.x + lab.offX, rec.center.y + off.y + 0.32, rec.center.z + off.z + lab.offZ);
           const show = debugParts ? 1 : info.beat === 3 ? clamp01((p - 0.56) / 0.04) : info.beat === 4 && obd ? 0.55 : 0;
-          rec.labelEl.style.opacity = String(debugParts ? 1 : show);
+          lab.el.style.opacity = String(debugParts ? 1 : show);
         }
         if (!debugParts && def?.kind !== "body") {
-          const reading = readings.get(rec.name);
-          const fin = def?.panel ? panelFindings.get(def.panel) : undefined;
+          const reading = readings.get(rec.name)?.find((r) => r.cls !== "factory") ?? readings.get(rec.name)?.[0];
+          const fin = def?.panels.map((pn) => panelFindings.get(pn)).find((f) => f?.verified) ?? (def?.panels[0] ? panelFindings.get(def.panels[0]) : undefined);
           rec.mats.forEach((m, i) => {
             const base = rec.baseColors[i];
             if (reading && tintK > 0 && reading.cls !== "factory") {
@@ -442,6 +491,9 @@ export default function GarageScene(props: GarageSceneProps) {
         }
       }
 
+      const heroW = debugParts ? 0 : heroWeight(p);
+      if (heroGroup) { heroGroup.visible = heroW > 0.01; heroMats.forEach((m) => { m.opacity = heroW; m.depthWrite = heroW > 0.6; }); }
+      if (partsGroup) { partsGroup.visible = heroW < 0.99; parts.forEach((r) => r.mats.forEach((m) => { m.opacity = 1 - heroW; m.depthWrite = heroW < 0.4; })); }
       if (debugParts) { camPos.set(6.2, 2.3, 6.0); camTgt.set(0, 0.95, 0); }
       else cameraPose(p, camPos, camTgt, entry);
       camera.position.copy(camPos);
@@ -510,7 +562,7 @@ export default function GarageScene(props: GarageSceneProps) {
             <h3 className="font-medium text-zinc-50">{BEAT_CAPTIONS[b][lang]}</h3>
             {b === 3 && readings.size > 0 && (
               <ul className="mt-2 space-y-1 text-sm text-zinc-300">
-                {[...readings.values()].map((r) => (
+                {allReadings(report).map((r) => (
                   <li key={r.part} className="flex justify-between gap-2">
                     <span>{panelLabel(r.panel, lang)}</span>
                     <b style={{ color: CLASS_COLOR[r.cls] }}>{r.microns} {lang === "ru" ? "мкм" : "µm"} · {CLASS_LABEL[lang][r.cls]}</b>
@@ -552,7 +604,7 @@ export default function GarageScene(props: GarageSceneProps) {
             {beat === 4 && obdText && <p className="mt-2 inline-block rounded-full bg-emerald-400/15 px-3 py-1 text-sm font-medium text-emerald-300">{obdText}</p>}
             {beat === 3 && readings.size > 0 && (
               <p className="mt-2 text-sm text-zinc-300">
-                {[...readings.values()].filter((r) => r.cls !== "factory").map((r) => `${panelLabel(r.panel, lang)}: ${r.microns} ${lang === "ru" ? "мкм" : "µm"}`).join(" · ") || (lang === "ru" ? "Все замеры в заводской норме" : "All readings within factory range")}
+                {allReadings(report).filter((r) => r.cls !== "factory").map((r) => `${panelLabel(r.panel, lang)}: ${r.microns} ${lang === "ru" ? "мкм" : "µm"}`).join(" · ") || (lang === "ru" ? "Все замеры в заводской норме" : "All readings within factory range")}
               </p>
             )}
           </div>
@@ -573,7 +625,7 @@ export default function GarageScene(props: GarageSceneProps) {
           </div>
         )}
         {debugParts && (
-          <p className="absolute left-4 top-4 rounded-lg bg-black/60 px-3 py-1.5 font-mono text-xs text-white">debug=parts · tripo_part_0..31</p>
+          <p className="absolute left-4 top-4 rounded-lg bg-black/60 px-3 py-1.5 font-mono text-xs text-white">debug=parts · tripo_part_0..21</p>
         )}
       </div>
     </div>

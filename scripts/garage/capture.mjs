@@ -55,16 +55,16 @@ async function shot(name, width, height, query) {
   browser = null; // fresh browser per shot: swiftshader + Reflector is heavy
 }
 
-for (let b = 0; b <= 5; b++) await shot(`tz10-beat${b}`, 1440, 900, `?beat=${b}&lang=ru&eco=off`);
-await shot("tz10-debug-parts", 1440, 900, "?debug=parts&lang=ru&eco=off");
-await shot("tz10-mobile-beat2", 390, 844, "?beat=2&lang=ru&eco=off");
-await shot("tz10-mobile-beat3", 390, 844, "?beat=3&lang=ru&eco=off");
+for (let b = 0; b <= 5; b++) await shot(`tz10b-beat${b}`, 1440, 900, `?beat=${b}&lang=ru&eco=off`);
+await shot("tz10b-debug-parts", 1440, 900, "?debug=parts&lang=ru&eco=off");
+await shot("tz10b-mobile-beat2", 390, 844, "?beat=2&lang=ru&eco=off");
+await shot("tz10b-mobile-beat3", 390, 844, "?beat=3&lang=ru&eco=off");
 
-if (!ONLY || "tz10-fallback".includes(ONLY)) {
+if (!ONLY || "tz10b-fallback".includes(ONLY)) {
   const page = await open(1280, 800, "?no3d=1&lang=ru", 3000);
   console.log("fallback cards:", await page.locator(".garage-fallback article").count());
-  await page.screenshot({ path: `${OUT}tz10-fallback.png`, timeout: 150000 });
-  console.log("saved tz10-fallback");
+  await page.screenshot({ path: `${OUT}tz10b-fallback.png`, timeout: 150000 });
+  console.log("saved tz10b-fallback");
   await page.close();
 }
 console.log("page errors:", JSON.stringify(errors.slice(0, 10)));
