@@ -20,7 +20,7 @@ const BUILDERS: Record<string, { build: SceneBuilder; env?: string }> = {
   finale: { build: buildFinale },
 };
 
-export default function SceneBlock({ sceneId, heightVh, mobileScale, onProgress }: { sceneId: string; heightVh: number; mobileScale: number; onProgress?: (blockId: string, local: number) => void }) {
+export default function SceneBlock({ sceneId, blockId, heightVh, mobileScale, onProgress }: { sceneId: string; blockId?: string; heightVh: number; mobileScale: number; onProgress?: (blockId: string, local: number) => void }) {
   const outerRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const mountedRef = useRef<Mounted | null>(null);
@@ -66,7 +66,7 @@ export default function SceneBlock({ sceneId, heightVh, mobileScale, onProgress 
 
   const poster = sceneId === "seoul" ? "/journey-v2/env-seoul-night.jpg" : sceneId === "port" ? "/journey-v2/env-port-night.jpg" : sceneId === "vladivostok" ? "/journey-v2/env-vladivostok-dawn.jpg" : sceneId === "finale" ? "/journey-v2/env-golden-hour.jpg" : "/journey-v2/tex-terrain-forest.jpg";
   return (
-    <section ref={outerRef} data-journey-block={sceneId} className="relative w-full" style={{ height: `calc(${heightVh}vh * ${mobileScale})` }}>
+    <section ref={outerRef} data-journey-block={blockId ?? sceneId} className="relative w-full" style={{ height: `calc(${heightVh}vh * ${mobileScale})` }}>
       <div className="sticky top-0 h-[100svh] w-full overflow-hidden bg-[#07090d]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={poster} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />

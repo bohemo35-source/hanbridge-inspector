@@ -72,7 +72,7 @@ export default function JourneyV2({ report, lang, reviews }: { report?: Report; 
 
   const at = blockAt(progress, visibleBlocks);
   const captionKey = CAPTION_BY_BLOCK[at.block.id];
-  const caption = captionKey ? CAPTIONS[captionKey][lang] : at.block.id === "handover" ? HANDOVER_CARD[lang] : CAPTIONS.seoul[lang];
+  const caption = at.block.id === "garage" ? "" : captionKey ? CAPTIONS[captionKey][lang] : at.block.id === "handover" ? HANDOVER_CARD[lang] : at.block.kind === "reviews" || at.block.kind === "finale" ? CAPTIONS.finale[lang] : CAPTIONS.seoul[lang];
   return (
     <main className="relative bg-[#07090d]" data-testid="journey-v2" data-total-vh={total} data-progress={progress.toFixed(3)}>
       <Hud lang={lang} activeKey={HUD_BY_BLOCK[at.block.id] ?? "purchase"} caption={caption} reportId={report?.id} />
@@ -82,7 +82,7 @@ export default function JourneyV2({ report, lang, reviews }: { report?: Report; 
 }
 
 function Block({ block, lang, report, reviews, mobileScale }: { block: BlockDef; lang: Lang; report?: Report; reviews: ReviewItem[]; mobileScale: number }) {
-  if (block.kind === "scene3d" && block.scene) return <SceneBlock sceneId={block.scene === "finale" ? "finale" : block.scene} heightVh={block.vh} mobileScale={mobileScale} />;
+  if (block.kind === "scene3d" && block.scene) return <SceneBlock sceneId={block.scene} blockId={block.id} heightVh={block.vh} mobileScale={mobileScale} />;
   if (block.kind === "bridge" && block.bridgeImage && block.bridgeStage) return <Bridge id={block.id} image={block.bridgeImage} stage={block.bridgeStage} heightVh={block.vh} mobileScale={mobileScale} lang={lang} />;
   if (block.kind === "garage") return <div data-journey-block="garage"><GarageScene report={report} lang={lang} /></div>;
   if (block.kind === "reviews") return <ReviewsSection reviews={reviews} lang={lang} />;
