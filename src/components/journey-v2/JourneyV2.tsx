@@ -19,7 +19,7 @@ const GarageScene = dynamic(() => import("@/components/garage-3d/GarageScene"), 
 const CAPTION_BY_BLOCK: Record<string, string> = Object.fromEntries(BLOCKS.filter((b) => CAPTIONS[b.id]).map((b) => [b.id, b.id]));
 const HUD_BY_BLOCK: Record<string, string> = {
   seoul: "purchase", "bridge-sourcing": "inspection", garage: "inspection", "bridge-documents": "documents",
-  port: "port", "bridge-sea": "sea", vladivostok: "arrival", "bridge-customs": "customs", road: "delivery", handover: "delivery",
+  port: "port", "bridge-sea": "sea", vladivostok: "arrival", "bridge-customs": "customs", road: "delivery", handover: "delivery", reviews: "delivery", finale: "delivery",
 };
 const FALLBACK_IMG: Record<string, string> = {
   seoul: "/journey-v2/env-seoul-night.jpg", port: "/journey-v2/env-port-night.jpg", vladivostok: "/journey-v2/env-vladivostok-dawn.jpg",
@@ -72,7 +72,7 @@ export default function JourneyV2({ report, lang, reviews }: { report?: Report; 
 
   const at = blockAt(progress, visibleBlocks);
   const captionKey = CAPTION_BY_BLOCK[at.block.id];
-  const caption = at.block.id === "garage" ? "" : captionKey ? CAPTIONS[captionKey][lang] : at.block.id === "handover" ? HANDOVER_CARD[lang] : at.block.kind === "reviews" || at.block.kind === "finale" ? CAPTIONS.finale[lang] : CAPTIONS.seoul[lang];
+  const caption = at.block.id === "garage" || at.block.kind === "bridge" ? "" : captionKey ? CAPTIONS[captionKey][lang] : at.block.id === "handover" ? HANDOVER_CARD[lang] : at.block.kind === "reviews" || at.block.kind === "finale" ? CAPTIONS.finale[lang] : CAPTIONS.seoul[lang];
   return (
     <main className="relative bg-[#07090d]" data-testid="journey-v2" data-total-vh={total} data-progress={progress.toFixed(3)}>
       <Hud lang={lang} activeKey={HUD_BY_BLOCK[at.block.id] ?? "purchase"} caption={caption} reportId={report?.id} />
