@@ -71,7 +71,7 @@ async function review(scene, mp4, take) {
     return p;
   });
   const text = `You review a 5-second generated shot for a car commercial. Intent: ${scene.intent}
-The 3 images are frames at the start, middle and end. Check: does the car keep the same shape and colour (no morphing, no melting wheels, no extra cars appearing in the foreground)? Does the motion match the intent? Any ugly artifacts?
+The 3 images are frames at the start, middle and end. If the intent shows no car in focus (a landscape or bridge shot), do not require one — judge stability, motion and artifacts only. Otherwise check: does the car keep the same shape and colour (no morphing, no melting wheels, no extra cars appearing in the foreground)? Does the motion match the intent? Any ugly artifacts?
 Reply ONLY JSON: {"score": 0-10, "accept": true|false, "issues": "short"}. Accept when score >= 7.`;
   return spark([{ type: "text", text }, ...frames.map(img)], 2000);
 }
