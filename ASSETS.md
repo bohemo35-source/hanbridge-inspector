@@ -28,4 +28,4 @@ HDRI use (TZ-13): Shanghai Bund — Seoul plate; Golden Bay — port; Düsseldor
 Libraries are listed in `package.json` (three.js — MIT, Next.js — MIT, etc.).
 
 ## 3D-модель (A/B-тест)
-- `public/models/kia-sportage.glb` — «Kia Sportage» by karaman.arman, CC-BY 4.0, https://sketchfab.com/3d-models/kia-sportage-98a84407998a4bc6b4dee912b289f15b. Изменения: поворот (перёд → +X), материалы краски/хрома/стёкол, meshopt-сжатие.
+- `public/models/kia-sportage.glb` — «Kia Sportage» by karaman.arman, CC-BY 4.0, https://sketchfab.com/3d-models/kia-sportage-98a84407998a4bc6b4dee912b289f15b. Изменения: поворот (перёд → +X), материалы краски/хрома/стёкол, удалены эмблемы, meshopt-сжатие. `kia-sportage-parts.glb` — та же модель, разрезанная по островам сетки на 22 детали для разборки (`scripts/kia/build-parts.mjs`).
