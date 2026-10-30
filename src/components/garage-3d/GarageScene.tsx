@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { heroModelUrl } from "../journey-v2/useCar";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { Reflector } from "three/addons/objects/Reflector.js";
 import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
@@ -412,7 +413,7 @@ export default function GarageScene(props: GarageSceneProps) {
 
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
-    loader.load("/models/car-v2.glb", (heroGltf) => {
+    loader.load(heroModelUrl(), (heroGltf) => {
       if (disposed) return;
       const hero = heroGltf.scene;
       // Same formula for both models: length (x) -> 4.4 m, wheels on floor, centred on x/z.

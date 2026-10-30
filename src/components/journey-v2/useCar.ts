@@ -8,12 +8,17 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 
+/** A/B test: ?model=kia swaps the hero model (Kia Sportage, CC-BY 4.0 karaman.arman / Sketchfab). */
+export function heroModelUrl(): string {
+  if (typeof window === "undefined") return "/models/car-v2.glb";
+  return new URLSearchParams(window.location.search).get("model") === "kia" ? "/models/kia-sportage.glb" : "/models/car-v2.glb";
+}
 let cached: Promise<THREE.Group> | null = null;
 export function loadCarTemplate(): Promise<THREE.Group> {
   if (!cached) {
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
-    cached = loader.loadAsync("/models/car-v2.glb").then((g) => g.scene).catch((e) => { cached = null; throw e; });
+    cached = loader.loadAsync(heroModelUrl()).then((g) => g.scene).catch((e) => { cached = null; throw e; });
   }
   return cached;
 }

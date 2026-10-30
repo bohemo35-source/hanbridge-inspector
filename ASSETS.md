@@ -26,3 +26,6 @@ Own generated images added in TZ-13 (not third-party, listed for traceability):
 HDRI use (TZ-13): Shanghai Bund — Seoul plate; Golden Bay — port; Düsseldorf Bridge — Vladivostok and top-down road; Evening Road 01 — handover; Autoshop 01 — garage (2k desktop, 1k phones). Reflections/lighting only; visible backgrounds stay Muse Image.
 
 Libraries are listed in `package.json` (three.js — MIT, Next.js — MIT, etc.).
+
+## 3D-модель (A/B-тест)
+- `public/models/kia-sportage.glb` — «Kia Sportage» by karaman.arman, CC-BY 4.0, https://sketchfab.com/3d-models/kia-sportage-98a84407998a4bc6b4dee912b289f15b. Изменения: поворот (перёд → +X), материалы краски/хрома/стёкол, meshopt-сжатие.
