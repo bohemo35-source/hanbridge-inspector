@@ -23,6 +23,16 @@ const SCENES = [
   { id: "vladivostok", intent: "Misty dawn, Vladivostok. The silver SUV drives down the ramp of the ship and rolls slowly onto the quay toward the camera, the camera slowly pulls back, morning haze over the bay and the distant cable-stayed bridge." },
   { id: "customs", intent: "Dawn at the customs gate. Slow push-in toward the gate, the barrier lifts, soft morning light, light fog." },
   { id: "road", intent: "Top-down aerial drone shot. The silver SUV drives along the forest road from lower left to upper right, the camera tracks it from above at the same speed, keeping the car centered. Trees and road texture scroll past." },
+  // v2 story (bridge = trust): new shots
+  { id: "bridge-a", intent: "Blue hour over the Han River. Very slow aerial dolly forward toward the cable-stayed bridge; the golden light line along the bridge deck gently pulses brighter, as if a path is lighting up. City lights twinkle, water calm. No cars in focus." },
+  { id: "bridge-b", intent: "Low angle from the river under the bridge pylon. Slow upward tilt and drift along the bridge underside; the golden light line along the deck edge glows steadily, mist drifts over the water." },
+  { id: "bridge-c", intent: "Top-down aerial over the bridge deck at night. Slow descent and gentle rotation; the golden light line runs straight through the frame and brightens from one end to the other like a path being drawn." },
+  { id: "onbridge", intent: "Night, light rain, on the bridge. The silver SUV drives forward along the golden light line toward the lit pylon; the camera follows close behind at the same speed, car stays large in frame." },
+  { id: "service", intent: "Night. The silver SUV drives slowly forward into the bright inspection bay and stops on the yellow lines; the camera holds and slowly pushes in. No people." },
+  { id: "inspect", intent: "Inside the inspection bay. The technician (seen from behind) slowly moves the paint thickness gauge along the front fender of the silver SUV; the tablet screen glows; gentle slow camera orbit. The car does not move." },
+  { id: "carrier", intent: "Morning highway in Korea. The car-carrier truck with the silver SUV on its upper deck drives steadily forward toward the port; camera tracks alongside at the same speed. The SUV stays fixed on the truck." },
+  { id: "svh", intent: "Misty morning in the bonded storage yard. The camera slowly dollies along the row of parked imported cars toward the silver SUV in the foreground; the ship and cranes stay still. Cars do not move." },
+  { id: "truck-ru", intent: "Aerial drone shot. The car-carrier truck carrying the silver SUV drives along the road through the autumn taiga forest; the camera tracks it from above at the same speed. Golden hour light." },
   { id: "handover", intent: "Golden hour at a modern house. The silver SUV rolls slowly forward on the paved driveway and comes to a gentle stop in front of the garage, the camera slowly pushes in. Warm light in the windows." },
 ];
 
@@ -49,7 +59,7 @@ async function direct(scene, frame, feedback) {
 The attached image is the exact FIRST FRAME of the next shot. An image-to-video model (Wan 2.2) will animate it for 5 seconds.
 Shot intent: ${scene.intent}
 ${feedback ? `The previous take was rejected: ${feedback}. Fix that.` : ""}
-Write the prompt for the video model: one paragraph, present tense, concrete motion of the car (speed: calm, realistic), camera move, light and weather that match THIS frame; the car must keep its exact shape, colour and size; no new vehicles in the foreground, no people, no text.
+Write the prompt for the video model: one paragraph, present tense, concrete motion of the car (speed: calm, realistic), camera move, light and weather that match THIS frame; the car must keep its exact shape, colour and size; no new vehicles in the foreground, no people unless the intent names them, no text.
 Reply ONLY JSON: {"prompt": "...", "camera": "short camera note"}`;
   return spark([{ type: "text", text }, img(frame)]);
 }
@@ -92,14 +102,23 @@ async function runScene(scene) {
   if (L.accepted) return;
   let feedback = "";
   for (let take = L.takes.length + 1; take <= 2; take++) {
-    const d = await direct(scene, frame, feedback);
     const seed = 20261030 + take * 7;
-    const id = await wan(frame, d.prompt, seed);
-    console.log(`[${scene.id}] take ${take} submitted ${id}: ${d.prompt.slice(0, 120)}…`);
+    let d, id;
+    if (L.pending?.take === take) {
+      // resume a take that was already submitted before the runner stopped
+      ({ id, prompt: d } = { id: L.pending.id, prompt: { prompt: L.pending.prompt, camera: L.pending.camera } });
+      console.log(`[${scene.id}] take ${take} resumed ${id}`);
+    } else {
+      d = await direct(scene, frame, feedback);
+      id = await wan(frame, d.prompt, seed);
+      L.pending = { take, id, prompt: d.prompt, camera: d.camera }; save();
+      console.log(`[${scene.id}] take ${take} submitted ${id}: ${d.prompt.slice(0, 120)}…`);
+    }
     const mp4 = join(outDir, `${scene.id}-t${take}.mp4`);
     const sec = await waitFor(id, mp4);
     const q = await review(scene, mp4, take);
     L.takes.push({ take, id, seed, prompt: d.prompt, camera: d.camera, wanSec: sec, review: q });
+    delete L.pending;
     console.log(`[${scene.id}] take ${take} done in ${sec}s, review ${JSON.stringify(q)}`);
     save();
     if (q.accept) { L.accepted = take; save(); return; }
