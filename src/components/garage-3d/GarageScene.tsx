@@ -430,7 +430,7 @@ export default function GarageScene(props: GarageSceneProps) {
       };
       applyNorm(hero);
       heroGroup = hero; carGroup.add(hero);
-      hero.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; m.castShadow = true; (Array.isArray(m.material) ? m.material : [m.material]).forEach((mt) => { const sm = mt as THREE.MeshStandardMaterial; if ("envMapIntensity" in sm) sm.envMapIntensity = 0.9; heroMats.push(mt); }); });
+      hero.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; m.castShadow = true; (Array.isArray(m.material) ? m.material : [m.material]).forEach((mt) => { const sm = mt as THREE.MeshStandardMaterial; if ("envMapIntensity" in sm) sm.envMapIntensity = kia ? 0.55 : 0.9; heroMats.push(mt); }); });
       triangles += countTris(hero);
       const sampled = debugParts ? paintBase.clone() : kia ? new THREE.Color(0xc9ced6) : samplePaint(hero);
       if (!debugParts) paintBase.copy(sampled).multiplyScalar(kia ? 1 : 0.88); // parts read slightly brighter than the textured hero under the same light
@@ -487,7 +487,7 @@ export default function GarageScene(props: GarageSceneProps) {
             const hasFinding = (def?.panels ?? []).some((pn) => panelFindings.has(pn));
             if (reading || hasFinding) {
               const color = CLASS_COLOR[reading?.cls ?? "repaint"];
-              const om = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+              const om = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, blending: THREE.NormalBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
               const ov = new THREE.Mesh(mesh.geometry, om);
               ov.position.copy(mesh.position); ov.quaternion.copy(mesh.quaternion); ov.scale.copy(mesh.scale);
               if (!overlayGroup) { overlayGroup = new THREE.Group(); overlayGroup.position.copy(model.position); overlayGroup.scale.copy(model.scale); carGroup.add(overlayGroup); }
@@ -584,7 +584,7 @@ export default function GarageScene(props: GarageSceneProps) {
       // finding panels glow on the whole car: scanning in beat 1, again once the car is back together in beat 5
       if (overlays.length) {
         const k = info.beat === 1 ? smooth((info.local - 0.15) * 4) : info.beat === 5 ? smooth((info.local - 0.85) * 6) : 0;
-        const o = k * heroW * (0.6 + Math.sin(time * 3.2) * 0.15);
+        const o = k * heroW * (0.5 + Math.sin(time * 3.2) * 0.12);
         overlays.forEach((ov) => { (ov.mesh.material as THREE.MeshBasicMaterial).opacity = o; ov.mesh.visible = o > 0.01; });
       }
       if (partsGroup) { partsGroup.visible = heroW < 0.99; parts.forEach((r) => r.mats.forEach((m) => setFade(m, 1 - heroW))); }

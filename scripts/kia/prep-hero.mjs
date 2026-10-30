@@ -14,7 +14,7 @@ import { KHRMaterialsClearcoat } from '@gltf-transform/extensions';
 const cc = doc.createExtension(KHRMaterialsClearcoat);
 for (const m of doc.getRoot().listMaterials()) {
   const n = m.getName();
-  if (/Wolf_Gray/.test(n)) { m.setBaseColorFactor([0.26, 0.27, 0.29, 1]).setMetallicFactor(0.4).setRoughnessFactor(0.42); m.setExtension('KHR_materials_clearcoat', cc.createClearcoat().setClearcoatFactor(1).setClearcoatRoughnessFactor(0.04)); }
+  if (/Wolf_Gray/.test(n)) { m.setBaseColorFactor([0.26, 0.27, 0.29, 1]).setMetallicFactor(0.4).setRoughnessFactor(0.42); m.setExtension('KHR_materials_clearcoat', cc.createClearcoat().setClearcoatFactor(0.6).setClearcoatRoughnessFactor(0.08)); }
   else if (/chrome_shiny|ChromeTrims|metal_rim|SilverSkid/.test(n)) { m.setMetallicFactor(1).setRoughnessFactor(0.18); }
   else if (/Windows|HeadLightsGlass|BrakeLightsGlass/.test(n)) { m.setRoughnessFactor(0.03).setMetallicFactor(0); }
   else if (/1black|windsmask/.test(n)) { m.setRoughnessFactor(0.35); }
