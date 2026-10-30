@@ -40,7 +40,7 @@ async function open(width, height, query, waitMs = 9000) {
   const page = await browser.newPage({ viewport: { width, height } });
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => m.type() === "error" && errors.push(m.text().slice(0, 200)));
-  await page.goto(`${BASE}/lab/garage${query}`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/lab/garage${query}${process.env.QUERY ? `&${process.env.QUERY}` : ""}`, { waitUntil: "networkidle" });
   await page.waitForTimeout(waitMs);
   return page;
 }
