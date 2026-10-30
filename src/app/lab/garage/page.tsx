@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function LabGaragePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   if (process.env.VERCEL_ENV === "production") notFound();
   const q = await searchParams;
-  const carId = typeof q.car === "string" ? q.car : "mini-cooper-s";
+  const carId = typeof q.car === "string" ? q.car : "kia-sportage";
   const lang = q.lang === "en" ? "en" : "ru";
   const debugParts = q.debug === "parts";
   const beatRaw = typeof q.beat === "string" ? Number(q.beat) : NaN;

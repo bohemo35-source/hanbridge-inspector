@@ -40,6 +40,8 @@ export interface GarageSceneProps {
   exit?: number;
 }
 
+/** Kia Sportage demo car: Snow White Pearl (SWP), toned down so it does not blow out under the 1.3 exposure */
+const KIA_WHITE = 0xd6d7d2;
 const CLASS_COLOR: Record<string, string> = { factory: "#34d399", repaint: "#fbbf24", putty: "#f87171" };
 const CLASS_LABEL = {
   ru: { factory: "норма", repaint: "перекрас", putty: "шпатлёвка / ремонт" },
@@ -388,7 +390,9 @@ export default function GarageScene(props: GarageSceneProps) {
     let partsGroup: THREE.Group | null = null;
     let triangles = 0;
     let invScale = 1;
-    const kia = isKiaModel();
+    const kia = isKiaModel() || report?.carId === "kia-sportage";
+    // white car: overhead softbox/strip lights saturate the top-facing panels, so they are dimmed for the Kia
+    if (kia) { softbox.intensity = 1.2; rect1.intensity = 1.1; }
     // Kia A/B: parts are cut from the same model, rendered as clean silver-white panels; finding panels glow on the whole car
     const overlays: { mesh: THREE.Mesh; color: string }[] = [];
     let overlayGroup: THREE.Group | null = null;
@@ -417,7 +421,7 @@ export default function GarageScene(props: GarageSceneProps) {
 
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
-    loader.load(heroModelUrl(), (heroGltf) => {
+    loader.load(kia ? "/models/kia-sportage.glb" : heroModelUrl(), (heroGltf) => {
       if (disposed) return;
       const hero = heroGltf.scene;
       // Same formula for both models: length (x) -> 4.4 m, wheels on floor, centred on x/z.
@@ -430,9 +434,11 @@ export default function GarageScene(props: GarageSceneProps) {
       };
       applyNorm(hero);
       heroGroup = hero; carGroup.add(hero);
-      hero.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; m.castShadow = true; (Array.isArray(m.material) ? m.material : [m.material]).forEach((mt) => { const sm = mt as THREE.MeshStandardMaterial; if ("envMapIntensity" in sm) sm.envMapIntensity = kia ? 0.55 : 0.9; heroMats.push(mt); }); });
+      hero.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; m.castShadow = true; (Array.isArray(m.material) ? m.material : [m.material]).forEach((mt) => { const sm = mt as THREE.MeshStandardMaterial; if ("envMapIntensity" in sm) sm.envMapIntensity = kia ? 0.55 : 0.9;
+        if (kia && /Wolf_Gray/i.test(mt.name)) { sm.color.set(KIA_WHITE); sm.metalness = 0.08; sm.roughness = 0.34; sm.envMapIntensity = 0.45; const pm = sm as THREE.MeshPhysicalMaterial; if ("clearcoat" in pm) { pm.clearcoat = 0.7; pm.clearcoatRoughness = 0.1; } }
+        heroMats.push(mt); }); });
       triangles += countTris(hero);
-      const sampled = debugParts ? paintBase.clone() : kia ? new THREE.Color(0xc9ced6) : samplePaint(hero);
+      const sampled = debugParts ? paintBase.clone() : kia ? new THREE.Color(KIA_WHITE).multiplyScalar(0.74) : samplePaint(hero);
       if (!debugParts) paintBase.copy(sampled).multiplyScalar(kia ? 1 : 0.88); // parts read slightly brighter than the textured hero under the same light
 
       loader.load(kia ? "/models/kia-sportage-parts.glb" : "/models/car-v2-parts.glb", (gltf) => {
@@ -454,7 +460,7 @@ export default function GarageScene(props: GarageSceneProps) {
           else if (kind === "wheel") material = wheelMat.clone();
           else if (kind === "underbody") material = withMatteInside(underMat.clone());
           // metallic paint: base metal flake + glossy clearcoat picks up the autoshop HDRI; insides dark matte
-          else if (kia) material = new THREE.MeshPhysicalMaterial({ color: paintBase.clone(), metalness: 0.55, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 0.85, side: THREE.DoubleSide });
+          else if (kia) material = new THREE.MeshPhysicalMaterial({ color: paintBase.clone(), metalness: 0.05, roughness: 0.42, clearcoat: 0.45, clearcoatRoughness: 0.12, envMapIntensity: 0.3, side: THREE.DoubleSide });
           else material = withMatteInside(new THREE.MeshPhysicalMaterial({ color: paintBase.clone(), metalness: 0.5, roughness: 0.36, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.1 }));
           material.transparent = true;
           mesh.material = material; mesh.castShadow = true;

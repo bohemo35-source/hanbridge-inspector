@@ -17,7 +17,7 @@ export default async function LabFilmPage({ searchParams }: { searchParams: Prom
   const q = await searchParams;
   const lang = q.lang === "ru" ? "ru" : "en";
   const reports = await listReportsAsync().catch(() => []);
-  const report = reports.find((r) => r.carId === (typeof q.car === "string" ? q.car : "mini-cooper-s")) ?? reports[0];
+  const report = reports.find((r) => r.carId === (typeof q.car === "string" ? q.car : "kia-sportage")) ?? reports[0];
   return (
     <main className={`${serif.variable} w-full`} style={{ ["--tw-font-serif" as string]: "var(--font-serif)" }}>
       <style>{`.font-serif{font-family:var(--font-serif),Georgia,serif}`}</style>

@@ -12,6 +12,7 @@ export const CARS: CarInfo[] = [
   { carId: "bmw-x3-8278", make: "BMW", model: "X3 20i xDrive M Sport", year: 2023, bodyType: "suv", doors: 5 },
   { carId: "bmw-530i-8053", make: "BMW", model: "530i xDrive M Sport", year: 2023, bodyType: "sedan", doors: 5 },
   { carId: "audi-a5-2005", make: "Audi", model: "A5 40 TFSI quattro S line", year: 2025, bodyType: "sedan", doors: 5 },
+  { carId: "kia-sportage", make: "Kia", model: "Sportage", year: 2022, bodyType: "suv", doors: 5 },
   { carId: "kia-morning", make: "Kia", model: "Morning (Picanto)", year: 2023, bodyType: "hatchback", doors: 5 },
 ];
 
