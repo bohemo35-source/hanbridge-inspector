@@ -16,6 +16,7 @@ import { PANEL_VALUES, panelLabel, type Panel } from "@/lib/domain/panels";
 import { samSegment } from "@/lib/meta/sam";
 import { sparkJson, type ChatPart } from "@/lib/meta/spark";
 import type { Finding } from "@/lib/schema";
+import { ffmpegBin, mediaDuration } from "./ffbin";
 
 const run = promisify(execFile);
 
@@ -171,10 +172,7 @@ const FRAMES_SPEC = `Return ONE JSON object: {"frames":[{"i":0,"gaugeVisible":tr
 - panel: where the gauge touches, one of: ${PANEL_VALUES.join(", ")}, or null when no gauge. Use cues: headlight + bonnet edge -> hood or front fender; door handle -> door; fuel flap / tail light -> rear fender; side mirror for left/right; the camera holder stands next to the panel;
 - panelConfidence 0..1.`;
 
-async function probeDuration(video: string): Promise<number> {
-  const { stdout } = await run("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", video]);
-  return Number.parseFloat(stdout.trim());
-}
+const probeDuration = (video: string): Promise<number> => mediaDuration(video); // ffmpeg-based: no ffprobe on Vercel
 
 /** frames every `step` seconds (step chosen so that count <= maxFrames), width <= 960 */
 export async function extractFrames(video: string, maxFrames = 60): Promise<{ t: number; jpg: Buffer }[]> {
@@ -182,7 +180,7 @@ export async function extractFrames(video: string, maxFrames = 60): Promise<{ t:
   const step = Math.max(1, Math.ceil(duration / maxFrames));
   const dir = await mkdtemp(path.join(tmpdir(), "gauge-"));
   try {
-    await run("ffmpeg", ["-v", "error", "-i", video, "-vf", `fps=1/${step},scale='min(960,iw)':-2`, "-q:v", "2", path.join(dir, "f%04d.jpg")]);
+    await run(await ffmpegBin(), ["-v", "error", "-i", video, "-vf", `fps=1/${step},scale='min(960,iw)':-2`, "-q:v", "2", path.join(dir, "f%04d.jpg")]);
     const files = (await readdir(dir)).filter((f) => f.endsWith(".jpg")).sort();
     return Promise.all(files.slice(0, maxFrames).map(async (f, i) => ({ t: i * step, jpg: await readFile(path.join(dir, f)) })));
   } finally {

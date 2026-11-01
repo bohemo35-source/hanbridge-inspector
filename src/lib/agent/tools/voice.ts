@@ -14,6 +14,7 @@ import { classifyPaint } from "@/lib/domain/paint";
 import { PANEL_VALUES, panelLabel, type Panel } from "@/lib/domain/panels";
 import { transcribeWav } from "@/lib/meta/asr";
 import { sparkJson } from "@/lib/meta/spark";
+import { ffmpegBin } from "./ffbin";
 import type { Finding } from "@/lib/schema";
 
 const run = promisify(execFile);
@@ -170,7 +171,7 @@ export function voicePaintJson(readings: VoiceReading[]): Record<string, number>
 export async function audioChunks(video: string, chunkSec = 15): Promise<{ i: number; tStart: number; tEnd: number; wav: Buffer }[]> {
   const dir = await mkdtemp(path.join(tmpdir(), "voice-"));
   try {
-    await run("ffmpeg", ["-v", "error", "-i", video, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", "-f", "segment", "-segment_time", String(chunkSec), path.join(dir, "c%04d.wav")]);
+    await run(await ffmpegBin(), ["-v", "error", "-i", video, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", "-f", "segment", "-segment_time", String(chunkSec), path.join(dir, "c%04d.wav")]);
     const files = (await readdir(dir)).filter((f) => f.endsWith(".wav")).sort();
     return Promise.all(
       files.map(async (f, i) => {

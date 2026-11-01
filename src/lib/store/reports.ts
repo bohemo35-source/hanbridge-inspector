@@ -6,6 +6,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ReportSchema, type Report } from "@/lib/schema";
+import { generatedFileForUrl } from "@/lib/runtime/generated";
 
 const cache = new Map<string, Report>();
 const localDir = () => path.join(process.cwd(), "data", "reports");
@@ -33,7 +34,7 @@ export async function saveReportAsync(r: Report): Promise<void> {
 export async function publishMedia(localUrl: string, blobPath: string): Promise<string> {
   if (!process.env.BLOB_READ_WRITE_TOKEN || /^https?:/.test(localUrl)) return localUrl;
   try {
-    const file = path.join(process.cwd(), "public", localUrl.replace(/^\//, ""));
+    const file = generatedFileForUrl(localUrl) ?? path.join(process.cwd(), "public", localUrl.replace(/^\//, ""));
     const { put } = await import("@vercel/blob");
     const res = await put(blobPath, readFileSync(file), { access: "public", contentType: "image/jpeg", addRandomSuffix: false, allowOverwrite: true });
     return res.url;

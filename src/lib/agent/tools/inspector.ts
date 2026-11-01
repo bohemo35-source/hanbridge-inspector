@@ -2,12 +2,11 @@
 // @project: hanbridge-inspector
 // @purpose: read_inspector_report tool: inspector_report_ru.txt -> per-panel claims with verbatim quotes (evidence transcript)
 // @created: 2026-10-29
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { z } from "zod";
 import { PANEL_VALUES, type Panel } from "@/lib/domain/panels";
 import { sparkJson } from "@/lib/meta/spark";
 import type { Finding } from "@/lib/schema";
+import { readMediaText } from "../media";
 import { normalizeText, quoteInText } from "./voice";
 
 export interface InspectorClaim { panel: Panel; kind: Finding["kind"] | null; quote: string; }
@@ -31,7 +30,7 @@ Panel words: задняя правая дверь=rear_right_door, передн�
 quote: 3-15 consecutive words copied EXACTLY from the text and it MUST contain the words that state the claim — include the heading when the item itself does not say it (e.g. "Замены: - задняя правая дверь", not just "задняя правая дверь"). Ignore owner names, plates, phones.`;
 
 export async function readInspectorReport(opts: { carId: string }): Promise<InspectorReportResult> {
-  const text = await readFile(path.join(process.cwd(), "demo-data", opts.carId, "inspector_report_ru.txt"), "utf8");
+  const text = await readMediaText(opts.carId, "root", "inspector_report_ru.txt");
   const draft = await sparkJson(Draft, [{ role: "user", content: `Inspector report (Russian):\n${text.slice(0, 12000)}` }], SPEC, { maxTokens: 4000 });
   const claims: InspectorClaim[] = []; let rejected = 0;
   for (const c of draft.claims) {

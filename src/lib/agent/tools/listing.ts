@@ -10,6 +10,7 @@ import { head, put } from "@vercel/blob";
 import { editImage, generateImage } from "@/lib/meta/image";
 import type { SamBox, SamInstance } from "@/lib/meta/sam";
 import type { Finding } from "@/lib/schema";
+import { generatedRoot } from "@/lib/runtime/generated";
 import { segmentImage, type SegmentImageResult } from "./segment";
 
 /** Badge required by TZ-04: a listing image is never report evidence. */
@@ -205,7 +206,7 @@ export async function makeListingPhoto(opts: {
     trace.push(`segment_image: car=${segment.car ? "found" : "none"} plate=${segment.licensePlate ? "found" : "none"}`);
   }
 
-  const outDir = opts.outDir ?? path.join(process.cwd(), "public", "generated", safeName(opts.carId));
+  const outDir = opts.outDir ?? path.join(generatedRoot(), safeName(opts.carId));
   const urlPrefix = opts.urlPrefix ?? `/generated/${safeName(opts.carId)}`;
 
   const plate = segment.licensePlate;
@@ -333,7 +334,7 @@ export async function getOrCreateHeroImage(reportId: string): Promise<{ url: str
     return { url: blob.url, generated: true };
   }
 
-  const dir = path.join(process.cwd(), "public", "generated", "heroes");
+  const dir = path.join(generatedRoot(), "heroes");
   const file = path.join(dir, `${safeName(reportId)}.png`);
   try {
     await readFile(file);

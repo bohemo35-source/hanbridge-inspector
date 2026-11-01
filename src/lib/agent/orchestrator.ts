@@ -11,7 +11,7 @@ import { sparkChat, sparkJson, type ChatMessage, type ToolDef } from "@/lib/meta
 import type { Finding, Report } from "@/lib/schema";
 import { ReportSchema } from "@/lib/schema";
 import { publishMedia, saveReportAsync } from "@/lib/store/reports";
-import { carMedia, getCar, photoPath, spreadPhotos, videoPath, type CarMedia } from "./catalog";
+import { carMedia, ensurePhotoPath, ensureVideoPath, getCar, spreadPhotos, type CarMedia } from "./catalog";
 import { segmentImage, boxArea, type SegmentImageResult } from "./tools/segment";
 import { findDefects } from "./tools/defects";
 import { transcribeNote } from "./tools/voice";
@@ -23,6 +23,13 @@ import { glimmerConfigured } from "@/lib/meta/glimmer";
 import { readDiagnosticReport } from "./tools/diagnostic";
 import { readInspectorReport } from "./tools/inspector";
 import { decideVerdict, detectConflict, verifyFinding } from "./verifier";
+
+/** Vercel kills the run route at 300 s (maxDuration): past this point optional work is skipped instead of risking the whole report. */
+const RUN_SOFT_DEADLINE_MS = 235_000;
+async function mapPool<T>(items: T[], n: number, fn: (x: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (next < items.length) await fn(items[next++]); }));
+}
 
 export type AgentStep = Report["trace"][number];
 const WHY: Record<string, string> = {
@@ -87,6 +94,9 @@ export async function runInspection(opts: {
   let listingUrl: string | undefined; let listingPhotoId: string | undefined; let listingDropped = false;
   let handoffReason: string | undefined; let finalized = false;
   let shipping = getShippingStatus(reportId);
+  // hero background does not depend on findings: generate it in parallel with the inspection (~16 s saved on the critical path)
+  const heroPromise = getOrCreateHeroImage(reportId);
+  heroPromise.catch(() => undefined);
 
   const step = (tool: string, argsSummary: string, ok: boolean, outputSummary: string, ms: number) => {
     const s: AgentStep = { i: trace.length + 1, tool, argsSummary: argsSummary.slice(0, 200), why: WHY[tool] ?? "", ms, ok, outputSummary: outputSummary.slice(0, 500) };
@@ -126,24 +136,24 @@ export async function runInspection(opts: {
       let out = "";
       if (name === "segment_image") {
         const photoId = String(args.photoId ?? "");
-        const r = await segmentImage({ carId: opts.carId, photoId, imagePath: photoPath(opts.carId, photoId) });
+        const r = await segmentImage({ carId: opts.carId, photoId, imagePath: await ensurePhotoPath(opts.carId, photoId) });
         segCache.set(photoId, r);
         out = `car=${r.car ? "found" : "none"} plate=${r.licensePlate ? "found" : "none"} wheels=${r.wheels.length} ${r.width}x${r.height}`;
       } else if (name === "find_defects") {
         const photoId = String(args.photoId ?? "");
-        const image = await readFile(photoPath(opts.carId, photoId));
+        const image = await readFile(await ensurePhotoPath(opts.carId, photoId));
         const r = await findDefects({ carId: opts.carId, photoId, image });
         addFindings(r.findings); photoViews.set(photoId, r.view);
         out = `view=${r.view} panels=${r.panels_visible.join(",")} defects=${r.findings.length}: ${r.findings.map((f) => `${f.panel}/${f.kind}/${f.severity}`).join(", ") || "none"}`;
       } else if (name === "transcribe_note") {
         const videoId = String(args.videoId ?? media.videos[0] ?? "");
         if (!videoId) { step(name, key, true, "source absent: no videos for this car", Date.now() - ts); return "source absent: no videos"; }
-        const r = await transcribeNote({ video: videoPath(opts.carId, videoId), mediaId: videoId });
+        const r = await transcribeNote({ video: await ensureVideoPath(opts.carId, videoId), mediaId: videoId });
         addFindings(r.findings); addPaint(r.paint); contextOverrides.push(...r.conflicts);
         out = `chunks=${r.chunks.length} readings=${r.readings.length} findings=${r.findings.length} conflicts=${r.conflicts.map((c) => c.panel).join(",") || "none"} paint=${JSON.stringify(r.paint)}`;
       } else if (name === "read_gauge_video") {
         if (!media.gaugeVideo) { step(name, key, true, "source absent: no paint_gauge.mp4 for this car", Date.now() - ts); return "source absent: no paint_gauge.mp4"; }
-        const r = await readGaugeVideo({ video: videoPath(opts.carId, media.gaugeVideo), mediaId: media.gaugeVideo });
+        const r = await readGaugeVideo({ video: await ensureVideoPath(opts.carId, media.gaugeVideo), mediaId: media.gaugeVideo });
         addFindings(r.findings); addPaint(r.paint);
         out = `frames=${r.stats.frames} measurements=${r.measurements.length} findings=${r.findings.length} paint=${JSON.stringify(r.paint)}`;
       } else if (name === "read_diagnostic_report") {
@@ -168,7 +178,7 @@ export async function runInspection(opts: {
         const asked = String(args.photoId ?? suggested[0] ?? "");
         const quarter = [...photoViews.entries()].find(([, v]) => QUARTER.has(v))?.[0];
         const photoId = QUARTER.has(photoViews.get(asked) ?? "") || !quarter ? asked : quarter;
-        const r = await makeListingPhoto({ carId: opts.carId, photoId, imagePath: photoPath(opts.carId, photoId) });
+        const r = await makeListingPhoto({ carId: opts.carId, photoId, imagePath: await ensurePhotoPath(opts.carId, photoId) });
         if (r.url) { listingUrl = r.url; listingPhotoId = photoId; }
         out = `url=${r.url ?? "none"} plateHidden=${r.plateHidden} backgroundEdited=${r.backgroundEdited} ${r.rejectedReason ?? ""}`;
       } else if (name === "get_shipping_status") {
@@ -235,14 +245,14 @@ export async function runInspection(opts: {
   }
 
   // verifier pass (independent model; deterministic paint findings already verified)
-  for (const f of findings) {
+  await mapPool(findings, 4, async (f) => {
     f.conflict = detectConflict(f, paintList) || f.conflict;
-    if (f.verified && f.verifierNote?.startsWith("Deterministic")) continue;
+    if (f.verified && f.verifierNote?.startsWith("Deterministic")) return;
     let crop: Buffer | undefined;
     const ev = f.evidence.find((e) => e.type === "frame" && e.box);
     if (ev?.box) {
       try {
-        const img = await readFile(photoPath(opts.carId, ev.mediaId));
+        const img = await readFile(await ensurePhotoPath(opts.carId, ev.mediaId));
         const meta = await sharp(img).metadata();
         const W = meta.width ?? 0, H = meta.height ?? 0;
         const left = Math.max(0, Math.floor(ev.box.x1)), top = Math.max(0, Math.floor(ev.box.y1));
@@ -261,7 +271,7 @@ export async function runInspection(opts: {
       f.verified = false; f.verifierNote = `verifier error: ${e instanceof Error ? e.message.slice(0, 120) : "failed"}`;
       step("verifier", f.id, false, f.verifierNote, Date.now() - ts);
     }
-  }
+  });
 
   // gauge-screen colour alone (panel guessed from a frame, no digits) is corroboration, not proof
   for (const f of findings) {
@@ -295,10 +305,13 @@ export async function runInspection(opts: {
   // listing must show the whole car: Spark's view label is not enough (a tail-light close-up came back as "rear_left").
   // Check the chosen photo with SAM; if the car box is cropped/too small, scan analysed views first, then spread photos.
   {
-    const segOf = async (pid: string) => segCache.get(pid) ?? segCache.set(pid, await segmentImage({ carId: opts.carId, photoId: pid, imagePath: photoPath(opts.carId, pid) })).get(pid)!;
+    const segOf = async (pid: string) => segCache.get(pid) ?? segCache.set(pid, await segmentImage({ carId: opts.carId, photoId: pid, imagePath: await ensurePhotoPath(opts.carId, pid) })).get(pid)!;
     let ok = false;
     if (listingPhotoId) { try { ok = isWholeCar(await segOf(listingPhotoId)); } catch { ok = false; } }
-    if (!ok) {
+    if (!ok && Date.now() - t0 > RUN_SOFT_DEADLINE_MS) {
+      step("make_listing_photo", listingPhotoId ?? "none", false, "time budget reached: listing dropped (unchecked photo is never published); report uses the generated hero", 0);
+      listingUrl = undefined; listingPhotoId = undefined; listingDropped = true;
+    } else if (!ok) {
       const QUARTER = new Set(["front_left", "front_right", "rear_left", "rear_right"]);
       const views = [...photoViews.entries()].sort(([, a], [, b]) => Number(QUARTER.has(b)) - Number(QUARTER.has(a))).map(([pid]) => pid);
       const candidates = [...new Set([...listingFromIndex.slice(0, 6), ...views, ...spreadPhotos(media.photos, 24)])].filter((pid) => pid !== listingPhotoId).slice(0, 24);
@@ -311,7 +324,7 @@ export async function runInspection(opts: {
       }
       if (picked) {
         try {
-          const r = await makeListingPhoto({ carId: opts.carId, photoId: picked, imagePath: photoPath(opts.carId, picked), segment: segCache.get(picked) });
+          const r = await makeListingPhoto({ carId: opts.carId, photoId: picked, imagePath: await ensurePhotoPath(opts.carId, picked), segment: segCache.get(picked) });
           step("make_listing_photo", picked, Boolean(r.url), r.url ? `re-picked whole-car photo (${photoViews.get(picked) ?? "unlabelled"}): url=${r.url} plateHidden=${r.plateHidden}` : `skipped: ${r.rejectedReason}`, Date.now() - t0);
           if (r.url) { listingUrl = r.url; listingPhotoId = picked; }
         } catch (e) { step("make_listing_photo", picked, false, `re-pick failed: ${(e as Error).message}`, Date.now() - t0); }
@@ -323,11 +336,11 @@ export async function runInspection(opts: {
     }
   }
   if (!listingUrl && !listingDropped && suggested[0]) {
-    try { const r = await makeListingPhoto({ carId: opts.carId, photoId: suggested[0], imagePath: photoPath(opts.carId, suggested[0]) }); if (r.url) { listingUrl = r.url; listingPhotoId = suggested[0]; } } catch { /* listing is optional */ }
+    try { const r = await makeListingPhoto({ carId: opts.carId, photoId: suggested[0], imagePath: await ensurePhotoPath(opts.carId, suggested[0]) }); if (r.url) { listingUrl = r.url; listingPhotoId = suggested[0]; } } catch { /* listing is optional */ }
   }
   if (listingUrl) listingUrl = await publishMedia(listingUrl, `media/${opts.carId}/${listingUrl.split("/").pop()}`);
   let heroUrl: string | undefined;
-  try { heroUrl = (await getOrCreateHeroImage(reportId)).url; } catch { heroUrl = listingUrl; }
+  try { heroUrl = (await heroPromise).url; } catch { heroUrl = listingUrl; }
   if (listingPhotoId) { try { assertFindingsFreeOfListingEvidence(findings, [listingPhotoId]); } catch { /* listing ids never used as evidence by construction */ } }
 
   const body = guessBodyType(car.make, car.model);

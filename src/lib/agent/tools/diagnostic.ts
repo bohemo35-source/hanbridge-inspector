@@ -4,11 +4,11 @@
 // @created: 2026-10-29
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { promisify } from "node:util";
 import { inflateSync } from "node:zlib";
 import { z } from "zod";
 import { sparkJson } from "@/lib/meta/spark";
+import { ensureMediaFile, hasMedia, readMediaText } from "../media";
 import type { Finding } from "@/lib/schema";
 
 const run = promisify(execFile);
@@ -16,7 +16,7 @@ const run = promisify(execFile);
 export interface FaultCode { code: string; system: string; description: string; }
 export interface DiagnosticResult {
   systemsChecked: number; faultCodes: FaultCode[]; mileageKm?: number; vinMasked?: string; scanTime?: string;
-  textChars: number; source: "pdftotext" | "pdf-streams" | "empty"; findings: Finding[];
+  textChars: number; source: "pdftotext" | "pdf-streams" | "text-sidecar" | "empty"; findings: Finding[];
 }
 
 /** Never expose workshop names/phones/addresses or a full VIN downstream. */
@@ -51,9 +51,13 @@ const SPEC = `Return ONE JSON object: {"systemsChecked":number,"faultCodes":[{"c
 Extract only OBD diagnostic facts from this LAUNCH report text. Never output workshop names, phones or addresses. If no fault codes are present, faultCodes=[].`;
 
 export async function readDiagnosticReport(opts: { carId: string; file: string }): Promise<DiagnosticResult> {
-  const filePath = path.join(process.cwd(), "demo-data", opts.carId, "sheets", opts.file);
   let text = ""; let source: DiagnosticResult["source"] = "empty";
-  try { text = (await run("pdftotext", ["-layout", filePath, "-"])).stdout; if (text.trim()) source = "pdftotext"; } catch { /* poppler absent */ }
+  // Vercel has no poppler: the Blob copy ships the (already redacted) report text next to the PDF as <file>.txt
+  if (hasMedia(opts.carId, "sheets", `${opts.file}.txt`)) {
+    try { text = await readMediaText(opts.carId, "sheets", `${opts.file}.txt`); if (text.trim()) source = "text-sidecar"; } catch { /* fall back to the PDF */ }
+  }
+  const filePath = await ensureMediaFile(opts.carId, "sheets", opts.file);
+  if (!text.trim()) try { text = (await run("pdftotext", ["-layout", filePath, "-"])).stdout; if (text.trim()) source = "pdftotext"; } catch { /* poppler absent */ }
   if (!text.trim()) { text = await pdfTextViaStreams(filePath); if (text.trim()) source = "pdf-streams"; }
   const clean = redactDiagnosticText(text).slice(0, 24000);
   const draft = clean.trim()

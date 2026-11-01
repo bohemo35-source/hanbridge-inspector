@@ -1,9 +1,10 @@
 // @agent:   muse-code
 // @project: hanbridge-inspector
-// @purpose: Demo-car catalog (docs/DEMO_CARS.md) + local media inventory from demo-data/<carId>
+// @purpose: Demo-car catalog (docs/DEMO_CARS.md) + media inventory: local demo-data/<carId> in dev, Vercel Blob (blob-manifest.json) on Vercel
 // @created: 2026-10-29
-import { existsSync, readdirSync } from "node:fs";
+// @updated: 2026-11-01 claude: media listing/reading goes through ./media (Blob on Vercel)
 import path from "node:path";
+import { ensureMediaFile, hasMedia, listMedia } from "./media";
 
 export interface CarInfo { carId: string; make: string; model: string; year: number; bodyType: "sedan" | "suv" | "hatchback"; doors: 3 | 5; }
 
@@ -23,28 +24,26 @@ export interface CarMedia {
   diagnosticPdfs: string[]; sheets: string[]; hasInspectorReport: boolean; hasAuctionSheet: boolean;
 }
 
-const list = (dir: string, exts: string[]) => {
-  try { return readdirSync(dir).filter((f) => exts.some((e) => f.toLowerCase().endsWith(e))).sort(); } catch { return []; }
-};
-
 export function carMedia(carId: string): CarMedia {
-  const base = path.join(process.cwd(), "demo-data", carId);
-  const videos = list(path.join(base, "video"), [".mp4", ".mov"]);
-  const sheets = list(path.join(base, "sheets"), [".jpg", ".jpeg", ".png", ".pdf"]);
+  const videos = listMedia(carId, "video", [".mp4", ".mov"]);
+  const sheets = listMedia(carId, "sheets", [".jpg", ".jpeg", ".png", ".pdf"]);
   return {
     carId,
-    photos: list(path.join(base, "photos"), [".jpg", ".jpeg", ".png"]),
+    photos: listMedia(carId, "photos", [".jpg", ".jpeg", ".png"]),
     videos,
     gaugeVideo: videos.includes("paint_gauge.mp4") ? "paint_gauge.mp4" : null,
     diagnosticPdfs: sheets.filter((f) => f.toLowerCase().endsWith(".pdf")),
     sheets,
-    hasInspectorReport: existsSync(path.join(base, "inspector_report_ru.txt")),
+    hasInspectorReport: hasMedia(carId, "root", "inspector_report_ru.txt"),
     hasAuctionSheet: false, // no car currently has an auction-sheet photo (TZ-05)
   };
 }
 
+/** Local paths only (scripts, tests). The agent uses ensurePhotoPath/ensureVideoPath, which also work from Blob. */
 export const photoPath = (carId: string, photoId: string) => path.join(process.cwd(), "demo-data", carId, "photos", photoId);
 export const videoPath = (carId: string, videoId: string) => path.join(process.cwd(), "demo-data", carId, "video", videoId);
+export const ensurePhotoPath = (carId: string, photoId: string) => ensureMediaFile(carId, "photos", photoId);
+export const ensureVideoPath = (carId: string, videoId: string) => ensureMediaFile(carId, "video", videoId);
 /** spread pick: first, middle, last etc. for a representative defect scan */
 export function spreadPhotos(photos: string[], n: number): string[] {
   if (photos.length <= n) return [...photos];

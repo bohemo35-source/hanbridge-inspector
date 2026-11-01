@@ -7,6 +7,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { samSegment, scaleBox, type SamBox, type SamInstance } from "@/lib/meta/sam";
 import type { Evidence } from "@/lib/schema";
+import { generatedIsServed, generatedRoot } from "@/lib/runtime/generated";
 
 export const SEGMENT_CONCEPTS = ["car", "license plate", "wheel"] as const;
 export type SegmentConcept = (typeof SEGMENT_CONCEPTS)[number];
@@ -83,7 +84,8 @@ async function saveMaskPng(
   if (!instance.maskDecoded || !instance.mask || instance.maskWidth <= 0 || instance.maskHeight <= 0) {
     return undefined;
   }
-  const dir = path.join(process.cwd(), "public", "generated", safeName(carId));
+  if (!generatedIsServed()) return undefined; // Vercel: read-only FS and /generated is not served; masks stay in memory
+  const dir = path.join(generatedRoot(), safeName(carId));
   await mkdir(dir, { recursive: true });
   const file = `${safeName(photoId)}-${conceptSlug}.png`;
   const grey = Buffer.from(instance.mask.map((v) => (v ? 255 : 0)));

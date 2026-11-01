@@ -19,3 +19,12 @@ Next.js 15 + TS strict + Tailwind, Vercel Blob, zod, sharp. Meta API тольк�
 
 ## Команды
 `npx tsc --noEmit` · `npm run lint` · `npx vitest run` · `npm run build`. Каждое ТЗ: ветка `tz-0N`, отчёт `docs/reports/tz-0N.md` с сырым выводом, без пуша в main без «делай».
+
+## Живое состояние (обновлено 01.11.2026, Claude)
+- **Медиа демо-машин в Vercel Blob** (стор `store_W8Cg01wtFGFsm1zk`, тот же токен на Vercel): `demo/<carId>/{photos,video,sheets,out,…}`; 5 машин, 512 файлов, ~349 МБ из лимита Hobby 1 ГБ (при превышении Blob блокируется на 30 дней, в том числе отчёты и hero).
+- Манифест `src/lib/agent/blob-manifest.json` (в git) — карта `carId → папка → файл → URL`. Читает `src/lib/agent/media.ts`: есть локальная `demo-data/<carId>` → берёт её (dev как раньше), нет → скачивает файл из Blob в `/tmp` один раз на инстанс. `MEDIA_SOURCE=blob|local` форсирует источник.
+- Что залито: фото как есть; `inspector_report_ru.txt`; `out/photo-index.json` (индексы Glimmer для всех 5 машин, поэтому прогон не индексирует фото вживую); видео — лёгкие копии (144p, AAC 64k mono: агенту нужен голос инспектора), кроме `mini-cooper-s/paint_gauge.mp4` (оригинал, по нему читаются кадры). OBD-PDF в Blob — копия без персональных данных (`scripts/redact_diag_pdf.py`: имя/адрес/телефоны/ссылки убраны, VIN обрезан); у 530i оригинал содержал имя и телефон.
+- Перезалить/добавить: `node --env-file=.env.local scripts/upload-demo-to-blob.mjs [--cars a,b] [--budget 150]` (идемпотентно, продолжает с места остановки; `--verify` — HEAD по всем URL). Индекс фото новой машины: `npx tsx --env-file=.env.local scripts/build-photo-index.ts <carId>`.
+- Vercel-совместимость прогона: `ffmpeg-static` (`src/lib/agent/tools/ffbin.ts`, duration из `ffmpeg -i`, без ffprobe; `next.config.ts` кладёт бинарь в трассировку роута), генерируемые файлы пишутся в `/tmp` (`src/lib/runtime/generated.ts`), маски SAM на Vercel не сохраняются, листинг публикуется в Blob через `publishMedia`.
+- Время прогона: hero генерируется параллельно, verifier идёт по 4 находки сразу, после 235 с листинг без перепроверки отбрасывается (роут обрывается на 300 с). Замеры в режиме «как на Vercel» (без `demo-data`, без токена): Kia Morning 94 с, MINI по HTTP 128 с.
+- **На Vercel не хватает** `GLIMMER_API_KEY` и `GLIMMER_BASE_URL` (есть только `META_API_KEY`, `BASETEN_API_KEY`, `BLOB_READ_WRITE_TOKEN`): без них шаг open-weight индексации пропускается. Ничего не задеплоено, не закоммичено и не запушено.

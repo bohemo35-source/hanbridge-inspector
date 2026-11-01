@@ -10,7 +10,8 @@ import sharp from "sharp";
 import { z } from "zod";
 import { glimmerJson, GLIMMER_MODEL } from "@/lib/meta/glimmer";
 import { PANEL_IDS } from "@/lib/domain/panels";
-import { photoPath } from "../catalog";
+import { ensurePhotoPath } from "../catalog";
+import { hasMedia, mediaSource, readMediaText, tmpMediaPath } from "../media";
 
 export const VIEWS = ["front", "rear", "left", "right", "front_left", "front_right", "rear_left", "rear_right", "detail", "interior", "engine", "underbody", "document", "other"] as const;
 const QUARTER = new Set(["front_left", "front_right", "rear_left", "rear_right"]);
@@ -33,14 +34,25 @@ export function readPhotoIndex(carId: string): PhotoIndex | null {
   try { return existsSync(cacheFile(carId)) ? (JSON.parse(readFileSync(cacheFile(carId), "utf8")) as PhotoIndex) : null; } catch { return null; }
 }
 
-export async function indexPhotos(opts: { carId: string; photos: string[]; concurrency?: number; useCache?: boolean; firstTimeoutMs?: number }): Promise<PhotoIndex> {
-  if (opts.useCache !== false) { const c = readPhotoIndex(opts.carId); if (c && c.entries.length >= Math.min(opts.photos.length, 1)) return c; }
+/** Index cache lookup for both sources: demo-data/out (local) or /tmp copy, then the Blob copy (Vercel). */
+const tmpCacheFile = (carId: string) => tmpMediaPath(carId, "out", "photo-index.json");
+export async function loadPhotoIndex(carId: string): Promise<PhotoIndex | null> {
+  if (mediaSource(carId) === "local") return readPhotoIndex(carId);
+  try { if (existsSync(tmpCacheFile(carId))) return JSON.parse(readFileSync(tmpCacheFile(carId), "utf8")) as PhotoIndex; } catch { /* fall through to Blob */ }
+  if (hasMedia(carId, "out", "photo-index.json")) {
+    try { return JSON.parse(await readMediaText(carId, "out", "photo-index.json")) as PhotoIndex; } catch { return null; }
+  }
+  return null;
+}
+
+export async function indexPhotos(opts: { carId: string; photos: string[]; concurrency?: number; useCache?: boolean; firstTimeoutMs?: number; persist?: boolean; warm?: boolean }): Promise<PhotoIndex> {
+  if (opts.useCache !== false) { const c = await loadPhotoIndex(opts.carId); if (c && c.entries.length >= Math.min(opts.photos.length, 1)) return c; }
   const t0 = Date.now();
   const entries: PhotoIndexEntry[] = []; const failed: string[] = [];
   const one = async (photoId: string, timeoutMs: number) => {
     const s = Date.now();
     try {
-      const jpg = await sharp(photoPath(opts.carId, photoId)).rotate().resize(640, 640, { fit: "inside" }).jpeg({ quality: 80 }).toBuffer();
+      const jpg = await sharp(await ensurePhotoPath(opts.carId, photoId)).rotate().resize(640, 640, { fit: "inside" }).jpeg({ quality: 80 }).toBuffer();
       const e = await glimmerJson(EntrySchema, [{ role: "user", content: [
         { type: "text", text: "Used-car inspection photo. Classify it." },
         { type: "image_url", image_url: { url: `data:image/jpeg;base64,${jpg.toString("base64")}` } },
@@ -49,13 +61,15 @@ export async function indexPhotos(opts: { carId: string; photos: string[]; concu
     } catch { failed.push(photoId); }
   };
   // first call wakes the GPU container (cold start can take minutes) — run it alone with a long timeout
-  const [first, ...rest] = opts.photos;
+  const warmFirst = opts.warm !== false;
+  const first = warmFirst ? opts.photos[0] : undefined;
+  const rest = warmFirst ? opts.photos.slice(1) : opts.photos;
   if (first) await one(first, opts.firstTimeoutMs ?? 300000);
   const conc = opts.concurrency ?? 6;
   for (let i = 0; i < rest.length; i += conc) await Promise.all(rest.slice(i, i + conc).map((p) => one(p, 90000)));
   entries.sort((a, b) => a.photoId.localeCompare(b.photoId));
   const idx: PhotoIndex = { carId: opts.carId, model: GLIMMER_MODEL, createdAt: new Date().toISOString(), entries, failed, totalMs: Date.now() - t0 };
-  try { mkdirSync(path.dirname(cacheFile(opts.carId)), { recursive: true }); writeFileSync(cacheFile(opts.carId), JSON.stringify(idx, null, 2)); } catch { /* read-only fs */ }
+  if (opts.persist !== false) try { const f = mediaSource(opts.carId) === "local" ? cacheFile(opts.carId) : tmpCacheFile(opts.carId); mkdirSync(path.dirname(f), { recursive: true }); writeFileSync(f, JSON.stringify(idx, null, 2)); } catch { /* read-only fs */ }
   return idx;
 }
 
