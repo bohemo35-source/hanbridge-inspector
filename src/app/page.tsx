@@ -1,12 +1,13 @@
 // @agent:   muse-code
 // @project: hanbridge-inspector
-// @purpose: Landing: Journey v2 — 2:45 scroll story (3D scenes + bridges + garage), TZ-11
+// @purpose: Landing: tool-first hero (demo cars, instant reports, live agent) + Journey v2 scroll story below
 // @created: 2026-10-27
-// @updated: 2026-10-29 muse-code
+// @updated: 2026-11-01 claude-code — hero first, journey moved below (#journey)
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import JourneyV2 from "@/components/journey-v2/JourneyV2";
 import type { ReviewItem } from "@/components/journey-v2/Reviews";
+import Hero from "@/components/hero/Hero";
 import { listReportsAsync } from "@/lib/store/reports";
 
 export const runtime = "nodejs";
@@ -28,7 +29,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const reviews = await loadReviews();
   return (
     <main className="w-full">
-      <JourneyV2 report={report} lang={lang} reviews={reviews} />
+      <Hero reports={reports} lang={lang} />
+      <div id="journey">
+        <JourneyV2 report={report} lang={lang} reviews={reviews} />
+      </div>
     </main>
   );
 }
