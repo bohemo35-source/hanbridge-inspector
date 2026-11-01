@@ -189,6 +189,7 @@ export default function FilmV3({ report, lang }: { report?: Report; lang: Lang }
           {/* end CTA */}
           {s.cta && (
             <div className="absolute inset-x-0 bottom-[22vh] z-[6] flex flex-wrap justify-center gap-3 px-5" style={{ opacity: cl((pos.t - 0.35) / 0.1) }}>
+              <h2 className="w-full text-center font-serif text-5xl font-light tracking-wide sm:text-7xl" style={{ textShadow: "0 2px 24px rgba(0,0,0,.8)" }}>Hanbridge</h2>
               <a href="/cars" className="rounded-full bg-amber-300 px-5 py-3 text-sm font-semibold text-zinc-950">{UI.cta[lang]}</a>
               <a href="#proof" className="rounded-full border border-white/25 bg-black/40 px-5 py-3 text-sm font-semibold backdrop-blur-md">{UI.seeReport[lang]}</a>
             </div>
