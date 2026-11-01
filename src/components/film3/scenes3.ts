@@ -56,25 +56,24 @@ export const SCENES: Scene[] = [
   // 00 · bridge
   { id: "a", clip: "bridge-a", vh: 150, sec: 6, ch: 0, hero: true },
   { id: "b", clip: "bridge-b", vh: 120, sec: 6, ch: 0, sub: [
-    { en: "You can't touch a car 8,000 km away.", ru: "Машину за восемь тысяч километров не потрогать." },
-    { en: "You can't sit behind the wheel or look under the hood.", ru: "Не посидеть за рулём, не заглянуть под капот." }] },
-  { id: "c", clip: "bridge-c", vh: 100, sec: 5, ch: 0, sub: [{ en: "So we built a bridge.", ru: "Поэтому мы построили мост." }] },
+    { en: "How do you touch a car 8,000 km away?", ru: "Как потрогать машину за 8 000 км?" },
+    { en: "Sit behind the wheel, look under the hood?", ru: "Посидеть за рулём, заглянуть под капот?" }] },
+  { id: "c", clip: "bridge-c", vh: 100, sec: 5, ch: 0, sub: [{ en: "That's what Hanbridge is for — an international bridge between you and your car.", ru: "Для этого есть Hanbridge — международный мост между вами и вашим автомобилем." }] },
   { id: "d", clip: "s0-4", vh: 100, sec: 5, ch: 0 },
   { id: "e", clip: "s0-5", vh: 100, sec: 5, ch: 0 },
   { id: "f", clip: "s0-6", vh: 100, sec: 5, ch: 0 },
   // 01 · request & selection
   { id: "req", insert: "request", bg: "s0-6", vh: 130, sec: 6, ch: 1, sub: [
-    { en: "It starts with your request: budget, wishes, timing.", ru: "Всё начинается с вашей заявки: бюджет, пожелания, сроки." }] },
+    { en: "It starts with your wish to buy a car — and your request: budget, wishes, timing.", ru: "Всё начинается с желания купить автомобиль и вашей заявки: бюджет, пожелания, сроки." }] },
   { id: "pick", insert: "pick", bg: "s2-1", vh: 140, sec: 7, ch: 1, sub: [
-    { en: "A manager picks options on Korean platforms —", ru: "Менеджер подбирает варианты на корейских площадках —" },
+    { en: "A manager picks options one by one, for every point of your request —", ru: "Менеджер подбирает варианты индивидуально, под каждый пункт заявки —" },
     { en: "with the real prices any buyer in Korea sees.", ru: "с реальными ценами, как их видит любой покупатель в Корее." }] },
   // 02 · inspection
-  { id: "lift", clip: "s2-1", vh: 110, sec: 5, ch: 2, sub: [{ en: "We inspect the car you like — before you pay.", ru: "Понравившуюся машину мы осматриваем до оплаты." }] },
+  { id: "lift", clip: "s2-1", vh: 110, sec: 5, ch: 2, sub: [{ en: "Our expert inspects the car you chose — before you pay.", ru: "Выбранную машину проверяет наш эксперт — до оплаты." }] },
   { id: "gauge", clip: "s2-2", vh: 110, sec: 5, ch: 2, chips: [{ en: "100 µm", ru: "100 мкм" }],
-    sub: [{ en: "Every panel — with a paint gauge.", ru: "Каждая панель — толщиномером." }] },
+    sub: [{ en: "Every part, outside and in, is checked with instruments and recorded on photo, video and in documents.", ru: "Каждый элемент снаружи и в салоне проверяется приборами и фиксируется на фото, видео и в документах." }] },
   { id: "report", insert: "report", bg: "s2-2", vh: 140, sec: 7, ch: 2, sub: [
-    { en: "AI turns photos, readings and voice notes into one report.", ru: "Фото, замеры и голосовые заметки ИИ собирает в один отчёт." },
-    { en: "You'll see this car's findings at the end.", ru: "Находки этой машины мы покажем в конце." }] },
+    { en: "AI gathers the media, readings and voice notes into one report.", ru: "Медиа, замеры и голосовые заметки ИИ собирает в один отчёт." }] },
   { id: "fork", insert: "fork", bg: "s2-1", vh: 130, sec: 6, ch: 2, sub: [
     { en: "Something's wrong — we keep searching. You decide.", ru: "Если что-то не так — ищем дальше. Решаете вы." }] },
   // 03 · purchase
@@ -100,12 +99,13 @@ export const SCENES: Scene[] = [
     { en: "From Vladivostok the roads split:", ru: "Из Владивостока дороги расходятся:" },
     { en: "Moscow, Minsk, Prague, Almaty, Tashkent.", ru: "в Москву, Минск, Прагу, Алматы, Ташкент." }] },
   // 07 · vladivostok
-  { id: "bay", clip: "s7-1", vh: 110, sec: 5, ch: 7, insured: true, sub: [{ en: "The same car, in the same condition.", ru: "Та же машина, в том же состоянии." }] },
+  { id: "bay", clip: "s7-1", vh: 110, sec: 5, ch: 7, insured: true, sub: [{ en: "At every stage of the journey the car is insured.", ru: "На каждом этапе пути машина застрахована." }] },
   { id: "ramp", clip: "s7-2", vh: 120, sec: 6, ch: 7, insured: true, chips: [{ en: "Matched to inspection", ru: "Сверено с осмотром" }, { en: "Bonded yard · 7–10 days", ru: "СВХ · 7–10 дней" }], sub: [
-    { en: "We check it against the inspection, panel by panel.", ru: "Мы сверяем её с осмотром, панель за панелью." },
+    { en: "We check it against the inspection report: it must be exactly as it was inspected.", ru: "Сверяем машину с отчётом осмотра: она должна быть точно в том состоянии, в каком её осмотрели." },
     { en: "Then the bonded yard — usually seven to ten days.", ru: "Дальше — склад временного хранения. Обычно семь–десять дней." }] },
   // 08 · customs
-  { id: "orbit", clip: "s8-1", vh: 110, sec: 5, ch: 8, insured: true, sub: [{ en: "Customs is cleared in your name.", ru: "Таможня оформляется на ваше имя." }] },
+  { id: "orbit", clip: "s8-1", vh: 110, sec: 5, ch: 8, insured: true, sub: [{ en: "Customs clearance follows the law to the letter.", ru: "Таможенное оформление — строго по правилам и закону." },
+    { en: "Every payment and receipt is in your name — only you can pay them.", ru: "Все платежи и квитанции — только на ваше имя, и оплатить их можете только вы." }] },
   { id: "gate", clip: "s8-2", vh: 170, sec: 9, ch: 8, insured: true, receipt: "customs", sub: [
     { en: "The receipt comes to you.", ru: "Квитанция приходит вам." },
     { en: "Duty, recycling fee and processing fee — you pay them yourself, in your bank app.", ru: "Пошлину, утильсбор и сбор за оформление вы платите сами, в приложении банка." }] },
@@ -114,17 +114,17 @@ export const SCENES: Scene[] = [
     { en: "Then a car carrier or rail.", ru: "Дальше — автовоз или железная дорога." }] },
   { id: "hills", clip: "s9-2", vh: 110, sec: 5, ch: 9, insured: true, sub: [{ en: "You choose the carrier and pay them directly.", ru: "Перевозчика выбираете вы и платите ему напрямую." }] },
   { id: "maproad", insert: "mapRoad", bg: "s9-3", vh: 120, sec: 6, ch: 9, insured: true },
-  { id: "taiga", clip: "s9-3", vh: 100, sec: 5, ch: 9, insured: true, sub: [{ en: "Insured every kilometre,", ru: "Застраховано каждый километр," }] },
-  { id: "sunset", clip: "s9-4", vh: 100, sec: 5, ch: 9, insured: true, sub: [{ en: "visible every day.", ru: "видно каждый день." }] },
+  { id: "taiga", clip: "s9-3", vh: 100, sec: 5, ch: 9, insured: true, sub: [{ en: "Its location — online,", ru: "Где машина — видно онлайн," }] },
+  { id: "sunset", clip: "s9-4", vh: 100, sec: 5, ch: 9, insured: true, sub: [{ en: "every kilometre insured.", ru: "застрахован каждый километр." }] },
   // 10 · home
-  { id: "street", clip: "s10-1", vh: 110, sec: 5, ch: 10, insured: true, sub: [{ en: "And here it is — home.", ru: "И вот она дома." }] },
+  { id: "street", clip: "s10-1", vh: 110, sec: 5, ch: 10, insured: true, sub: [{ en: "Meet your car.", ru: "Встречайте свой автомобиль." }] },
   { id: "unload", clip: "s10-2", vh: 110, sec: 5, ch: 10, insured: true, toast: L.zero, sub: [{ en: "No commission. No hidden payments.", ru: "Без комиссии, без скрытых платежей." }] },
   { id: "hand", clip: "s10-3", vh: 110, sec: 5, ch: 10, insured: true, sub: [{ en: "Simple and clear — as it should be.", ru: "Просто и понятно — как и должно быть." }] },
-  { id: "house", clip: "s10-4", vh: 150, sec: 7, ch: 10, insured: true, cta: true, sub: [{ en: "That's the bridge.", ru: "Это и есть мост." }] },
+  { id: "house", clip: "s10-4", vh: 150, sec: 7, ch: 10, insured: true, cta: true, sub: [{ en: "That's the bridge between you and your car.", ru: "Это и есть мост между вами и вашим автомобилем." }] },
 ];
 
 export const UI = {
-  watch: { en: "▶ Watch the film with sound", ru: "▶ Смотреть фильм со звуком" },
+  watch: { en: "▶ Watch your car's journey", ru: "▶ Смотреть путь вашего автомобиля" },
   stop: { en: "❚❚ Pause", ru: "❚❚ Пауза" },
   scroll: { en: "or scroll to cross", ru: "или листайте, чтобы перейти" },
   tagline: { en: "The bridge between you and your car.", ru: "Мост между вами и вашим автомобилем." },
@@ -133,8 +133,8 @@ export const UI = {
   byYou: { en: "paid by you", ru: "платите вы" },
   insured: { en: "Insured", ru: "Застрахована" },
   zeroNote: { en: "We earn from Korea's export VAT refund — not from you.", ru: "Мы зарабатываем на возврате экспортного НДС в Корее — не на вас." },
-  cta: { en: "Cross the bridge", ru: "Перейти мост" },
-  seeReport: { en: "Open this car's report ↓", ru: "Открыть отчёт этой машины ↓" },
-  proofTitle: { en: "This was a real car. Here is its real report.", ru: "Это была настоящая машина. Вот её настоящий отчёт." },
+  cta: { en: "Enter the bridge", ru: "Перейти в мост" },
+  seeReport: { en: "Open the report ↓", ru: "Открыть отчёт ↓" },
+  proofTitle: { en: "This was a real car — its journey and real data from its report.", ru: "Это была реальная машина — её путь и настоящие данные из отчёта." },
   proofSub: { en: "Open it — panel by panel.", ru: "Откройте — панель за панелью." },
 };
