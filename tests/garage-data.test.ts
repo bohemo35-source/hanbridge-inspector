@@ -2,7 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Garage studio data: panel status ranking (gauge class raised by findings, unverified → unconfirmed) and photo-note relevance
 // @created: 2026-11-02
-// @updated: 2026-11-03 claude-code — uploaded car (no photo index) gets a full garage from its report; prototype keys are not car ids
+// @updated: 2026-11-03 claude-code — uploaded car (no photo index) gets a full garage from its report; prototype keys are not car ids; unconfirmed reading → unconfirmed panel
 import { describe, expect, it } from "vitest";
 import { bodyKind, garageData, noteScore, panelStatus } from "../src/lib/garage/data";
 import type { Report } from "../src/lib/schema";
@@ -60,5 +60,13 @@ describe("garageData for an uploaded car", () => {
   it("prototype keys are not cars", () => {
     expect(bodyKind("constructor")).toBe("suv");
     expect(bodyKind("__proto__")).toBe("suv");
+  });
+});
+
+describe("panelStatus with an unconfirmed reading", () => {
+  it("owner-typed 245 µm whose paint finding is not verified → unconfirmed, not putty", () => {
+    const paintF = { ...finding("front_left_door", "putty", false), id: "paint-front_left_door", evidence: [{ type: "gauge" as const, mediaId: "gauge", gaugeMicrons: 245 }] };
+    expect(panelStatus(report({ paintReadings: [{ panel: "front_left_door", microns: 245 }], findings: [paintF] }), "front_left_door")).toBe("unconfirmed");
+    expect(panelStatus(report({ paintReadings: [{ panel: "front_left_door", microns: 245 }], findings: [{ ...paintF, verified: true }] }), "front_left_door")).toBe("putty");
   });
 });

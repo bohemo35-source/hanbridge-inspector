@@ -2,7 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Garage studio data per inspection: status, gauge spread, findings (with inspector quotes) and real photos of every one of the 13 panels (photos picked from the Muse Glimmer photo index)
 // @created: 2026-11-02
-// @updated: 2026-11-03 claude-code — own-key lookups only (carId from a stored report must not hit Object.prototype)
+// @updated: 2026-11-03 claude-code — a gauge class whose paint finding the verifier did not confirm (e.g. owner-typed reading) shows as unconfirmed; own-key lookups only (carId from a stored report must not hit Object.prototype)
 import type { Report } from "@/lib/schema";
 import { PANELS, type PanelId } from "@/lib/domain/panels";
 import { classifyPaint } from "@/lib/domain/paint";
@@ -64,6 +64,9 @@ export function noteScore(panel: PanelId, note: string): number {
 export function panelStatus(report: Report | undefined, panel: PanelId): PanelStatus {
   const r = report?.paintReadings.find((x) => x.panel === panel);
   let status: PanelStatus = r ? classifyPaint(r.microns) : "clean";
+  // the reading's own finding was not confirmed (e.g. a number the owner typed) → the panel is unconfirmed, not "filler"
+  const paintFinding = report?.findings.find((f) => f.id === `paint-${panel}`);
+  if (paintFinding && !paintFinding.verified && status !== "factory") status = "unconfirmed";
   for (const f of report?.findings ?? []) {
     if (f.panel !== panel) continue;
     const s = f.verified ? KIND_STATUS[f.kind] ?? "damage" : "unconfirmed";
