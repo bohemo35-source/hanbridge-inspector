@@ -90,6 +90,7 @@ const glow = (hex: number, k: number) => new THREE.MeshBasicMaterial({ color: ne
 /** Inspection bay: cyclorama, glossy floor, turntable with a sodium ring, light stands, LED columns, tool cart, tyres. */
 function buildBay(scene: THREE.Scene, mobile: boolean) {
   const g = new THREE.Group(); scene.add(g);
+  const props: THREE.Object3D[] = []; // stands, cart, tyres: hidden while they stand between the camera and the car
   // cyclorama
   const cyc = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 12, 64, 1, true), new THREE.MeshBasicMaterial({ map: gradientTexture([[0, "#07080a"], [0.55, "#121619"], [0.82, "#0b0d10"], [1, "#060708"]]), side: THREE.BackSide, fog: false }));
   cyc.position.y = 5.2; g.add(cyc);
@@ -129,7 +130,7 @@ function buildBay(scene: THREE.Scene, mobile: boolean) {
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, h), metal); pole.position.y = h / 2; s.add(pole);
     const box = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.0, 0.22), new THREE.MeshStandardMaterial({ color: 0x0c0d0f, roughness: 0.8 })); box.position.set(0, h, 0); s.add(box);
     const face = new THREE.Mesh(new THREE.PlaneGeometry(1.36, 0.88), glow(0xf3efe6, 0.95)); face.position.set(0, h, 0.115); s.add(face);
-    g.add(s); return s;
+    g.add(s); props.push(s); return s;
   };
   stand(-6.2, -1.2, 2.3); stand(5.9, -3.4, 2.1); stand(-3.8, -5.6, 2.6);
   // LED columns on the cyclorama: visible in the floor and the paint
@@ -139,7 +140,7 @@ function buildBay(scene: THREE.Scene, mobile: boolean) {
     col.position.set(Math.cos(a) * 13.4, 1.9, Math.sin(a) * 13.4); g.add(col);
   }
   // tool cart with the paint gauge on top
-  const cart = new THREE.Group(); cart.position.set(4.6, 0, -2.6); cart.rotation.y = -0.6; g.add(cart);
+  const cart = new THREE.Group(); cart.position.set(4.6, 0, -2.6); cart.rotation.y = -0.6; g.add(cart); props.push(cart);
   const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.85, 0.5), new THREE.MeshStandardMaterial({ color: 0x24282d, metalness: 0.5, roughness: 0.45 })); body.position.y = 0.55; cart.add(body);
   for (let d = 0; d < 3; d++) { const h = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.02, 0.02), new THREE.MeshStandardMaterial({ color: 0x9aa3ad, metalness: 0.9, roughness: 0.3 })); h.position.set(0, 0.32 + d * 0.25, 0.26); cart.add(h); }
   const gauge = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.26), new THREE.MeshStandardMaterial({ color: 0x0b0c0e, roughness: 0.6 })); gauge.position.set(-0.2, 1.0, 0); cart.add(gauge);
@@ -147,8 +148,9 @@ function buildBay(scene: THREE.Scene, mobile: boolean) {
   for (let w = 0; w < 4; w++) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.04, 16), metal); wh.rotation.x = Math.PI / 2; wh.position.set(w < 2 ? -0.42 : 0.42, 0.05, w % 2 ? 0.2 : -0.2); cart.add(wh); }
   // tyre stack
   const rubber = new THREE.MeshStandardMaterial({ color: 0x0b0b0c, roughness: 0.92 });
-  for (let i = 0; i < 3; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.12, 12, 32), rubber); t.rotation.x = Math.PI / 2; t.position.set(-5.4, 0.12 + i * 0.25, -2.0); t.castShadow = true; g.add(t); }
-  return { group: g, table };
+  const tyres = new THREE.Group(); tyres.position.set(-5.4, 0, -2.0); g.add(tyres); props.push(tyres);
+  for (let i = 0; i < 3; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.12, 12, 32), rubber); t.rotation.x = Math.PI / 2; t.position.set(0, 0.12 + i * 0.25, 0); t.castShadow = true; tyres.add(t); }
+  return { group: g, table, props };
 }
 
 export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile: boolean; zoom: boolean }): StudioHandle {
@@ -166,8 +168,11 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
   scene.background = new THREE.Color(0x060708);
   scene.fog = new THREE.Fog(0x060708, 12, 26);
   const camera = new THREE.PerspectiveCamera(mobile ? 46 : 34, host.clientWidth / host.clientHeight, 0.1, 80);
+  // portrait screens: the car must still fit across the width, so the camera backs off
+  const distK = () => Math.min(1.55, Math.max(1, 0.8 / camera.aspect));
   const HOME = new THREE.Vector3(7.6, 2.1, 5.6);
-  camera.position.copy(HOME);
+  camera.position.copy(HOME).multiplyScalar(distK());
+  (scene.fog as THREE.Fog).near = 12 * distK(); (scene.fog as THREE.Fog).far = 26 * distK();
 
   const pmrem = new THREE.PMREMGenerator(renderer);
   new RGBELoader().setDataType(THREE.FloatType).load(mobile ? "/hdri/autoshop_01_1k.hdr" : "/hdri/autoshop_01_2k.hdr", (hdr) => {
@@ -203,7 +208,7 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 0.75, 0); controls.enableDamping = true; controls.dampingFactor = 0.07;
-  controls.minDistance = 4.2; controls.maxDistance = 12.5; controls.maxPolarAngle = Math.PI * 0.48; controls.minPolarAngle = Math.PI * 0.12;
+  controls.minDistance = 4.2; controls.maxDistance = 12.5 * distK(); controls.maxPolarAngle = Math.PI * 0.48; controls.minPolarAngle = Math.PI * 0.12;
   controls.enablePan = false; controls.enableZoom = opts.zoom; controls.autoRotate = true; // embedded in a scrolling page: the wheel scrolls the page controls.autoRotateSpeed = 0.45;
   controls.update();
 
@@ -393,6 +398,11 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
       camera.position.lerpVectors(fly.from, fly.to, k); if (fly.t >= 1) fly = null;
     }
     controls.update();
+    const camAz = Math.atan2(camera.position.z, camera.position.x), camR = Math.hypot(camera.position.x, camera.position.z);
+    for (const p of bay.props) {
+      const az = Math.atan2(p.position.z, p.position.x); let d = Math.abs(az - camAz); if (d > Math.PI) d = 2 * Math.PI - d;
+      p.visible = !(d < 0.42 && Math.hypot(p.position.x, p.position.z) < camR);
+    }
     if (composer) composer.render(); else renderer.render(scene, camera);
     ev.onFrame();
     raf = requestAnimationFrame(loop);
@@ -417,12 +427,12 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
       c.applyAxisAngle(new THREE.Vector3(0, 1, 0), tableAngle());
       const dir = new THREE.Vector3(c.x, 0, c.z); if (dir.lengthSq() < 0.01) dir.set(1, 0, 1);
       dir.normalize();
-      const dist = explode > 0.5 ? 9.5 : 7.2;
+      const dist = (explode > 0.5 ? 9.5 : 7.2) * distK();
       const up = p === "roof" || p === "hood" || p === "trunk" ? 4.6 : 2.0;
       flyTo(new THREE.Vector3(dir.x * dist, up, dir.z * dist));
     },
-    setExploded(on) { explodeTarget = on ? 1 : 0; if (on) flyTo(camera.position.clone().setLength(10.5).setY(Math.max(3.2, camera.position.y))); },
-    resetView() { flyTo(HOME.clone()); controls.autoRotate = true; },
+    setExploded(on) { explodeTarget = on ? 1 : 0; if (on) flyTo(camera.position.clone().setLength(10.5 * distK()).setY(Math.max(3.2, camera.position.y))); },
+    resetView() { flyTo(HOME.clone().multiplyScalar(distK())); controls.autoRotate = true; },
     project(p) {
       const pc = byPanel.get(p); if (!pc) return null;
       const v = pc.center.clone().add(pc.dir.clone().multiplyScalar(explode)); v.y += 0.12;
