@@ -1,0 +1,48 @@
+{
+  "model": "muse-wonder-1.0",
+  "task": "procedural bridge geometry for docs/bridge hero (scripts/bridge/wonder-bridge.mjs)",
+  "status": 200,
+  "ms": 16861,
+  "usage": {
+    "completion_tokens": 2197,
+    "prompt_tokens": 821,
+    "total_tokens": 3018,
+    "completion_tokens_details": {
+      "reasoning_tokens": 1571
+    },
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    }
+  },
+  "finish": "stop",
+  "content": "```js\nexport function buildBridge() {\n  const shards = [];\n  const deck = [];\n  for (let i = 0; i < 24; i++) {\n    const x = -2.99 + i * 0.26;\n    const g = x < 0 ? 2 : 3;\n    deck.push({ p: [x, -0.07, 0], a: [1, 0, 0], L: 0.26, t: 0.14, glow: 0, g });\n  }\n  for (const s of deck) shards.push(s);\n  for (const s of deck) {\n    shards.push({ p: [s.p[0], s.p[1] + 0.075, s.p[2]], a: [1, 0, 0], L: 0.24, t: 0.02, glow: 1, g: s.g });\n  }\n  const pylonX = [-1.6, 1.6];\n  const pylonG = [0, 5];\n  for (let k = 0; k < 2; k++) {\n    for (let i = 0; i < 6; i++) {\n      shards.push({ p: [pylonX[k], 0.35 + i * 0.36, 0], a: [0, 1, 0], L: 0.34, t: 0.2, glow: 0, g: pylonG[k] });\n    }\n  }\n  const offsets = [-1.35, -1.1, -0.85, -0.6, -0.35, -0.1, 0.1, 0.35, 0.6, 0.85, 1.1, 1.35];\n  const cableG = [1, 4];\n  for (let k = 0; k < 2; k++) {\n    const xp = pylonX[k];\n    for (let i = 0; i < offsets.length; i++) {\n      const xa = xp + offsets[i];\n      const za = i % 2 === 0 ? 0.28 : -0.28;\n      const dx = xp - xa;\n      const dy = 2.4 - 0.07;\n      const dz = 0 - za;\n      const L = Math.hypot(dx, dy, dz);\n      shards.push({\n        p: [(xp + xa) / 2, (2.4 + 0.07) / 2, za / 2],\n        a: [dx / L, dy / L, dz / L],\n        L,\n        t: 0.03,\n        glow: 0,\n        g: cableG[k]\n      });\n    }\n  }\n  return { shards };\n}\n```",
+  "raw": {
+    "id": "chatcmpl-01a19c82-6421-7494-b487-73b96fb662d5",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "content": "```js\nexport function buildBridge() {\n  const shards = [];\n  const deck = [];\n  for (let i = 0; i < 24; i++) {\n    const x = -2.99 + i * 0.26;\n    const g = x < 0 ? 2 : 3;\n    deck.push({ p: [x, -0.07, 0], a: [1, 0, 0], L: 0.26, t: 0.14, glow: 0, g });\n  }\n  for (const s of deck) shards.push(s);\n  for (const s of deck) {\n    shards.push({ p: [s.p[0], s.p[1] + 0.075, s.p[2]], a: [1, 0, 0], L: 0.24, t: 0.02, glow: 1, g: s.g });\n  }\n  const pylonX = [-1.6, 1.6];\n  const pylonG = [0, 5];\n  for (let k = 0; k < 2; k++) {\n    for (let i = 0; i < 6; i++) {\n      shards.push({ p: [pylonX[k], 0.35 + i * 0.36, 0], a: [0, 1, 0], L: 0.34, t: 0.2, glow: 0, g: pylonG[k] });\n    }\n  }\n  const offsets = [-1.35, -1.1, -0.85, -0.6, -0.35, -0.1, 0.1, 0.35, 0.6, 0.85, 1.1, 1.35];\n  const cableG = [1, 4];\n  for (let k = 0; k < 2; k++) {\n    const xp = pylonX[k];\n    for (let i = 0; i < offsets.length; i++) {\n      const xa = xp + offsets[i];\n      const za = i % 2 === 0 ? 0.28 : -0.28;\n      const dx = xp - xa;\n      const dy = 2.4 - 0.07;\n      const dz = 0 - za;\n      const L = Math.hypot(dx, dy, dz);\n      shards.push({\n        p: [(xp + xa) / 2, (2.4 + 0.07) / 2, za / 2],\n        a: [dx / L, dy / L, dz / L],\n        L,\n        t: 0.03,\n        glow: 0,\n        g: cableG[k]\n      });\n    }\n  }\n  return { shards };\n}\n```",
+          "refusal": null,
+          "role": "assistant"
+        },
+        "logprobs": null
+      }
+    ],
+    "created": 1793627153,
+    "model": "muse-wonder-1.0",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 2197,
+      "prompt_tokens": 821,
+      "total_tokens": 3018,
+      "completion_tokens_details": {
+        "reasoning_tokens": 1571
+      },
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      }
+    }
+  }
+}

@@ -3,9 +3,11 @@
 // @purpose: Tool-first landing hero: one-line pitch, Meta models on view, demo cars with real agent reports (instant) + live agent run
 // @created: 2026-11-01
 // @updated: 2026-11-02 claude-code — film v4 type and palette (display serif, mono labels, sodium accent)
+// @updated: 2026-11-02 claude-code — first screen: 3D bridge on the right (desktop) / under the buttons (mobile); text and buttons stay in the flow above it
 import Link from "next/link";
 import type { Report } from "@/lib/schema";
 import { CARS, carMedia } from "@/lib/agent/catalog";
+import BridgeHero from "@/components/bridge-hero/BridgeHero";
 
 type Lang = "en" | "ru";
 
@@ -65,6 +67,9 @@ export default function Hero({ reports, lang }: { reports: Report[]; lang: Lang 
     // Kia Sportage (Arthur's own inspection) is the hero car: always first
     .sort((a, b) => Number(b.car.carId === "kia-sportage") - Number(a.car.carId === "kia-sportage") || Number(!!b.report) - Number(!!a.report));
   const q = lang === "ru" ? "?lang=ru" : "";
+  // the bridge's "Evidence" label: the hero car's report, else any report, else the car's garage
+  const evidence = reports.find((r) => r.carId === "kia-sportage") ?? reports[0];
+  const reportHref = evidence ? `/r/${evidence.id}` : "/garage/kia-sportage";
 
   return (
     <section className="relative overflow-hidden bg-ink text-bone">
@@ -80,13 +85,20 @@ export default function Hero({ reports, lang }: { reports: Report[]; lang: Lang 
             <Link href="/?lang=ru" className={lang === "ru" ? "text-bone" : "text-mist hover:text-bone"}>RU</Link>
           </nav>
         </div>
-        <h1 className="mt-10 max-w-[980px] font-display text-[clamp(34px,4.9vw,68px)] font-medium leading-[.98] tracking-[-.01em]">{t.h1}</h1>
-        <p className="mt-6 max-w-[780px] text-[17px] leading-relaxed text-bone-2">{t.sub}</p>
-        <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
-          <Link href={`/inspect/new${q}`} className="rounded-full bg-sodium px-6 py-3.5 font-mono text-[11px] font-medium uppercase tracking-[.2em] text-ink shadow-[0_0_40px_rgba(238,166,90,.3)] transition-transform hover:-translate-y-px">{t.own}</Link>
-          <a href="#journey" className="font-mono text-[11px] uppercase tracking-[.2em] text-bone-2 hover:text-bone">{t.film}</a>
+        <div className="mt-10 grid gap-8 md:grid-cols-2 md:items-center md:gap-10">
+          <div className="md:col-start-1 md:row-start-1">
+            <h1 className="max-w-[980px] font-display text-[clamp(34px,4.9vw,68px)] font-medium leading-[.98] tracking-[-.01em]">{t.h1}</h1>
+            <p className="mt-6 max-w-[780px] text-[17px] leading-relaxed text-bone-2">{t.sub}</p>
+            <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+              <Link href={`/inspect/new${q}`} className="rounded-full bg-sodium px-6 py-3.5 font-mono text-[11px] font-medium uppercase tracking-[.2em] text-ink shadow-[0_0_40px_rgba(238,166,90,.3)] transition-transform hover:-translate-y-px">{t.own}</Link>
+              <a href="#journey" className="font-mono text-[11px] uppercase tracking-[.2em] text-bone-2 hover:text-bone">{t.film}</a>
+            </div>
+          </div>
+          <div className="md:col-start-2 md:row-span-2 md:row-start-1 md:self-stretch">
+            <BridgeHero lang={lang} reportHref={reportHref} />
+          </div>
+          <p className="max-w-[780px] border-l border-sodium/50 pl-4 text-[14px] leading-relaxed text-bone-2 md:col-start-1 md:row-start-2"><span className="text-sodium-hi">{t.who}</span> {t.price}</p>
         </div>
-        <p className="mt-6 max-w-[780px] border-l border-sodium/50 pl-4 text-[14px] leading-relaxed text-bone-2"><span className="text-sodium-hi">{t.who}</span> {t.price}</p>
 
         <div className="mt-12 grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
           {cars.map(({ car, report }) => (
