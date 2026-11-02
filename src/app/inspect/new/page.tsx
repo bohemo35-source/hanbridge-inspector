@@ -5,7 +5,7 @@
 // @created: 2026-11-02
 "use client";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 type Step = { i?: number; tool: string; why?: string; ms?: number; ok?: boolean; outputSummary?: string };
 const MODEL_OF: Record<string, string[]> = {
@@ -45,6 +45,8 @@ function NewInspection() {
   const [status, setStatus] = useState(""); const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ url: string; reportId: string; verdict?: { decision: string } } | null>(null);
+  // wake the open-weight Glimmer GPU while the form is being filled (cold start takes 1–3 min)
+  useEffect(() => { fetch("/api/glimmer-warm").catch(() => undefined); }, []);
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); setError(""); setDone(null); setSteps([]);
