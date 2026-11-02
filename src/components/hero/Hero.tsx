@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Tool-first landing hero: one-line pitch, Meta models on view, demo cars with real agent reports (instant) + live agent run
 // @created: 2026-11-01
+// @updated: 2026-11-02 claude-code — film v4 type and palette (display serif, mono labels, sodium accent)
 import Link from "next/link";
 import type { Report } from "@/lib/schema";
 import { CARS, carMedia } from "@/lib/agent/catalog";
@@ -19,7 +20,7 @@ const T = {
     findings: "findings",
     verified: "verified",
     models: "Who does what",
-    film: "How the car gets home ↓",
+    film: "Watch the film ↓",
     noReport: "No report yet — run the agent",
     own: "Check your own car →",
     price: "How it is paid: when we source the car for you, the first inspection is free. Each extra inspection is $100 — most buyers need only one, because we check the car's history before sending an inspector.",
@@ -34,7 +35,7 @@ const T = {
     findings: "находок",
     verified: "подтверждено",
     models: "Кто что делает",
-    film: "Как машина едет домой ↓",
+    film: "Смотреть фильм ↓",
     noReport: "Отчёта ещё нет — запустите агента",
     own: "Проверить свою машину →",
     price: "Как это оплачивается: если мы подбираем машину для вас, первый осмотр бесплатно. Каждый следующий — $100. Обычно хватает одного: до выезда инспектора мы проверяем историю машины.",
@@ -51,7 +52,7 @@ const MODELS: { name: string; role_en: string; role_ru: string }[] = [
 ];
 
 const ruFindings = (n: number) => { const a = n % 10, b = n % 100; return a === 1 && b !== 11 ? "находка" : a >= 2 && a <= 4 && (b < 12 || b > 14) ? "находки" : "находок"; };
-const verdictColor = (d?: string) => (d === "BUY" ? "#4fb38a" : d === "WALK_AWAY" ? "#e5544b" : "#e3a33b");
+const verdictColor = (d?: string) => (d === "BUY" ? "#86cfa2" : d === "WALK_AWAY" ? "#e2574c" : "#eea65a");
 
 export default function Hero({ reports, lang }: { reports: Report[]; lang: Lang }) {
   const t = T[lang];
@@ -64,56 +65,61 @@ export default function Hero({ reports, lang }: { reports: Report[]; lang: Lang 
   const q = lang === "ru" ? "?lang=ru" : "";
 
   return (
-    <section style={{ background: "#07090e", color: "#e8ebee", fontFamily: "system-ui, -apple-system, Segoe UI, sans-serif" }}>
-      <div style={{ maxWidth: 1180, margin: "0 auto", padding: "56px 20px 40px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <p style={{ font: "600 11px ui-monospace, monospace", letterSpacing: ".14em", color: "#8b94a1", margin: 0 }}>{t.kicker}</p>
-          <nav style={{ display: "flex", gap: 10, fontSize: 13 }}>
-            <Link href="/" style={{ color: lang === "en" ? "#e8ebee" : "#8b94a1" }}>EN</Link>
-            <Link href="/?lang=ru" style={{ color: lang === "ru" ? "#e8ebee" : "#8b94a1" }}>RU</Link>
+    <section className="relative overflow-hidden bg-ink text-bone">
+      <div className="pointer-events-none absolute inset-0" style={{ background: "radial-gradient(70% 60% at 85% 0%, rgba(238,166,90,.10), transparent 60%), radial-gradient(60% 50% at 0% 100%, rgba(140,199,207,.07), transparent 60%)" }} />
+      <div className="relative mx-auto max-w-[1220px] px-5 pb-14 pt-8 sm:px-8 sm:pt-10">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-bone/10 pb-5">
+          <div className="flex items-center gap-4">
+            <span className="font-display text-[17px] font-semibold uppercase tracking-[.42em]">Hanbridge</span>
+            <span className="hidden font-mono text-[10.5px] uppercase tracking-[.2em] text-mist sm:inline">{t.kicker}</span>
+          </div>
+          <nav className="flex gap-4 font-mono text-[11px] uppercase tracking-[.2em]">
+            <Link href="/" className={lang === "en" ? "text-bone" : "text-mist hover:text-bone"}>EN</Link>
+            <Link href="/?lang=ru" className={lang === "ru" ? "text-bone" : "text-mist hover:text-bone"}>RU</Link>
           </nav>
         </div>
-        <h1 style={{ fontSize: "clamp(28px, 4.4vw, 52px)", lineHeight: 1.08, margin: "18px 0 14px", maxWidth: 900, fontWeight: 750 }}>{t.h1}</h1>
-        <p style={{ fontSize: 17, lineHeight: 1.55, color: "#c9cfd6", maxWidth: 820, margin: 0 }}>{t.sub}</p>
-        <p style={{ fontSize: 14, color: "#c9a46a", margin: "14px 0 0" }}>{t.who}</p>
-        <p style={{ fontSize: 13, color: "#8b94a1", margin: "6px 0 0", maxWidth: 820 }}>{t.price}</p>
-        <p style={{ margin: "14px 0 0" }}><Link href={`/inspect/new${q}`} style={{ display: "inline-block", padding: "9px 16px", borderRadius: 8, border: "1px solid #c9a46a", color: "#c9a46a", fontWeight: 700, fontSize: 14 }}>{t.own}</Link></p>
+        <h1 className="mt-10 max-w-[980px] font-display text-[clamp(34px,4.9vw,68px)] font-medium leading-[.98] tracking-[-.01em]">{t.h1}</h1>
+        <p className="mt-6 max-w-[780px] text-[17px] leading-relaxed text-bone-2">{t.sub}</p>
+        <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <Link href={`/inspect/new${q}`} className="rounded-full bg-sodium px-6 py-3.5 font-mono text-[11px] font-medium uppercase tracking-[.2em] text-ink shadow-[0_0_40px_rgba(238,166,90,.3)] transition-transform hover:-translate-y-px">{t.own}</Link>
+          <a href="#journey" className="font-mono text-[11px] uppercase tracking-[.2em] text-bone-2 hover:text-bone">{t.film}</a>
+        </div>
+        <p className="mt-6 max-w-[780px] border-l border-sodium/50 pl-4 text-[14px] leading-relaxed text-bone-2"><span className="text-sodium-hi">{t.who}</span> {t.price}</p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14, marginTop: 30 }}>
+        <div className="mt-12 grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
           {cars.map(({ car, report }) => (
-            <article key={car.carId} style={{ background: "#11141a", border: "1px solid #242a33", borderRadius: 14, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-              <div style={{ aspectRatio: "16 / 10", background: "#0d1015" }}>
+            <article key={car.carId} className="group flex flex-col overflow-hidden rounded-[6px] border border-bone/10 bg-ink-2 transition-colors hover:border-sodium/50">
+              <div className="relative aspect-[16/10] overflow-hidden bg-ink-3">
                 {report?.listingUrl
-                  ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={report.listingUrl} alt={`${car.make} ${car.model}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={report.listingUrl} alt={`${car.make} ${car.model}`} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]" />
                   : null}
+                {report && <span className="absolute left-3 top-3 border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[.18em]" style={{ color: verdictColor(report.verdict.decision), borderColor: verdictColor(report.verdict.decision), background: "rgba(6,7,8,.72)" }}>{report.verdict.decision.replace("_", " ")}</span>}
               </div>
-              <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
-                <b style={{ fontSize: 15 }}>{car.year} {car.make} {car.model}</b>
+              <div className="flex flex-1 flex-col gap-2 p-4">
+                <b className="font-display text-[22px] font-medium leading-tight">{car.year} {car.make} {car.model}</b>
                 {report ? (
-                  <span style={{ fontSize: 13, color: "#8b94a1" }}>
-                    <span style={{ fontWeight: 800, color: verdictColor(report.verdict.decision) }}>{report.verdict.decision.replace("_", " ")}</span>
-                    {" · "}{report.findings.length} {lang === "ru" ? ruFindings(report.findings.length) : report.findings.length === 1 ? "finding" : t.findings}, {report.findings.filter((f) => f.verified).length} {t.verified}
+                  <span className="font-mono text-[11px] uppercase tracking-[.12em] text-mist">
+                    {report.findings.length} {lang === "ru" ? ruFindings(report.findings.length) : report.findings.length === 1 ? "finding" : t.findings} · {report.findings.filter((f) => f.verified).length} {t.verified}
                   </span>
-                ) : <span style={{ fontSize: 13, color: "#8b94a1" }}>{t.noReport}</span>}
-                <div style={{ display: "flex", gap: 8, marginTop: "auto", flexWrap: "wrap" }}>
-                  {report && <a href={`/r/${report.id}${q}`} style={{ background: "#c9a46a", color: "#111", fontWeight: 700, fontSize: 13, padding: "8px 12px", borderRadius: 8, textDecoration: "none" }}>{t.open}</a>}
-                  <a href={`/inspect/${car.carId}${q}`} style={{ border: "1px solid #3a4250", color: "#e8ebee", fontSize: 13, padding: "8px 12px", borderRadius: 8, textDecoration: "none" }}>{t.live}</a>
+                ) : <span className="text-[13px] text-mist">{t.noReport}</span>}
+                <div className="mt-auto flex flex-wrap gap-2 pt-2">
+                  {report && <a href={`/r/${report.id}${q}`} className="rounded-full bg-bone px-4 py-2 font-mono text-[10.5px] uppercase tracking-[.16em] text-ink hover:bg-sodium-hi">{t.open}</a>}
+                  <a href={`/inspect/${car.carId}${q}`} className="rounded-full border border-bone/25 px-4 py-2 font-mono text-[10.5px] uppercase tracking-[.16em] text-bone hover:border-sodium">{t.live}</a>
                 </div>
               </div>
             </article>
           ))}
         </div>
 
-        <h2 style={{ fontSize: 14, letterSpacing: ".12em", textTransform: "uppercase", color: "#8b94a1", margin: "34px 0 12px" }}>{t.models}</h2>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <h2 className="mb-4 mt-12 font-mono text-[11px] uppercase tracking-[.3em] text-sodium">{t.models}</h2>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-px overflow-hidden rounded-[6px] border border-bone/10 bg-bone/10">
           {MODELS.map((m) => (
-            <span key={m.name} style={{ background: "#11141a", border: "1px solid #242a33", borderRadius: 999, padding: "7px 12px", fontSize: 13 }}>
-              <b>{m.name}</b> <span style={{ color: "#8b94a1" }}>— {lang === "ru" ? m.role_ru : m.role_en}</span>
-            </span>
+            <div key={m.name} className="bg-ink-2 px-4 py-3.5">
+              <div className="font-mono text-[11px] uppercase tracking-[.14em] text-bone">{m.name}</div>
+              <div className="mt-1 text-[13.5px] text-bone-2">{lang === "ru" ? m.role_ru : m.role_en}</div>
+            </div>
           ))}
         </div>
-
-        <p style={{ marginTop: 34, fontSize: 14 }}><a href="#journey" style={{ color: "#8b94a1" }}>{t.film}</a></p>
       </div>
     </section>
   );
