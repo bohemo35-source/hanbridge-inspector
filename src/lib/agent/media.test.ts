@@ -7,7 +7,7 @@ afterEach(() => vi.unstubAllEnvs());
 describe("media source", () => {
   it("MEDIA_SOURCE=blob serves the manifest (every demo car has photos, report and photo index)", () => {
     vi.stubEnv("MEDIA_SOURCE", "blob");
-    for (const id of ["kia-morning", "mini-cooper-s", "bmw-x3-8278", "bmw-530i-8053", "audi-a5-2005"]) {
+    for (const id of ["kia-sportage", "kia-morning", "mini-cooper-s", "bmw-x3-8278", "bmw-530i-8053", "audi-a5-2005"]) {
       expect(mediaSource(id)).toBe("blob");
       const m = carMedia(id);
       expect(m.photos.length, id).toBeGreaterThan(50);
@@ -23,8 +23,8 @@ describe("media source", () => {
   });
   it("unknown car falls back to local (no manifest entry)", () => {
     vi.stubEnv("MEDIA_SOURCE", "blob");
-    expect(mediaSource("kia-sportage")).toBe("local");
-    expect(listMedia("kia-sportage", "photos", [".jpg"])).toEqual([]);
+    expect(mediaSource("no-such-car")).toBe("local");
+    expect(listMedia("no-such-car", "photos", [".jpg"])).toEqual([]);
   });
   it("tmp cache path is stable and filesystem-safe", () => {
     const a = tmpMediaPath("kia-morning", "sheets", "Отчёт (VTR).pdf");

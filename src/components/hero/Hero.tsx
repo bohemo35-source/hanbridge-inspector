@@ -58,7 +58,9 @@ export default function Hero({ reports, lang }: { reports: Report[]; lang: Lang 
   const newest = new Map<string, Report>();
   for (const r of reports) if (r.carId && !newest.has(r.carId)) newest.set(r.carId, r);
   // only cars whose inspection media exist (local demo-data or Blob): a card must be runnable live
-  const cars = CARS.filter((c) => carMedia(c.carId).photos.length > 0).map((c) => ({ car: c, report: newest.get(c.carId) })).sort((a, b) => Number(!!b.report) - Number(!!a.report));
+  const cars = CARS.filter((c) => carMedia(c.carId).photos.length > 0).map((c) => ({ car: c, report: newest.get(c.carId) }))
+    // Kia Sportage (Arthur's own inspection) is the hero car: always first
+    .sort((a, b) => Number(b.car.carId === "kia-sportage") - Number(a.car.carId === "kia-sportage") || Number(!!b.report) - Number(!!a.report));
   const q = lang === "ru" ? "?lang=ru" : "";
 
   return (

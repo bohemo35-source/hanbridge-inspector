@@ -18,7 +18,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   const q = await searchParams;
   const lang = q.lang === "ru" ? "ru" : "en";
   const reports = await listReportsAsync().catch(() => []);
-  const report = reports.find((r) => r.carId === "kia-morning") ?? reports.find((r) => r.carId === "mini-cooper-s") ?? reports[0];
+  const report = reports.find((r) => r.carId === "kia-sportage") ?? reports.find((r) => r.carId === "mini-cooper-s") ?? reports[0]; // hero car: Kia Sportage
   return (
     <main className={`${serif.variable} w-full`} style={{ ["--tw-font-serif" as string]: "var(--font-serif)" }}>
       <style>{`.font-serif{font-family:var(--font-serif),Georgia,serif}`}</style>
