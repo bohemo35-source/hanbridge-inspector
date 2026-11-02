@@ -6,6 +6,7 @@ import type { Report } from "@/lib/schema";
 import { PANELS, type PanelId } from "@/lib/domain/panels";
 import { classifyPaint } from "@/lib/domain/paint";
 import { blobUrl, readMediaText } from "@/lib/agent/media";
+import { getCar } from "@/lib/agent/catalog";
 import NOTES_RU from "./notes-ru.json";
 import SHEETS from "./inspector-sheets.json";
 import GAUGE from "./gauge-videos.json";
@@ -23,6 +24,14 @@ export interface PanelState {
 export interface SheetItem { ru: string; en: string; panels?: string[] }
 /** the inspector's original checklist, structured by Muse Spark (scripts/film4/build-sheets.mjs) */
 export interface InspectorSheet { facts: { ru: string; en: string; value_ru: string; value_en: string }[]; sections: { ru: string; en: string; state: string; items: SheetItem[] }[] }
+/** neutral template the garage shows for this car (one shape per body type, never the exact model) */
+export type BodyKind = "suv" | "sedan" | "hatchback" | "compact" | "city";
+const BODY_OF: Record<string, BodyKind> = { "mini-cooper-s": "compact", "kia-morning": "city" };
+export function bodyKind(carId: string, report?: Report): BodyKind {
+  if (BODY_OF[carId]) return BODY_OF[carId];
+  const t = getCar(carId)?.bodyType ?? report?.vehicle.bodyType;
+  return t === "sedan" ? "sedan" : t === "hatchback" ? ((getCar(carId)?.doors ?? report?.vehicle.doors) === 3 ? "compact" : "hatchback") : "suv";
+}
 export interface GarageData {
   carId: string;
   title: string;
@@ -31,6 +40,7 @@ export interface GarageData {
   reasons?: { en: string[]; ru: string[] };
   panels: PanelState[];
   photoTotal: number;
+  body: BodyKind;
   sheet?: InspectorSheet;
   gaugeVideo?: { url: string; poster: string };
 }
@@ -100,6 +110,7 @@ export async function garageData(carId: string, report?: Report, title?: string)
     reasons: report ? { en: report.verdict.reasons_en, ru: report.verdict.reasons_ru } : undefined,
     panels,
     photoTotal: entries.length,
+    body: bodyKind(carId, report),
     sheet: (SHEETS as unknown as Record<string, InspectorSheet>)[carId],
     gaugeVideo: (GAUGE as Record<string, { url: string }>)[carId] ? { url: (GAUGE as Record<string, { url: string }>)[carId].url, poster: `/garage/gauge/${carId}.jpg` } : undefined,
   };

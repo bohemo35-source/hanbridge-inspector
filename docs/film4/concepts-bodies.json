@@ -1,0 +1,26 @@
+{
+  "sedan": {
+    "model": "muse-image-1.0",
+    "prompt": "a modern mid-size four-door saloon sedan with a separate trunk, neutral light silver-grey paint, smooth generic design, no badges, no logos, no licence plate, closed doors, standard five-spoke alloy wheels, dark tinted windows, three-quarter front view from the front left at eye level, isolated product shot on a plain light grey seamless studio background, soft even diffuse lighting, no harsh reflections, whole car fully in frame with margin, sharp focus, photorealistic, orthographic-like long lens, no text, no people",
+    "ms": 21522,
+    "ok": true
+  },
+  "hatchback": {
+    "model": "muse-image-1.0",
+    "prompt": "a modern five-door C-segment hatchback with a sloping rear hatch, neutral light silver-grey paint, smooth generic design, no badges, no logos, no licence plate, closed doors, standard five-spoke alloy wheels, dark tinted windows, three-quarter front view from the front left at eye level, isolated product shot on a plain light grey seamless studio background, soft even diffuse lighting, no harsh reflections, whole car fully in frame with margin, sharp focus, photorealistic, orthographic-like long lens, no text, no people",
+    "ms": 28325,
+    "ok": true
+  },
+  "compact": {
+    "model": "muse-image-1.0",
+    "prompt": "a modern small three-door compact premium hatchback with short overhangs and a round-ish friendly face, neutral light silver-grey paint, smooth generic design, no badges, no logos, no licence plate, closed doors, standard five-spoke alloy wheels, dark tinted windows, three-quarter front view from the front left at eye level, isolated product shot on a plain light grey seamless studio background, soft even diffuse lighting, no harsh reflections, whole car fully in frame with margin, sharp focus, photorealistic, orthographic-like long lens, no text, no people",
+    "ms": 25792,
+    "ok": true
+  },
+  "city": {
+    "model": "muse-image-1.0",
+    "prompt": "a modern tiny five-door A-segment city car, tall and narrow, very short, neutral light silver-grey paint, smooth generic design, no badges, no logos, no licence plate, closed doors, standard five-spoke alloy wheels, dark tinted windows, three-quarter front view from the front left at eye level, isolated product shot on a plain light grey seamless studio background, soft even diffuse lighting, no harsh reflections, whole car fully in frame with margin, sharp focus, photorealistic, orthographic-like long lens, no text, no people",
+    "ms": 21779,
+    "ok": true
+  }
+}

@@ -29,6 +29,10 @@ const EXPLODE: Record<PanelId, [number, number, number]> = {
   trunk: [-1.05, 0.4, 0], rear_bumper: [-1.35, 0, 0], roof: [0, 1.15, 0],
 };
 
+/** One neutral model per body type. Kia: real model + its parts cut; templates: one textured mesh, panels found by geometry. */
+export interface BodyModel { hero: string; parts?: string; length: number; doors: 3 | 5; rotY?: number }
+export const KIA_MODEL: BodyModel = { hero: "/models/kia-sportage.glb", parts: "/models/kia-sportage-parts.glb", length: 4.4, doors: 5 };
+
 export interface StudioHandle {
   /** colour per panel (null = nothing to say) and how loud it is (1 = remark, ~0.3 = factory paint) */
   setStatus(colors: Partial<Record<PanelId, { color: string; weight: number } | null>>): void;
@@ -58,6 +62,28 @@ function floatGeometry(src: THREE.BufferGeometry): THREE.BufferGeometry {
   g.setAttribute("position", new THREE.BufferAttribute(P, 3));
   if (src.index) g.setIndex(Array.from(src.index.array as ArrayLike<number>));
   return g;
+}
+
+/**
+ * Generic panel classifier for template bodies. u = x/(L/2) (+1 front), v = height share (0 floor), w = z/(W/2) (-1 left), n = face normal.
+ * Glass, pillars, wheels and the underbody stay non-panel pieces.
+ */
+export function classifyTriangle(u: number, v: number, w: number, n: THREE.Vector3, doors: 3 | 5): string {
+  const side = w < 0 ? "left" : "right";
+  if (v < 0.42 && Math.abs(w) > 0.5 && (Math.abs(u - 0.64) < 0.2 || Math.abs(u + 0.64) < 0.2) && Math.abs(n.z) > 0.35) return "wheel";
+  if (v < 0.12) return "under";
+  if (v > 0.86 && n.y > 0.5) return "p:roof";
+  if (u > 0.3 && n.y > 0.4 && v > 0.45 && v < 0.82 && Math.abs(w) < 0.85) return "p:hood";
+  if (u < -0.55 && v > 0.36 && v < 0.84 && (n.x < -0.35 || n.y > 0.4) && Math.abs(w) < 0.8) return "p:trunk";
+  if (u > 0.72 && v < 0.55) return "p:front_bumper";
+  if (u < -0.74 && v < 0.42) return "p:rear_bumper";
+  if (v > 0.6) return "cabin";
+  if (Math.abs(w) < 0.55 && Math.abs(n.z) < 0.5) return "under";
+  if (u > 0.36) return `p:front_${side}_fender`;
+  if (doors === 3) return u > -0.32 ? `p:front_${side}_door` : `p:rear_${side}_fender`;
+  if (u > -0.06) return `p:front_${side}_door`;
+  if (u > -0.46) return `p:rear_${side}_door`;
+  return `p:rear_${side}_fender`;
 }
 
 /** Back faces dark and matte: exploded panels never read as hollow shells. */
@@ -97,7 +123,7 @@ function buildBay(scene: THREE.Scene, mobile: boolean) {
   // floor: dim reflection under a dark glossy plane whose alpha fades out from the centre
   let refl: Reflector | null = null;
   if (!mobile) {
-    refl = new Reflector(new THREE.CircleGeometry(16, 64), { textureWidth: 1024, textureHeight: 1024, color: 0x1a1d21, clipBias: 0.003 });
+    refl = new Reflector(new THREE.CircleGeometry(16, 64), { textureWidth: 1024, textureHeight: 1024, color: 0x111316, clipBias: 0.003 });
     refl.rotation.x = -Math.PI / 2; refl.position.y = -0.001; g.add(refl);
   }
   const floor = new THREE.Mesh(new THREE.CircleGeometry(16, 64), new THREE.MeshStandardMaterial({ color: 0x0a0c0e, roughness: 0.42, metalness: 0.3, transparent: !mobile, opacity: mobile ? 1 : 0.86 }));
@@ -154,7 +180,8 @@ function buildBay(scene: THREE.Scene, mobile: boolean) {
   return { group: g, table, props, reflector: refl };
 }
 
-export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile: boolean; zoom: boolean }): StudioHandle {
+export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile: boolean; zoom: boolean; model?: BodyModel }): StudioHandle {
+  const model = opts.model ?? KIA_MODEL;
   const { mobile } = opts;
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobile ? 1.5 : 2));
@@ -237,14 +264,31 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
   let explodeTarget = 0, explode = 0;
   let scanT = -1; // -1 idle, 0..1 sweeping
 
+  /** Template GLBs come in unknown orientation: length goes to X, and the front is the end farther from the roof (bonnets are longer than boots). */
+  const autoOrient = (m: THREE.Object3D) => {
+    m.updateMatrixWorld(true);
+    let sz = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
+    if (sz.z > sz.x) { m.rotation.y += Math.PI / 2; m.updateMatrixWorld(true); sz = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3()); }
+    const box = new THREE.Box3().setFromObject(m), v = new THREE.Vector3(); let sx = 0, n = 0;
+    m.traverse((o) => {
+      const mesh = o as THREE.Mesh; if (!mesh.isMesh) return; const pos = mesh.geometry.getAttribute("position");
+      for (let i = 0; i < pos.count; i += 5) { v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld); if (v.y > box.min.y + sz.y * 0.88) { sx += v.x; n++; } }
+    });
+    if (n && sx / n > (box.min.x + box.max.x) / 2) { m.rotation.y += Math.PI; m.updateMatrixWorld(true); }
+  };
   const norm = (m: THREE.Object3D) => {
+    if (model.rotY) { m.rotation.y = model.rotY; m.updateMatrixWorld(true); }
+    else if (!model.parts) autoOrient(m);
     const b = new THREE.Box3().setFromObject(m); const sz = b.getSize(new THREE.Vector3()); const c = b.getCenter(new THREE.Vector3());
-    const sc = 4.4 / sz.x; m.scale.setScalar(sc); m.position.set(-c.x * sc, -b.min.y * sc, -c.z * sc);
+    const sc = model.length / sz.x; m.scale.multiplyScalar(sc); m.position.set(-c.x * sc, -b.min.y * sc, -c.z * sc);
+    m.updateMatrixWorld(true);
   };
   const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
-  loader.load("/models/kia-sportage.glb", (gl) => {
+  loader.load(model.hero, (gl) => {
     if (disposed) return;
-    hero = gl.scene; norm(hero); car.add(hero);
+    hero = gl.scene; norm(hero);
+    if (!model.parts) { buildPiecesFromHero(hero); car.add(hero); ready = true; scanT = 0; ev.onReady(); }
+    else car.add(hero);
     hero.traverse((o) => {
       const m = o as THREE.Mesh; if (!m.isMesh) return; m.castShadow = true;
       (Array.isArray(m.material) ? m.material : [m.material]).forEach((mt) => {
@@ -256,7 +300,7 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
         if (/Windows/i.test(mt.name)) { s.color.set(0x07090b); s.roughness = 0.05; s.metalness = 0.2; s.envMapIntensity = 1.4; }
       });
     });
-    loader.load("/models/kia-sportage-parts.glb", (pg) => {
+    if (model.parts) loader.load(model.parts, (pg) => {
       if (disposed) return;
       const root = pg.scene; norm(root); root.updateMatrixWorld(true);
       buildPieces(root);
@@ -264,25 +308,55 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
     });
   });
 
+  const paintBase = new THREE.MeshPhysicalMaterial({ color: PAINT, metalness: 0.55, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 1.1 });
+  const darkMat = matteInside(new THREE.MeshPhysicalMaterial({ color: 0x0a0b0d, metalness: 0.3, roughness: 0.55 }));
+  const glassMat = matteInside(new THREE.MeshPhysicalMaterial({ color: 0x050607, metalness: 0.3, roughness: 0.08, clearcoat: 1, envMapIntensity: 1.4 }));
+
+  /** Template models: bake the textured mesh into car space and sort every triangle into a panel by where it sits and where it faces. */
+  function buildPiecesFromHero(root: THREE.Object3D) {
+    const box = new THREE.Box3().setFromObject(root); const L = box.max.x - box.min.x, H = box.max.y - box.min.y, W = box.max.z - box.min.z;
+    const buckets = new Map<string, number[][]>(); // key -> [positions[], normals[]]
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), nn = new THREE.Vector3();
+    root.traverse((o) => {
+      const m = o as THREE.Mesh; if (!m.isMesh) return;
+      const geo = floatGeometry(m.geometry).applyMatrix4(m.matrixWorld).toNonIndexed();
+      const pos = geo.getAttribute("position");
+      for (let i = 0; i < pos.count; i += 3) {
+        a.fromBufferAttribute(pos, i); b.fromBufferAttribute(pos, i + 1); c.fromBufferAttribute(pos, i + 2);
+        nn.crossVectors(e1.subVectors(b, a), e2.subVectors(c, a)).normalize();
+        const k = classifyTriangle((a.x + b.x + c.x) / 3 / (L / 2), ((a.y + b.y + c.y) / 3 - box.min.y) / H, (a.z + b.z + c.z) / 3 / (W / 2), nn, model.doors);
+        let bk = buckets.get(k); if (!bk) buckets.set(k, (bk = [[], []]));
+        bk[0].push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+      }
+      geo.dispose();
+    });
+    for (const [k, [P]] of buckets) {
+      const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.computeVertexNormals();
+      addPiece(k, g);
+    }
+  }
+
   /** Bake every part into car space and split shared parts into their panels by triangle position. */
   function buildPieces(root: THREE.Object3D) {
-    const paintBase = new THREE.MeshPhysicalMaterial({ color: PAINT, metalness: 0.55, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 1.1 });
-    const darkMat = matteInside(new THREE.MeshPhysicalMaterial({ color: 0x0a0b0d, metalness: 0.3, roughness: 0.55 }));
-    const glassMat = matteInside(new THREE.MeshPhysicalMaterial({ color: 0x050607, metalness: 0.3, roughness: 0.08, clearcoat: 1, envMapIntensity: 1.4 }));
     const meshes: THREE.Mesh[] = [];
     root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) meshes.push(m); });
     for (const m of meshes) {
       const n = Number((m.name || m.parent?.name || "").replace("tripo_part_", ""));
       const geo = floatGeometry(m.geometry).applyMatrix4(m.matrixWorld).toNonIndexed(); geo.computeVertexNormals();
-      const groups = splitPart(n, geo);
-      for (const [key, g] of groups) {
+      for (const [key, g] of splitPart(n, geo)) addPiece(key, g);
+    }
+  }
+
+  function addPiece(key: string, g: THREE.BufferGeometry) {
+      {
         const panel = (key.startsWith("p:") ? key.slice(2) : null) as PanelId | null;
         g.computeBoundingBox(); const center = g.boundingBox!.getCenter(new THREE.Vector3());
         let mat: THREE.Material;
         if (panel) { const pm = matteInside(paintBase.clone()); paintMats.set(panel, pm); mat = pm; }
         else mat = key === "cabin" ? glassMat : darkMat;
         const mesh = new THREE.Mesh(g, mat); mesh.castShadow = true; mesh.visible = false; car.add(mesh);
-        const dir = panel ? new THREE.Vector3(...EXPLODE[panel]) : new THREE.Vector3(center.x * 0.25, key === "cabin" ? 0.55 : 0.05, Math.sign(center.z) * (Math.abs(center.z) > 0.6 ? 0.55 : 0));
+        // templates: only the 13 body panels peel off, the dark core (glass, wheels, underbody) stays put — one mesh, no real parts to scatter
+        const dir = panel ? new THREE.Vector3(...EXPLODE[panel]) : !model.parts ? new THREE.Vector3() : new THREE.Vector3(center.x * 0.25, key === "cabin" ? 0.55 : 0.05, Math.sign(center.z) * (Math.abs(center.z) > 0.6 ? 0.55 : 0));
         const piece: Piece = { mesh, panel, dir, center };
         pieces.push(piece);
         if (panel) {
@@ -294,7 +368,6 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
           piece.overlay = ov;
         }
       }
-    }
   }
 
   /** Which panel a triangle belongs to, for parts that carry several (front fenders, rear quarters + tailgate, cabin + roof). */

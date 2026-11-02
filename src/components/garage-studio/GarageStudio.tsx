@@ -6,7 +6,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PANELS, panelLabel, type PanelId } from "@/lib/domain/panels";
 import type { GarageData, PanelPhoto, PanelState, PanelStatus } from "@/lib/garage/data";
-import type { StudioHandle } from "./scene";
+import type { BodyModel, StudioHandle } from "./scene";
+import type { BodyKind } from "@/lib/garage/data";
+
+/** one neutral shape per body type (Muse Image concept → Tripo image-to-3D); SUV is the Kia Sportage model. Lengths in garage metres, Kia = 4.4 */
+const BODY_MODELS: Record<BodyKind, BodyModel | undefined> = {
+  suv: undefined,
+  sedan: { hero: "/models/body-sedan.glb", length: 4.6, doors: 5 },
+  hatchback: { hero: "/models/body-hatchback.glb", length: 4.1, doors: 5 },
+  compact: { hero: "/models/body-compact.glb", length: 3.7, doors: 3 },
+  city: { hero: "/models/body-city.glb", length: 3.4, doors: 5 },
+};
 
 type Lang = "en" | "ru";
 export const STATUS_COLOR: Record<PanelStatus, string> = {
@@ -73,10 +83,10 @@ export default function GarageStudio({ data, lang, embedded = false }: { data: G
           const pr = s.project(id); if (!pr) return;
           el.style.transform = `translate(${pr.x}px, ${pr.y}px)`; el.style.opacity = pr.visible ? "1" : "0";
         },
-      }, { mobile: window.matchMedia("(max-width: 768px)").matches, zoom: !embedded });
+      }, { mobile: window.matchMedia("(max-width: 768px)").matches, zoom: !embedded, model: BODY_MODELS[data.body] });
     });
     return () => { alive = false; studio.current?.dispose(); studio.current = null; };
-  }, [embedded, near]);
+  }, [embedded, near, data.body]);
 
   useEffect(() => {
     if (!ready) return;

@@ -1,0 +1,26 @@
+{
+ "city": {
+  "task": "8bdfbb4f-753d-447e-8a8e-258c069952b4",
+  "created": "2026-11-02T14:00:33.961Z",
+  "glb": "city.glb",
+  "bytes": 62880264
+ },
+ "compact": {
+  "task": "ea92f720-d639-4ab3-be0b-1da01c6173e1",
+  "created": "2026-11-02T14:00:34.469Z",
+  "glb": "compact.glb",
+  "bytes": 63079112
+ },
+ "hatchback": {
+  "task": "dd1ea76a-1fb6-41e8-bbf3-bb28e22658c6",
+  "created": "2026-11-02T14:00:34.538Z",
+  "glb": "hatchback.glb",
+  "bytes": 63165200
+ },
+ "sedan": {
+  "task": "18625c85-4198-4c9b-a492-5a8b5c0a980b",
+  "created": "2026-11-02T14:00:34.605Z",
+  "glb": "sedan.glb",
+  "bytes": 63864012
+ }
+}
