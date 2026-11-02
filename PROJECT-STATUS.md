@@ -1,6 +1,6 @@
 # PROJECT-STATUS — Hanbridge Inspector
 
-<!-- @agent: muse-code · @project: hanbridge-inspector · @purpose: живой статус и точка продолжения · @created: 2026-10-28 · @updated: 2026-11-02 claude-code -->
+<!-- @agent: muse-code · @project: hanbridge-inspector · @purpose: живой статус и точка продолжения · @created: 2026-10-28 · @updated: 2026-11-03 claude-code -->
 
 ## Сделано
 - ТЗ-01 (Spark-эксперт), ТЗ-02 (SAM+дефекты) — в `main`.
@@ -43,3 +43,11 @@ Journey v2 на `/`: цепочка коротких 3D-сцен (Сеул, Пу
 **Проверено:** `tsc` 0; `vitest` 16 файлов / 123 теста; eslint по новым файлам 0 ошибок; контакт-листы фильма снимались в `$TMPDIR` (в репо не сохранены); гараж смотрел глазами в браузере приложения (1440×860, 375×812 эмуляция без тача): Kia и MINI, клик по детали, карточка, фото, разборка. Ревью: субагент reviewer — FAIL, замечания закрыты (см. отчёт сессии). `next build` локально не прошёл проверку (сеть песочницы) — проверяется сборкой превью Vercel.
 **Не сделано / открыто:** лимиты прогонов на Vercel не подняты (автопроверка заблокировала запись env; `node --env-file=.env.local scripts/ops/set-limits.local.mjs --apply` в основной копии — запускает Артур); ветка не смержена в `main`; на физическом телефоне (тач, FPS) не проверено; setPos на каждом скролл-тике перерисовывает ленту — на слабых телефонах не мерено; видео для жюри снято со старого сайта — пересъёмка после мержа.
 **Следующие шаги:** превью ветки → «да» Артура → merge в `main` (production) → пересъёмка ролика → озвучка → YouTube → пост X → форма.
+
+## 03.11 — production, карточки, гараж для загрузок, ролик v4 (Claude Code)
+- `film-v4` слит в `main` fast-forward (03087a8 → production READY), затем 2521dcb и 1d91e4f — тоже в `main`, production 1d91e4f READY. Лимиты прогонов Артур поднял сам (RUN 10/ч, 300/сут; UPLOAD 5/ч, 50/сут).
+- Карточки каталога (2521dcb): `scripts/film4/make-cards.mts` — плашка номера по 4 углам маски SAM 3.1 (перспектива), закрыты все номера в кадре, включая соседние машины; надпись HANBRIDGE только на фронтальных крупных номерах.
+- Личный кабинет (1d91e4f): отчёт загруженной машины (`/r/r-u-…`) тоже открывается в 3D-гараже (шаблон по типу кузова, статус/толщиномер/находки из отчёта; фото деталей нет — у загрузок нет индекса Glimmer); у таких машин счётчик фото не показывается.
+- Звук фильма: только барабаны (unfa «Drum Jam», CC0, `public/film3/audio/drums.mp3`). Озвучка фильма: ждёт `film-en.mp3`/`film-ru.mp3` от Артура (текст `recordings/film-narration-elevenlabs.md`) → `scripts/film4/align-narration.mts`.
+- Ролик для жюри v4: `recordings/jury-cut-final-v4.mp4` (178,7 с, 1080p30, −15,9 LUFS; превью `-small`). Скрипты `video-build/`: `scene1v4.mjs`, `scene2.mjs` (живой прогон Kia r-kia-sportage-mvzpdzhi), `scene3v4.mjs` (кабинет+гараж на r-kia-sportage-mvyzh2mz — в нём есть «not confirmed», о котором говорит озвучка), `scene4.mjs` (своя машина, r-u-036974be04-mvzpslau), `cast.mjs` (CDP screencast — не зависит от монитора), `edit-v4.mjs` → `timeline-v4.json`, `voice-build/assemble.py` (env SILENT/TOTAL/W24), `mix_music.sh` с `film-v3/work/music/drums-video-v4.mp3`. В конце — нарезка записей сессий Muse Code ТЗ-01…10 с датами.
+**Следующие шаги:** Артур смотрит ролик → YouTube → пост X (@AIatMeta @cerebral_valley) → репозиторий public → форма; честный раздел «кто что сделал» — `docs/film4/PLANS.md` §2.
