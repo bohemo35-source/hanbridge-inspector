@@ -390,7 +390,8 @@ export default function GarageScene(props: GarageSceneProps) {
     let partsGroup: THREE.Group | null = null;
     let triangles = 0;
     let invScale = 1;
-    const kia = isKiaModel() || report?.carId === "kia-sportage";
+    // Kia Sportage model (A/B winner, 30.10) is the default garage car; ?model=old shows the first parametric/car-v2 model
+    const kia = isKiaModel() || report?.carId === "kia-sportage" || !(typeof window !== "undefined" && new URLSearchParams(window.location.search).get("model") === "old");
     // white car: overhead softbox/strip lights saturate the top-facing panels, so they are dimmed for the Kia
     if (kia) { softbox.intensity = 1.2; rect1.intensity = 1.1; }
     // Kia A/B: parts are cut from the same model, rendered as clean silver-white panels; finding panels glow on the whole car
