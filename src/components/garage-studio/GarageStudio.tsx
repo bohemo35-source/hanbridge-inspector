@@ -2,7 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Garage studio UI: 3D bay + panel rail, legend, assemble/explode, panel card with status, gauge spread, findings, inspector quotes and the car's real photos (lightbox)
 // @created: 2026-11-02
-// @updated: 2026-11-03 claude-code — no photo count when the car has no photo index (uploads)
+// @updated: 2026-11-03 claude-code — no photo count when the car has no photo index (uploads); neutral wording for «unconfirmed» (the source may be the owner's reading)
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PANELS, panelLabel, type PanelId } from "@/lib/domain/panels";
@@ -28,8 +28,8 @@ const STATUS_LABEL: Record<Lang, Record<PanelStatus, string>> = {
   ru: { clean: "Без замечаний", factory: "Заводской окрас", unconfirmed: "Не подтверждено", damage: "Износ / повреждение", repaint: "Перекрас", putty: "Шпатлёвка / ремонт", replaced: "Заменена" },
 };
 const STATUS_NOTE: Record<Lang, Record<PanelStatus, string>> = {
-  en: { clean: "Photographed, no findings by the agent or the inspector.", factory: "Paint thickness within factory range.", unconfirmed: "The inspector mentioned it, the independent verifier did not confirm it.", damage: "Traces of use or damage, confirmed.", repaint: "Paint layer thicker than factory — the panel was repainted.", putty: "Thick layer: filler under the paint, body repair.", replaced: "The panel was replaced." },
-  ru: { clean: "Деталь сфотографирована, ни агент, ни инспектор замечаний не нашли.", factory: "Толщина ЛКП в заводском диапазоне.", unconfirmed: "Инспектор упомянул, независимая проверка не подтвердила.", damage: "Следы эксплуатации или повреждение — подтверждено.", repaint: "Слой краски толще заводского — деталь перекрашивалась.", putty: "Толстый слой: шпатлёвка под краской, кузовной ремонт.", replaced: "Деталь заменена." },
+  en: { clean: "Photographed, no findings by the agent or the inspector.", factory: "Paint thickness within factory range.", unconfirmed: "One source reports it (inspector, gauge or the owner's reading); the independent check did not confirm it.", damage: "Traces of use or damage, confirmed.", repaint: "Paint layer thicker than factory — the panel was repainted.", putty: "Thick layer: filler under the paint, body repair.", replaced: "The panel was replaced." },
+  ru: { clean: "Деталь сфотографирована, ни агент, ни инспектор замечаний не нашли.", factory: "Толщина ЛКП в заводском диапазоне.", unconfirmed: "Есть в одном источнике (инспектор, толщиномер или показание владельца), независимая проверка не подтвердила.", damage: "Следы эксплуатации или повреждение — подтверждено.", repaint: "Слой краски толще заводского — деталь перекрашивалась.", putty: "Толстый слой: шпатлёвка под краской, кузовной ремонт.", replaced: "Деталь заменена." },
 };
 const KIND: Record<string, [string, string]> = { repaint: ["Repainted", "Перекрас"], putty: ["Filler under the paint", "Шпатлёвка под краской"], panel_replaced: ["Panel replaced", "Деталь заменена"], dent: ["Dent", "Вмятина"], scratch: ["Scratch", "Царапина"], rust: ["Rust", "Ржавчина"], mechanical: ["Mechanical", "Механика"], other: ["Note", "Замечание"] };
 const T = {
