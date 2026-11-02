@@ -45,7 +45,7 @@ export async function loadPhotoIndex(carId: string): Promise<PhotoIndex | null> 
   return null;
 }
 
-export async function indexPhotos(opts: { carId: string; photos: string[]; concurrency?: number; useCache?: boolean; firstTimeoutMs?: number; persist?: boolean; warm?: boolean }): Promise<PhotoIndex> {
+export async function indexPhotos(opts: { carId: string; photos: string[]; concurrency?: number; useCache?: boolean; firstTimeoutMs?: number; persist?: boolean; warm?: boolean; abortIfFirstFails?: boolean }): Promise<PhotoIndex> {
   if (opts.useCache !== false) { const c = await loadPhotoIndex(opts.carId); if (c && c.entries.length >= Math.min(opts.photos.length, 1)) return c; }
   const t0 = Date.now();
   const entries: PhotoIndexEntry[] = []; const failed: string[] = [];
@@ -65,6 +65,7 @@ export async function indexPhotos(opts: { carId: string; photos: string[]; concu
   const first = warmFirst ? opts.photos[0] : undefined;
   const rest = warmFirst ? opts.photos.slice(1) : opts.photos;
   if (first) await one(first, opts.firstTimeoutMs ?? 300000);
+  if (first && opts.abortIfFirstFails && failed.includes(first)) return { carId: opts.carId, model: GLIMMER_MODEL, createdAt: new Date().toISOString(), entries: [], failed: [...opts.photos], totalMs: Date.now() - t0 }; // GPU cold: do not burn the run budget
   const conc = opts.concurrency ?? 6;
   for (let i = 0; i < rest.length; i += conc) await Promise.all(rest.slice(i, i + conc).map((p) => one(p, 90000)));
   entries.sort((a, b) => a.photoId.localeCompare(b.photoId));

@@ -21,6 +21,7 @@ const T = {
     models: "Who does what",
     film: "How the car gets home ↓",
     noReport: "No report yet — run the agent",
+    own: "Check your own car →",
   },
   ru: {
     kicker: "HANBRIDGE INSPECTOR · АГЕНТ НА МОДЕЛЯХ META",
@@ -34,6 +35,7 @@ const T = {
     models: "Кто что делает",
     film: "Как машина едет домой ↓",
     noReport: "Отчёта ещё нет — запустите агента",
+    own: "Проверить свою машину →",
   },
 } as const;
 
@@ -70,6 +72,7 @@ export default function Hero({ reports, lang }: { reports: Report[]; lang: Lang 
         <h1 style={{ fontSize: "clamp(28px, 4.4vw, 52px)", lineHeight: 1.08, margin: "18px 0 14px", maxWidth: 900, fontWeight: 750 }}>{t.h1}</h1>
         <p style={{ fontSize: 17, lineHeight: 1.55, color: "#c9cfd6", maxWidth: 820, margin: 0 }}>{t.sub}</p>
         <p style={{ fontSize: 14, color: "#c9a46a", margin: "14px 0 0" }}>{t.who}</p>
+        <p style={{ margin: "14px 0 0" }}><Link href={`/inspect/new${q}`} style={{ display: "inline-block", padding: "9px 16px", borderRadius: 8, border: "1px solid #c9a46a", color: "#c9a46a", fontWeight: 700, fontSize: 14 }}>{t.own}</Link></p>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14, marginTop: 30 }}>
           {cars.map(({ car, report }) => (

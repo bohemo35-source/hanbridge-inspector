@@ -17,7 +17,10 @@ export const CARS: CarInfo[] = [
   { carId: "kia-morning", make: "Kia", model: "Morning (Picanto)", year: 2023, bodyType: "hatchback", doors: 5 },
 ];
 
-export const getCar = (carId: string) => CARS.find((c) => c.carId === carId);
+/** Visitor-uploaded cars (one run, this instance only). */
+const uploadedCars = new Map<string, CarInfo>();
+export const registerCar = (car: CarInfo) => { uploadedCars.set(car.carId, car); };
+export const getCar = (carId: string) => CARS.find((c) => c.carId === carId) ?? uploadedCars.get(carId);
 
 export interface CarMedia {
   carId: string; photos: string[]; videos: string[]; gaugeVideo: string | null;

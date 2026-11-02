@@ -18,11 +18,15 @@ export type MediaDir = "photos" | "video" | "sheets" | "out" | "root";
 interface Manifest { version: number; cars: Record<string, Partial<Record<MediaDir, Record<string, string>>>> }
 const manifest = manifestJson as Manifest;
 
-const localBase = (carId: string) => path.join(process.cwd(), "demo-data", carId);
+/** Cars uploaded by a visitor for one run: their files live in a local temp dir of this instance (never in Blob). */
+const uploadedDirs = new Map<string, string>();
+export function registerLocalCar(carId: string, dir: string) { uploadedDirs.set(carId, dir); }
+const localBase = (carId: string) => uploadedDirs.get(carId) ?? path.join(process.cwd(), "demo-data", carId);
 const localDir = (carId: string, dir: MediaDir) => (dir === "root" ? localBase(carId) : path.join(localBase(carId), dir));
 export const tmpMediaRoot = () => path.join(tmpdir(), "hanbridge-media");
 
 export function mediaSource(carId: string): "local" | "blob" {
+  if (uploadedDirs.has(carId)) return "local";
   const forced = process.env.MEDIA_SOURCE;
   if (forced === "local") return "local";
   if (forced === "blob") return manifest.cars[carId] ? "blob" : "local";

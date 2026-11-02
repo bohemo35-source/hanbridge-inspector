@@ -72,6 +72,7 @@ export interface RunResult { report: Report; ms: number; }
 
 export async function runInspection(opts: {
   carId: string; reportId?: string; onStep?: (s: AgentStep) => void; maxSteps?: number;
+  /** paint-gauge readings typed by the visitor (uploaded car) */ initialPaint?: Array<{ panel: string; microns: number }>;
 }): Promise<RunResult> {
   const t0 = Date.now();
   const car = getCar(opts.carId);
@@ -97,7 +98,8 @@ export async function runInspection(opts: {
   let handoffReason: string | undefined; let finalized = false;
   let shipping = getShippingStatus(reportId);
   // hero background does not depend on findings: generate it in parallel with the inspection (~16 s saved on the critical path)
-  const heroPromise = getOrCreateHeroImage(`hero-${opts.carId}`); // one generated hero per car, not per run (saves a Muse Image call + a Blob put)
+  const isUpload = opts.carId.startsWith("u-");
+  const heroPromise = getOrCreateHeroImage(isUpload ? "hero-upload" : `hero-${opts.carId}`); // one generated hero per car, not per run (saves a Muse Image call + a Blob put)
   heroPromise.catch(() => undefined);
 
   let photoIdx: PhotoIndex | null = null;
@@ -110,7 +112,7 @@ export async function runInspection(opts: {
   if (glimmerConfigured() && media.photos.length) {
     const ts = Date.now();
     try {
-      const idx = await indexPhotos({ carId: opts.carId, photos: media.photos });
+      const idx = await indexPhotos({ carId: opts.carId, photos: media.photos, ...(isUpload ? { firstTimeoutMs: 45_000, abortIfFirstFails: true } : {}) });
       photoIdx = idx;
       const picks = pickDefectPhotos(idx, 3);
       if (picks.length) suggested = [...picks, ...suggested.filter((p) => !picks.includes(p))].slice(0, 4);
@@ -131,6 +133,7 @@ export async function runInspection(opts: {
     }
   };
   const addPaint = (rec: Record<string, number>) => { for (const [p, v] of Object.entries(rec)) paint.set(p, Math.max(paint.get(p) ?? 0, v)); };
+  if (opts.initialPaint?.length) addPaint(Object.fromEntries(opts.initialPaint.map((r) => [r.panel, r.microns])));
 
   async function execute(name: string, args: Record<string, unknown>): Promise<string> {
     const key = `${name}:${JSON.stringify(args)}`;
@@ -227,6 +230,7 @@ export async function runInspection(opts: {
     photos: { count: media.photos.length, suggestedPhotoIds: suggested },
     videos: media.videos, gaugeVideo: media.gaugeVideo, diagnosticPdfs: media.diagnosticPdfs,
     hasInspectorReport: media.hasInspectorReport, hasAuctionSheet: media.hasAuctionSheet,
+    ...(opts.initialPaint?.length ? { paintReadingsTypedByOwner: opts.initialPaint } : {}),
   };
   const messages: ChatMessage[] = [
     { role: "system", content: "You are the Hanbridge inspection agent. Every claim needs evidence: no evidence, no finding (tools enforce this). Cross-check independent sources: voice vs gauge-screen colour vs photos vs inspector text. Agreement of two sources raises confidence; contradiction -> conflict. Call tools, then finalize_report. Budget: find_defects on at most 3 suggested photos, transcribe_note on at most ONE video (prefer paint_gauge.mp4 when present), read_gauge_video only when gaugeVideo is present, read_diagnostic_report only when a PDF is listed. Always call analyze_paint_readings after voice/gauge, estimate_landed_cost once, and make_listing_photo once. When sources disagree about a panel (voice numbers vs gauge-screen colour vs inspector text vs photos), or a finding rests on a single source, call recheck_panel(panel, reason) for that panel (at most 2 times) BEFORE finalize_report, and say in reason which sources disagree. If a source is absent the tool says so — do not invent it." },
