@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Garage studio UI: 3D bay + panel rail, legend, assemble/explode, panel card with status, gauge spread, findings, inspector quotes and the car's real photos (lightbox)
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code — no photo count when the car has no photo index (uploads)
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PANELS, panelLabel, type PanelId } from "@/lib/domain/panels";
@@ -125,7 +126,7 @@ export default function GarageStudio({ data, lang, embedded = false }: { data: G
       {/* header */}
       <div className="absolute inset-x-0 top-0 z-[6] flex flex-wrap items-start justify-between gap-3 px-4 pt-4 sm:px-8 sm:pt-6">
         <div>
-          <div className="font-mono text-[10.5px] uppercase tracking-[.3em] text-sodium">{lang === "ru" ? "Гараж осмотра" : "Inspection bay"} · {data.photoTotal} {lang === "ru" ? "фото" : "photos"}</div>
+          <div className="font-mono text-[10.5px] uppercase tracking-[.3em] text-sodium">{lang === "ru" ? "Гараж осмотра" : "Inspection bay"}{data.photoTotal ? ` · ${data.photoTotal} ${lang === "ru" ? "фото" : "photos"}` : ""}</div>
           <h2 className="mt-1 font-display text-[clamp(28px,3.4vw,46px)] font-medium leading-none">{data.title}</h2>
           {data.sheet && <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[10.5px] uppercase tracking-[.14em] text-bone-2">{data.sheet.facts.filter((f) => !/model|модель/i.test(f.en + f.ru)).slice(0, 4).map((f) => <span key={f.en}><span className="text-mist">{lang === "ru" ? f.ru : f.en}</span> {lang === "ru" ? f.value_ru : f.value_en}</span>)}</div>}
         </div>
