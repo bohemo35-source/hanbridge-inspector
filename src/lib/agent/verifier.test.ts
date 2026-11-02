@@ -4,7 +4,7 @@
 // @created: 2026-10-29
 // @updated: 2026-11-03 claude-code — owner-typed reading alone is not proof
 import { describe, expect, it } from "vitest";
-import { decideVerdict, detectConflict, ownerReadingOnly, shouldHandoff } from "./verifier";
+import { applyOwnerOnlyRule, decideVerdict, detectConflict, ownerReadingOnly, shouldHandoff, withOwnerReasons } from "./verifier";
 import type { Finding } from "@/lib/schema";
 
 const f = (over: Partial<Finding>): Finding => ({
@@ -52,9 +52,22 @@ describe("ownerReadingOnly", () => {
   it("catalog car (nothing typed) → rule does not apply", () => {
     expect(ownerReadingOnly(typedOnly, new Set(), new Set())).toBe(false);
   });
-  it("with the owner-only finding removed the verdict is not NEGOTIATE and goes to a manager", () => {
-    const v = decideVerdict([]);
-    expect(v.decision).toBe("BUY");
+  it("applyOwnerOnlyRule unconfirms only owner-only findings and explains why", () => {
+    const owner = { ...typedOnly, id: "paint-front_left_door" };
+    const measured = f({ id: "paint-hood", panel: "hood", evidence: [{ type: "gauge", mediaId: "gauge", gaugeMicrons: 180 }] });
+    const rule = applyOwnerOnlyRule([owner, measured], typed, new Set(["hood"]));
+    expect(rule.ownerOnly.map((x) => x.id)).toEqual(["paint-front_left_door"]);
+    expect(owner.verified).toBe(false);
+    expect(measured.verified).toBe(true);
+    expect(rule.handoffReason).toContain("front_left_door 245 µm");
+    expect(rule.reasons_en[0]).toContain("245 µm points to filler");
+  });
+  it("withOwnerReasons: the typed reading leads, «no adverse findings» is replaced, handoff on", () => {
+    const rule = applyOwnerOnlyRule([{ ...typedOnly }], typed, new Set());
+    const v = withOwnerReasons({ ...decideVerdict([]), reasons_en: ["No adverse findings identified"], reasons_ru: ["Нет"] }, rule, false);
+    expect(v.reasons_en[0]).toContain("owner's typed reading 245 µm");
+    expect(v.reasons_en.join(" ")).not.toContain("No adverse");
     expect(v.handoff).toBe(true);
+    expect(withOwnerReasons(decideVerdict([]), applyOwnerOnlyRule([], typed, new Set()), false).reasons_en).toEqual([]);
   });
 });

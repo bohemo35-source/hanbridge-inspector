@@ -23,7 +23,7 @@ import { indexPhotos, pickDefectPhotos, pickListingCandidates, type PhotoIndex }
 import { glimmerConfigured } from "@/lib/meta/glimmer";
 import { readDiagnosticReport } from "./tools/diagnostic";
 import { readInspectorReport } from "./tools/inspector";
-import { decideVerdict, detectConflict, ownerReadingOnly, verifyFinding } from "./verifier";
+import { applyOwnerOnlyRule, decideVerdict, detectConflict, verifyFinding, withOwnerReasons } from "./verifier";
 
 /** Vercel kills the run route at 300 s (maxDuration): past this point optional work is skipped instead of risking the whole report. */
 const RUN_SOFT_DEADLINE_MS = 235_000;
@@ -334,16 +334,9 @@ export async function runInspection(opts: {
   }
 
   // a number typed by the visitor is a claim, not proof: alone it never confirms a finding
-  const ownerOnly: Finding[] = [];
-  for (const f of findings) {
-    if (f.verified && ownerReadingOnly(f, typedPanels, measuredPanels)) {
-      f.verified = false;
-      f.verifierNote = `${f.verifierNote ?? ""} · only the owner's typed gauge reading — no photo, inspector voice or sheet confirms it → unconfirmed`.trim();
-      step("conflict_check", f.id, true, `${f.panel}/${f.kind}: owner-typed reading only → unconfirmed`, 0);
-      ownerOnly.push(f);
-    }
-  }
-  if (ownerOnly.length && !handoffReason) handoffReason = `typed gauge reading not confirmed by photos (${ownerOnly.map((f) => `${f.panel} ${f.evidence[0]?.gaugeMicrons ?? "?"} µm`).join(", ")}) — a manager checks it`;
+  const ownerRule = applyOwnerOnlyRule(findings, typedPanels, measuredPanels);
+  for (const f of ownerRule.ownerOnly) step("conflict_check", f.id, true, `${f.panel}/${f.kind}: owner-typed reading only → unconfirmed`, 0);
+  if (ownerRule.handoffReason && !handoffReason) handoffReason = ownerRule.handoffReason;
 
   const verified = findings.filter((f) => f.verified);
   let verdict = decideVerdict(verified);
@@ -354,13 +347,7 @@ export async function runInspection(opts: {
     verdict = { ...verdict, reasons_en: reasons.reasons_en, reasons_ru: reasons.reasons_ru };
   } catch { /* deterministic reasons stand */ }
   // the buyer must see why it is not a clean BUY: the unconfirmed typed reading leads the reasons
-  if (ownerOnly.length) {
-    const en = ownerOnly.map((f) => `${f.panel.replace(/_/g, " ")}: the owner's typed reading ${f.evidence[0]?.gaugeMicrons ?? "?"} µm points to ${f.kind === "putty" ? "filler" : "repaint"} — not confirmed by photos; a manager checks it.`);
-    const ru = ownerOnly.map((f) => `${f.panel.replace(/_/g, " ")}: введённое владельцем показание ${f.evidence[0]?.gaugeMicrons ?? "?"} мкм указывает на ${f.kind === "putty" ? "шпатлёвку" : "перекрас"} — по фото не подтверждено, проверит менеджер.`);
-    verdict = verified.length
-      ? { ...verdict, reasons_en: [...en, ...verdict.reasons_en], reasons_ru: [...ru, ...verdict.reasons_ru] }
-      : { ...verdict, reasons_en: [...en, "No finding is confirmed by photos or the inspector yet."], reasons_ru: [...ru, "Ни одна находка пока не подтверждена фото или инспектором."] };
-  }
+  verdict = withOwnerReasons(verdict, ownerRule, verified.length > 0);
   if (handoffReason) verdict = { ...verdict, handoff: true };
 
   // listing must show the whole car: Spark's view label is not enough (a tail-light close-up came back as "rear_left").

@@ -2,7 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Independent verifier: open-weight muse-spark-open-1026 (Baseten), fallback muse-spark-1.3; deterministic verdict + handoff rules
 // @created: 2026-10-29
-// @updated: 2026-11-03 claude-code — ownerReadingOnly: a reading typed by the visitor is a claim, not proof
+// @updated: 2026-11-03 claude-code — ownerReadingOnly / applyOwnerOnlyRule / withOwnerReasons: a reading typed by the visitor is a claim, not proof
 import { z } from "zod";
 import { classifyPaint } from "@/lib/domain/paint";
 import { sparkJson, type ChatPart } from "@/lib/meta/spark";
@@ -29,6 +29,31 @@ export function detectConflict(f: Finding, paint: Array<{ panel: string; microns
 /** Pure: the finding rests only on a paint reading the visitor typed into the form (no inspector voice/gauge video/photo/sheet for that panel). */
 export function ownerReadingOnly(f: Finding, typedPanels: ReadonlySet<string>, measuredPanels: ReadonlySet<string>): boolean {
   return typedPanels.has(f.panel) && !measuredPanels.has(f.panel) && f.evidence.length > 0 && f.evidence.every((e) => e.type === "gauge" && e.mediaId === "gauge");
+}
+
+/** Pure (mutates the findings it unconfirms): owner-only paint findings → verified=false; returns them, the handoff reason and the lead verdict reasons. */
+export function applyOwnerOnlyRule(findings: Finding[], typedPanels: ReadonlySet<string>, measuredPanels: ReadonlySet<string>) {
+  const ownerOnly = findings.filter((f) => f.verified && ownerReadingOnly(f, typedPanels, measuredPanels));
+  for (const f of ownerOnly) {
+    f.verified = false;
+    f.verifierNote = `${f.verifierNote ?? ""} · only the owner's typed gauge reading — no inspector voice, gauge video or sheet confirms it → unconfirmed`.trim();
+  }
+  if (!ownerOnly.length) return { ownerOnly, handoffReason: undefined, reasons_en: [] as string[], reasons_ru: [] as string[] };
+  const µm = (f: Finding) => f.evidence[0]?.gaugeMicrons ?? "?";
+  return {
+    ownerOnly,
+    handoffReason: `typed gauge reading not confirmed (${ownerOnly.map((f) => `${f.panel} ${µm(f)} µm`).join(", ")}) — a manager checks it`,
+    reasons_en: ownerOnly.map((f) => `${f.panel.replace(/_/g, " ")}: the owner's typed reading ${µm(f)} µm points to ${f.kind === "putty" ? "filler" : "repaint"} — not confirmed; a manager checks it.`),
+    reasons_ru: ownerOnly.map((f) => `${f.panel.replace(/_/g, " ")}: введённое владельцем показание ${µm(f)} мкм указывает на ${f.kind === "putty" ? "шпатлёвку" : "перекрас"} — не подтверждено, проверит менеджер.`),
+  };
+}
+
+/** Pure: the unconfirmed typed readings lead the verdict reasons; with nothing verified the model's «no adverse findings» is replaced. */
+export function withOwnerReasons(verdict: Verdict, rule: { reasons_en: string[]; reasons_ru: string[] }, anyVerified: boolean): Verdict {
+  if (!rule.reasons_en.length) return verdict;
+  return anyVerified
+    ? { ...verdict, reasons_en: [...rule.reasons_en, ...verdict.reasons_en], reasons_ru: [...rule.reasons_ru, ...verdict.reasons_ru], handoff: true }
+    : { ...verdict, reasons_en: [...rule.reasons_en, "No finding is confirmed by the inspector or photos yet."], reasons_ru: [...rule.reasons_ru, "Ни одна находка пока не подтверждена инспектором или фото."], handoff: true };
 }
 
 export async function verifyFinding(f: Finding, opts: { crop?: Buffer } = {}): Promise<{ result: VerifierResult; model: string }> {

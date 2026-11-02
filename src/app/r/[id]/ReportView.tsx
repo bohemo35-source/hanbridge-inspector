@@ -4,7 +4,7 @@
 // @created: 2026-10-29
 // @updated: 2026-11-02 claude-code — garage studio (one neutral 3D car, panels from this report, real photos) replaces the parametric map when the car has a photo index
 // @updated: 2026-11-02 claude-code — film v4 design: display/mono type, sodium palette, evidence chips, model badges in the agent trace, ?lang= on load
-// @updated: 2026-11-03 claude-code — «open the car's garage» only for catalog cars (uploads have no /garage page)
+// @updated: 2026-11-03 claude-code — «open the car's garage» only for catalog cars (uploads have no /garage page); «Not confirmed» without «by the verifier» (an owner-typed reading never reaches it)
 "use client";
 import dynamic from "next/dynamic";
 import { useState } from "react";
@@ -20,8 +20,8 @@ const GarageStudio = dynamic(() => import("@/components/garage-studio/GarageStud
 
 type Lang = "ru" | "en";
 const T = {
-  ru: { kicker: "Отчёт осмотра", confirmed: "Подтверждённые находки", unconfirmed: "Не подтверждены верификатором", trace: "Как работал агент", delivery: "Доставка", report: "Отчёт", chat: "Спросить эксперта", ask: "Спросить по этому отчёту…", send: "Отправить", listing: "Фото для объявления · номер скрыт", handoff: "Передано менеджеру", cost: "Растаможка и итоговая стоимость — расчёт менеджера.", conf: "уверенность", none: "Нет", verifier: "Проверка", steps: "шагов", garage: "Открыть гараж авто ↗", photo: "кадр", voice: "голос", gauge: "толщиномер", sheet: "аукционный лист", empty: "Задайте вопрос — ответ строится только по этому отчёту." },
-  en: { kicker: "Inspection report", confirmed: "Confirmed findings", unconfirmed: "Not confirmed by the verifier", trace: "How the agent worked", delivery: "Delivery", report: "Report", chat: "Ask the expert", ask: "Ask about this report…", send: "Send", listing: "Listing photo · plate hidden", handoff: "Handed off to a manager", cost: "Customs and landed cost — quoted by a manager.", conf: "confidence", none: "None", verifier: "Verifier", steps: "steps", garage: "Open the car's garage ↗", photo: "frame", voice: "voice", gauge: "gauge", sheet: "auction sheet", empty: "Ask a question — the answer is built from this report only." },
+  ru: { kicker: "Отчёт осмотра", confirmed: "Подтверждённые находки", unconfirmed: "Не подтверждены", trace: "Как работал агент", delivery: "Доставка", report: "Отчёт", chat: "Спросить эксперта", ask: "Спросить по этому отчёту…", send: "Отправить", listing: "Фото для объявления · номер скрыт", handoff: "Передано менеджеру", cost: "Растаможка и итоговая стоимость — расчёт менеджера.", conf: "уверенность", none: "Нет", verifier: "Проверка", steps: "шагов", garage: "Открыть гараж авто ↗", photo: "кадр", voice: "голос", gauge: "толщиномер", sheet: "аукционный лист", empty: "Задайте вопрос — ответ строится только по этому отчёту." },
+  en: { kicker: "Inspection report", confirmed: "Confirmed findings", unconfirmed: "Not confirmed", trace: "How the agent worked", delivery: "Delivery", report: "Report", chat: "Ask the expert", ask: "Ask about this report…", send: "Send", listing: "Listing photo · plate hidden", handoff: "Handed off to a manager", cost: "Customs and landed cost — quoted by a manager.", conf: "confidence", none: "None", verifier: "Verifier", steps: "steps", garage: "Open the car's garage ↗", photo: "frame", voice: "voice", gauge: "gauge", sheet: "auction sheet", empty: "Ask a question — the answer is built from this report only." },
 } as const;
 const KIND: Record<string, [string, string]> = { repaint: ["Repainted", "Перекрас"], putty: ["Filler under the paint", "Шпатлёвка под краской"], panel_replaced: ["Panel replaced", "Деталь заменена"], dent: ["Dent", "Вмятина"], scratch: ["Scratch", "Царапина"], rust: ["Rust", "Ржавчина"], mechanical: ["Mechanical", "Механика"], other: ["Note", "Замечание"] };
 /** which Meta model stands behind each agent tool (as in the agent's code) */
