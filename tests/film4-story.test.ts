@@ -27,7 +27,8 @@ describe("film v4 story", () => {
     expect(byId("busan").receipt).toBe("busan");
     expect(RECEIPT_BUSAN.map((l) => l.by)).toEqual(["invoice", "invoice", "invoice", "invoice"]);
     expect(text("busan")).toMatch(/one invoice/i);
-    expect(text("busan")).toMatch(/Nothing on top/);
+    expect(text("busan")).toMatch(/No extra or hidden payments/);
+    expect(text("busan", "ru")).toMatch(/скрытых платежей/);
     expect(text("busan", "ru")).toMatch(/один инвойс/);
   });
 

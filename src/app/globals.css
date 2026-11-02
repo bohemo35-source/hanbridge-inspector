@@ -8,8 +8,8 @@
   --ink-3: #15181b;
   --line: rgba(239, 233, 223, 0.12);
   --bone: #efe9df;
-  --bone-2: #c8c2b8;
-  --mist: #8d949b;
+  --bone-2: #d8d2c8;
+  --mist: #a8afb6; /* raised: small mono labels must read on dark film frames */
   --sodium: #eea65a;
   --sodium-hi: #ffc98a;
   --signal: #8cc7cf;

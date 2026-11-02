@@ -65,9 +65,9 @@ function Request({ t, lang }: { t: number; lang: Lang }) {
 
 function Pick({ t, lang }: { t: number; lang: Lang }) {
   const cars = [
-    { img: "/film3/s0-6.jpg", y: "2021", km: "58 000", p: "₩ 22 400 000", pos: "40% 50%" },
-    { img: "/film3/s10-4.jpg", y: "2022", km: "41 000", p: "₩ 24 900 000", pos: "60% 55%" },
-    { img: "/film3/s2-1.jpg", y: "2022", km: "36 000", p: "₩ 25 300 000", pos: "50% 50%" },
+    { img: "/film3/pick-list1.jpg", y: "2021", km: "58 000", p: "₩ 22 400 000", pos: "50% 60%" }, // Muse Image, listing-style
+    { img: "/cards/kia-sportage.jpg", y: "2022", km: "38 328", p: "₩ 24 900 000", pos: "50% 45%" }, // the real inspected car (plate covered)
+    { img: "/film3/pick-list2.jpg", y: "2022", km: "36 000", p: "₩ 25 300 000", pos: "50% 60%" }, // Muse Image, listing-style
   ];
   const chosen = t > 0.5;
   return (
@@ -110,7 +110,7 @@ function AgentReport({ t, lang, report }: { t: number; lang: Lang; report?: Repo
   const quotes = fnd.flatMap((f) => f.evidence).filter((e) => e.type === "transcript").length;
   const gauge = r?.paintReadings.length ?? 0;
   const rows: [string, string][] = [
-    ["SAM 3.1", tr(lang, "car, panels and plate segmented", "машина, детали и номер выделены")],
+    ["SAM 3.1", tr(lang, "car, panels and plate segmented", "авто, детали и номер выделены")],
     ["Muse Glimmer", tr(lang, "every photo indexed and described", "каждое фото описано и в индексе")],
     ["Muse Voice Transcribe", quotes ? tr(lang, `inspector's voice → ${quotes} quotes with timecodes`, `голос инспектора → цитат с таймкодами: ${quotes}`) : tr(lang, "inspector's voice → quotes with timecodes", "голос инспектора → цитаты с таймкодами")],
     ["Muse Spark", r ? tr(lang, `${r.trace.length} agent steps${gauge ? ` · gauge ${gauge} panels` : ""} · ${fnd.length} findings`, `${r.trace.length} шагов агента${gauge ? ` · толщиномер ${gauge} дет.` : ""} · находок: ${fnd.length}`) : tr(lang, "plans the inspection, calls the tools, writes the verdict", "ведёт осмотр, вызывает инструменты, пишет вердикт")],

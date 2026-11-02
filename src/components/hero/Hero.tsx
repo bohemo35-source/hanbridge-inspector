@@ -30,9 +30,9 @@ const T = {
   },
   ru: {
     kicker: "HANBRIDGE INSPECTOR · АГЕНТ НА МОДЕЛЯХ META",
-    h1: "Б/у машина в Корее, осмотренная ИИ-агентом. У каждой находки есть доказательство.",
+    h1: "Авто с пробегом в Корее, осмотренное ИИ-агентом. У каждой находки есть доказательство.",
     sub: "Агент читает фото обхода, видео толщиномера, голосовую заметку инспектора и диагностику, перепроверяет каждую находку отдельным проходом и выдаёт BUY / NEGOTIATE / WALK AWAY — со ссылкой, где покупатель кликает до кадра или цитаты.",
-    who: "Для экспортёров и дилеров: одна проверяемая ссылка на машину вместо 40 фото в чате.",
+    who: "Для экспортёров и дилеров: одна проверяемая ссылка на авто вместо 40 фото в чате.",
     open: "Открыть отчёт",
     garage: "3D-гараж",
     live: "Смотреть агента вживую (~1,5 мин)",
@@ -41,14 +41,14 @@ const T = {
     models: "Кто что делает",
     film: "Смотреть фильм ↓",
     noReport: "Отчёта ещё нет — запустите агента",
-    own: "Проверить свою машину →",
-    price: "Как это оплачивается: если мы подбираем машину для вас, первый осмотр бесплатно. Каждый следующий — $100. Обычно хватает одного: до выезда инспектора мы проверяем историю машины.",
+    own: "Проверить своё авто →",
+    price: "Как это оплачивается: если мы подбираем авто для вас, первый осмотр бесплатно. Каждый следующий — $100. Обычно хватает одного: до выезда инспектора мы проверяем историю авто.",
   },
 } as const;
 
 const MODELS: { name: string; role_en: string; role_ru: string }[] = [
   { name: "Muse Spark", role_en: "plans the inspection, calls tools, writes the verdict", role_ru: "ведёт осмотр, вызывает инструменты, пишет вердикт" },
-  { name: "SAM 3.1", role_en: "segments the car, panels and plates", role_ru: "выделяет машину, панели и номера" },
+  { name: "SAM 3.1", role_en: "segments the car, panels and plates", role_ru: "выделяет авто, панели и номера" },
   { name: "Muse Voice Transcribe", role_en: "turns the inspector's voice into findings", role_ru: "превращает голос инспектора в находки" },
   { name: "Muse Image", role_en: "clean listing photo, plate hidden", role_ru: "чистое фото для объявления без номера" },
   { name: "Muse Glimmer", role_en: "open-weight photo triage on our GPU", role_ru: "open-weight разбор фото на нашем GPU" },
@@ -104,9 +104,9 @@ export default function Hero({ reports, lang }: { reports: Report[]; lang: Lang 
           {cars.map(({ car, report }) => (
             <article key={car.carId} className="group flex flex-col overflow-hidden rounded-[6px] border border-bone/10 bg-ink-2 transition-colors hover:border-sodium/50">
               <div className="relative aspect-[16/10] overflow-hidden bg-ink-3">
-                {report?.listingUrl
-                  ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={report.listingUrl} alt={`${car.make} ${car.model}`} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]" />
-                  : null}
+                {/* clean card: the original inspection photo with the plate covered (public/cards, scripts/film4/make-cards.mts) */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/cards/${car.carId}.jpg`} alt={`${car.make} ${car.model}`} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]" />
                 {report && <span className="absolute left-3 top-3 border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[.18em]" style={{ color: verdictColor(report.verdict.decision), borderColor: verdictColor(report.verdict.decision), background: "rgba(6,7,8,.72)" }}>{report.verdict.decision.replace("_", " ")}</span>}
               </div>
               <div className="flex flex-1 flex-col gap-2 p-4">

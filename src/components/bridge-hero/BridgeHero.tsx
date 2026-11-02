@@ -23,9 +23,9 @@ function groupsFor(lang: Lang, reportHref: string): Group[] {
   return [
     { name: ru ? "Осмотр" : "Inspect", note: ru ? "живой прогон агента" : "live agent run", href: `/inspect/kia-sportage${q}` },
     { name: ru ? "Доказательства" : "Evidence", note: ru ? "отчёт с доказательствами" : "report with proof", href: `${reportHref}${q}` },
-    { name: ru ? "Гараж" : "Garage", note: ru ? "3D-гараж машины" : "3D garage of the car", href: `/garage/kia-sportage${q}` },
+    { name: ru ? "Гараж" : "Garage", note: ru ? "3D-гараж авто" : "3D garage of the car", href: `/garage/kia-sportage${q}` },
     { name: ru ? "Путь" : "Journey", note: ru ? "фильм о рейсе" : "the film of the trip", href: `/${q}#journey` },
-    { name: ru ? "Своя машина" : "Your car", note: ru ? "загрузить фото" : "upload your photos", href: `/inspect/new${q}` },
+    { name: ru ? "Своё авто" : "Your car", note: ru ? "загрузить фото" : "upload your photos", href: `/inspect/new${q}` },
     { name: ru ? "Честный чек" : "Open receipt", note: ru ? "один инвойс, ноль комиссии" : "one invoice, zero commission", href: `/${q}#journey` },
   ];
 }
@@ -136,7 +136,7 @@ export default function BridgeHero({ lang, reportHref }: { lang: Lang; reportHre
                 className={`absolute left-0 top-0 whitespace-nowrap border bg-ink/80 px-2 py-1.5 md:px-3 md:py-2 backdrop-blur-sm transition-colors ${exploded ? "pointer-events-auto" : "pointer-events-none"} ${hover === i ? "border-sodium text-sodium-hi" : "border-bone/25 text-bone hover:border-sodium"}`}
               >
                 <span className="block font-mono text-[11px] uppercase tracking-[.16em]">{g.name}</span>
-                <span className="hidden font-mono text-[9.5px] uppercase tracking-[.12em] text-mist md:block">{g.note}</span>
+                <span className="hidden font-mono text-[10.5px] uppercase tracking-[.12em] text-bone-2 md:block">{g.note}</span>
               </Link>
             ))}
           </div>
@@ -147,11 +147,11 @@ export default function BridgeHero({ lang, reportHref }: { lang: Lang; reportHre
           >
             {exploded ? t.assemble : t.explode}
           </button>
-          <p className="pointer-events-none absolute bottom-5 right-4 hidden md:block z-[3] max-w-[260px] text-right font-mono text-[9.5px] uppercase tracking-[.14em] text-mist">{t.hint}</p>
+          <p className="pointer-events-none absolute bottom-5 right-4 hidden md:block z-[3] max-w-[280px] text-right font-mono text-[11px] uppercase tracking-[.14em] text-bone-2">{t.hint}</p>
         </>
       )}
       {mode === "static" && (
-        <nav className="absolute bottom-3 left-0 right-0 z-[2] flex flex-wrap justify-center gap-x-4 gap-y-2 px-4 font-mono text-[10px] uppercase tracking-[.16em] text-mist">
+        <nav className="absolute bottom-3 left-0 right-0 z-[2] flex flex-wrap justify-center gap-x-4 gap-y-2 px-4 font-mono text-[11px] uppercase tracking-[.16em] text-bone-2">
           {groups.map((g) => (
             <Link key={g.href + g.name} href={g.href} className="hover:text-bone">{g.name}</Link>
           ))}

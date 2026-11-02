@@ -1,0 +1,26 @@
+{
+  "gauge": {
+    "model": "muse-image-1.0",
+    "prompt": "cinematic close-up film still, a gloved hand in black nitrile glove pressing a small digital paint thickness gauge flat against the middle of the front door of a white SUV, the gauge screen glowing warm amber, raindrops on glossy white paint, door handle and side window edge visible, no headlights in frame, inspection garage at night with teal fluorescent light, shallow depth of field, photorealistic, 16:9, no text, no logos",
+    "ms": 21262,
+    "ok": true
+  },
+  "list1": {
+    "model": "muse-image-1.0",
+    "prompt": "used car listing photo taken by a dealer, a white 2021 Kia Sportage SUV (fifth generation, boomerang LED daytime running lights, wide black grille) parked in a bright indoor underground parking lot in Seoul, front three-quarter view from the left at eye level, even fluorescent light, clean concrete floor, licence plate area covered by a plain dark rectangle, realistic smartphone photo, 4:3, no text, no watermark",
+    "ms": 23288,
+    "ok": true
+  },
+  "list2": {
+    "model": "muse-image-1.0",
+    "prompt": "used car listing photo, a white 2022 Kia Sportage SUV (fifth generation, boomerang LED daytime running lights) parked outdoors on a Korean used car dealer lot on an overcast day, other cars in the background, front three-quarter view from the right, licence plate area covered by a plain dark rectangle, realistic smartphone photo, 4:3, no text, no watermark",
+    "ms": 29418,
+    "ok": true
+  },
+  "vlad": {
+    "model": "muse-image-1.0",
+    "prompt": "cinematic aerial drone photograph at misty dawn, a large dark car carrier ro-ro ship sailing into Vladivostok bay towards a long white cable-stayed bridge with two tall pylons in fog, hills and city lights on the shore, the ship's stern ramp fully closed and raised flush against the hull, calm water with soft reflections, pastel blue and pink sky, photorealistic, 16:9, no text",
+    "ms": 30232,
+    "ok": true
+  }
+}
