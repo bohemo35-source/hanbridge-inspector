@@ -13,12 +13,13 @@ import { blobUrl, hasMedia } from "@/lib/agent/media";
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 export const runtime = "nodejs";
 
-export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ReportPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { id } = await params;
+  const lang = (await searchParams).lang === "en" ? "en" : (await searchParams).lang === "ru" ? "ru" : undefined;
   const report = await getReportAsync(id);
   if (!report) notFound();
   const carId = report.carId;
   const garage = carId && (hasMedia(carId, "out", "photo-index.json") || blobUrl(carId, "out", "photo-index.json"))
     ? await garageData(carId, report, `${report.vehicle.year ?? ""} ${report.vehicle.make} ${report.vehicle.model}`.trim()).catch(() => undefined) : undefined;
-  return <ReportView report={report} garage={garage} />;
+  return <ReportView report={report} garage={garage} initialLang={lang} />;
 }
