@@ -1,0 +1,1378 @@
+{
+ "kia-sportage": {
+  "facts": [
+   {
+    "ru": "Модель",
+    "en": "Model",
+    "value_ru": "KIA SPORTAGE",
+    "value_en": "KIA SPORTAGE"
+   },
+   {
+    "ru": "Год выпуска",
+    "en": "Year",
+    "value_ru": "2022 года 9 месяца",
+    "value_en": "September 2022"
+   },
+   {
+    "ru": "Пробег",
+    "en": "Mileage",
+    "value_ru": "38 328 км",
+    "value_en": "38,328 km"
+   }
+  ],
+  "sections": [
+   {
+    "ru": "Кузов",
+    "en": "Body",
+    "state": "issue",
+    "items": [
+     {
+      "ru": "водительская дверь вторичный окрас и маленькое пятно ремонтных работ, переднее левое крыло замена и вторичный окрас, левая фара замена. Деформаций нет",
+      "en": "Driver door repainted with a small repair spot, front left fender replaced and repainted, left headlight replaced. No deformations",
+      "panels": [
+       "front_left_door",
+       "front_left_fender"
+      ]
+     },
+     {
+      "ru": "Повреждений нет",
+      "en": "No damage",
+      "panels": []
+     },
+     {
+      "ru": "Имеется несколько мелких сколов",
+      "en": "Several small chips present",
+      "panels": []
+     },
+     {
+      "ru": "Состояние тормозных дисков",
+      "en": "Brake disc condition",
+      "panels": []
+     },
+     {
+      "ru": "Диски в хорошем состоянии, не критические притертости имеются",
+      "en": "Discs in good condition, with non-critical scuffs",
+      "panels": []
+     },
+     {
+      "ru": "Без реставрации и деформаций",
+      "en": "No restoration or deformations",
+      "panels": []
+     },
+     {
+      "ru": "Резина свежая",
+      "en": "Tires are fresh",
+      "panels": []
+     },
+     {
+      "ru": "Маркировка стекол +",
+      "en": "Glass markings OK",
+      "panels": []
+     },
+     {
+      "ru": "Дата фар +",
+      "en": "Headlight dates OK",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Моторный отсек и коробка",
+    "en": "Engine bay and transmission",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Чистый, потеков нет",
+      "en": "Clean, no leaks",
+      "panels": []
+     },
+     {
+      "ru": "Двигатель работает исправно, не троит",
+      "en": "Engine runs properly, no misfires",
+      "panels": []
+     },
+     {
+      "ru": "Посторонних звуков, свистов нет",
+      "en": "No extraneous noises or whistling",
+      "panels": []
+     },
+     {
+      "ru": "Коробка не пинает",
+      "en": "Transmission does not jerk",
+      "panels": []
+     },
+     {
+      "ru": "Патрубки свежие",
+      "en": "Hoses in fresh condition",
+      "panels": []
+     },
+     {
+      "ru": "Уровень жидкостей в норме",
+      "en": "Fluid levels normal",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Багажный отсек",
+    "en": "Trunk",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Состояние отличное",
+      "en": "Excellent condition",
+      "panels": []
+     },
+     {
+      "ru": "Пластик, материал в отличном состоянии",
+      "en": "Plastic and trim in excellent condition",
+      "panels": []
+     },
+     {
+      "ru": "Погрузочная зона без повреждений",
+      "en": "Loading area undamaged",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Салон и интерьер",
+    "en": "Cabin and interior",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Отличное состояние",
+      "en": "Excellent condition",
+      "panels": []
+     },
+     {
+      "ru": "Акустика: штатная",
+      "en": "Audio system: stock",
+      "panels": []
+     },
+     {
+      "ru": "Кожа пластик в отличном состоянии",
+      "en": "Leather and plastic in excellent condition",
+      "panels": []
+     },
+     {
+      "ru": "Посторонних запахов нет",
+      "en": "No strange odors",
+      "panels": []
+     },
+     {
+      "ru": "Прожженных участков нет",
+      "en": "No burn marks",
+      "panels": []
+     },
+     {
+      "ru": "Салон ухоженный",
+      "en": "Well-kept interior",
+      "panels": []
+     },
+     {
+      "ru": "Дверные карты в отличном состоянии",
+      "en": "Door panels in excellent condition",
+      "panels": []
+     },
+     {
+      "ru": "Дверные проёмы без повреждений и царапин",
+      "en": "Door jambs without damage or scratches",
+      "panels": []
+     },
+     {
+      "ru": "Сиденья без просадок",
+      "en": "Seats without sagging",
+      "panels": []
+     },
+     {
+      "ru": "Целостность кожи без повреждений",
+      "en": "Leather intact, undamaged",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Функции интерьера",
+    "en": "Interior functions",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Стеклоподъемники исправны",
+      "en": "Power windows work",
+      "panels": []
+     },
+     {
+      "ru": "Оптика исправна",
+      "en": "Lights work",
+      "panels": []
+     },
+     {
+      "ru": "Электроника исправна",
+      "en": "Electronics work",
+      "panels": []
+     },
+     {
+      "ru": "Камера 360 исправна",
+      "en": "360 camera works",
+      "panels": []
+     },
+     {
+      "ru": "Парктронники работают исправно",
+      "en": "Parking sensors work properly",
+      "panels": []
+     },
+     {
+      "ru": "Руль не закусывает, люфта нет",
+      "en": "Steering does not stick, no play",
+      "panels": []
+     }
+    ]
+   }
+  ],
+  "source": "inspector_report_ru.txt",
+  "model": "muse-spark-1.3",
+  "ms": 20082
+ },
+ "mini-cooper-s": {
+  "facts": [
+   {
+    "ru": "Модель",
+    "en": "Model",
+    "value_ru": "mini cooper",
+    "value_en": "mini cooper"
+   },
+   {
+    "ru": "Дата производства",
+    "en": "Year",
+    "value_ru": "2018",
+    "value_en": "2018"
+   },
+   {
+    "ru": "Двигатель",
+    "en": "Engine",
+    "value_ru": "1.5 gasoline",
+    "value_en": "1.5 gasoline"
+   },
+   {
+    "ru": "Привод",
+    "en": "Drive",
+    "value_ru": "fwd",
+    "value_en": "fwd"
+   },
+   {
+    "ru": "Комплектация",
+    "en": "Trim",
+    "value_ru": "high",
+    "value_en": "high"
+   },
+   {
+    "ru": "Пробег",
+    "en": "Mileage",
+    "value_ru": "25 тыс. км",
+    "value_en": "25k km"
+   }
+  ],
+  "sections": [
+   {
+    "ru": "Экстерьер",
+    "en": "Exterior",
+    "state": "issue",
+    "items": [
+     {
+      "ru": "Лакокрасочное покрытие: косметический окрас капота с небольшим участком ремонтной работы",
+      "en": "Paintwork: cosmetic paint on the hood with a small repair area",
+      "panels": [
+       "hood"
+      ]
+     },
+     {
+      "ru": "Замены: отсутствуют",
+      "en": "Replacements: none",
+      "panels": []
+     },
+     {
+      "ru": "Кузов: минимальные следы эксплуатации",
+      "en": "Body: minimal signs of use",
+      "panels": []
+     },
+     {
+      "ru": "Лобовое стекло: без повреждений",
+      "en": "Windshield: no damage",
+      "panels": []
+     },
+     {
+      "ru": "Колесные диски: без повреждений",
+      "en": "Wheels: no damage",
+      "panels": []
+     },
+     {
+      "ru": "Резина передняя ось: hankook",
+      "en": "Tires front axle: Hankook",
+      "panels": []
+     },
+     {
+      "ru": "Резина задняя ось: hankook",
+      "en": "Tires rear axle: Hankook",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Интерьер",
+    "en": "Interior",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Посторонние запахи и прожженые участки: отсутствуют",
+      "en": "Foreign odors and burn marks: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по рулевому колесу: отсутствуют",
+      "en": "Steering wheel damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по торпедке: отсутствуют",
+      "en": "Dashboard damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по потолку: отсутствуют",
+      "en": "Headliner damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по коже: отсутствуют",
+      "en": "Leather damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по пластику: отсутствуют",
+      "en": "Plastic damage: none",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Функции интерьера",
+    "en": "Interior functions",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Электроника: исправна",
+      "en": "Electronics: working",
+      "panels": []
+     },
+     {
+      "ru": "Стеклоподъемники: исправны",
+      "en": "Power windows: working",
+      "panels": []
+     },
+     {
+      "ru": "Парктроники: исправны",
+      "en": "Parking sensors: working",
+      "panels": []
+     },
+     {
+      "ru": "Климат контроль: исправен",
+      "en": "Climate control: working",
+      "panels": []
+     },
+     {
+      "ru": "Оптика: исправна",
+      "en": "Lights: working",
+      "panels": []
+     },
+     {
+      "ru": "Аудио система: исправна",
+      "en": "Audio system: working",
+      "panels": []
+     },
+     {
+      "ru": "Камера: исправна",
+      "en": "Camera: working",
+      "panels": []
+     },
+     {
+      "ru": "Проекция: исправна",
+      "en": "Projection: working",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Багажное пространство",
+    "en": "Trunk space",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Повреждения по пластику: отсутствуют",
+      "en": "Plastic damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по материалу: отсутствуют",
+      "en": "Trim material damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по погрузочной зоне: отсутствуют",
+      "en": "Loading area damage: none",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Моторное пространство и трансмиссия",
+    "en": "Engine bay and transmission",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Проверка на подтеки: отсутствуют, без запотеваний",
+      "en": "Leak check: none, no misting",
+      "panels": []
+     },
+     {
+      "ru": "Работа двигателя: исправна, без посторонних звуков",
+      "en": "Engine operation: normal, no unusual noises",
+      "panels": []
+     },
+     {
+      "ru": "Трансмиссия: исправна, без перебоев",
+      "en": "Transmission: normal, no interruptions",
+      "panels": []
+     },
+     {
+      "ru": "Уровни жидкостей: охлаждающая жидкость в норме",
+      "en": "Fluid levels: coolant normal",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Заключение",
+    "en": "Conclusion",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Данный автомобиль находится в отличном состоянии, что подтверждается тщательной проверкой всех ключевых узлов и агрегатов",
+      "en": "This vehicle is in excellent condition, as confirmed by thorough inspection of all key components and assemblies",
+      "panels": []
+     }
+    ]
+   }
+  ],
+  "source": "inspector_report_ru.txt",
+  "model": "muse-spark-1.3",
+  "ms": 33825
+ },
+ "bmw-x3-8278": {
+  "facts": [
+   {
+    "ru": "Модель",
+    "en": "Model",
+    "value_ru": "bmw g01 x3 20i",
+    "value_en": "bmw g01 x3 20i"
+   },
+   {
+    "ru": "Год",
+    "en": "Year",
+    "value_ru": "2023/08",
+    "value_en": "2023/08"
+   },
+   {
+    "ru": "Двигатель",
+    "en": "Engine",
+    "value_ru": "2.0 gasoline",
+    "value_en": "2.0 gasoline"
+   },
+   {
+    "ru": "Привод",
+    "en": "Drive",
+    "value_ru": "xdrive",
+    "value_en": "xdrive"
+   },
+   {
+    "ru": "Комплектация",
+    "en": "Trim",
+    "value_ru": "m sport",
+    "value_en": "m sport"
+   },
+   {
+    "ru": "Пробег",
+    "en": "Mileage",
+    "value_ru": "28 тыс. км",
+    "value_en": "28,000 km"
+   }
+  ],
+  "sections": [
+   {
+    "ru": "Экстерьер",
+    "en": "Exterior",
+    "state": "issue",
+    "items": [
+     {
+      "ru": "Лакокрасочное покрытие: заводское",
+      "en": "Paintwork: factory original",
+      "panels": []
+     },
+     {
+      "ru": "Замены: задняя правая дверь",
+      "en": "Replacements: rear right door",
+      "panels": [
+       "rear_right_door"
+      ]
+     },
+     {
+      "ru": "Кузов: притертость правого порога",
+      "en": "Body: scuff on right sill",
+      "panels": []
+     },
+     {
+      "ru": "Лобовое стекло: без повреждений",
+      "en": "Windshield: no damage",
+      "panels": []
+     },
+     {
+      "ru": "Колесные диски: без повреждений",
+      "en": "Wheels: no damage",
+      "panels": []
+     },
+     {
+      "ru": "Резина передняя ось: hankook",
+      "en": "Tires front axle: Hankook",
+      "panels": []
+     },
+     {
+      "ru": "Резина задняя ось: hankook",
+      "en": "Tires rear axle: Hankook",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Интерьер",
+    "en": "Interior",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Посторонние запахи и прожженые участки: отсутствуют",
+      "en": "Foreign smells and burn marks: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по рулевому колесу: отсутствуют",
+      "en": "Steering wheel damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по торпедке: отсутствуют",
+      "en": "Dashboard damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по потолку: отсутствуют",
+      "en": "Headliner damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по коже: отсутствуют",
+      "en": "Leather damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по пластику: отсутствуют",
+      "en": "Plastic damage: none",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Функции интерьера",
+    "en": "Interior functions",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Электроника: исправна",
+      "en": "Electronics: working",
+      "panels": []
+     },
+     {
+      "ru": "Стеклоподъемники: исправны",
+      "en": "Power windows: working",
+      "panels": []
+     },
+     {
+      "ru": "Парктроники: исправны",
+      "en": "Parking sensors: working",
+      "panels": []
+     },
+     {
+      "ru": "Климат контроль: исправен",
+      "en": "Climate control: working",
+      "panels": []
+     },
+     {
+      "ru": "Оптика: исправна",
+      "en": "Lights: working",
+      "panels": []
+     },
+     {
+      "ru": "Аудио система: исправна",
+      "en": "Audio system: working",
+      "panels": []
+     },
+     {
+      "ru": "Камера 360: исправна",
+      "en": "360 camera: working",
+      "panels": []
+     },
+     {
+      "ru": "Проекция на лобовое: исправна",
+      "en": "Head-up display: working",
+      "panels": []
+     },
+     {
+      "ru": "Панорамный люк: исправен",
+      "en": "Panoramic sunroof: working",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Багажное пространство",
+    "en": "Cargo area",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Повреждения по пластику: отсутствуют",
+      "en": "Plastic damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по материалу: отсутствуют",
+      "en": "Trim material damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по погрузочной зоне: отсутствуют",
+      "en": "Loading area damage: none",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Моторное пространство и трансмиссия",
+    "en": "Engine bay and transmission",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Проверка на подтеки: отсутствуют, без запотеваний",
+      "en": "Leak check: none, no misting",
+      "panels": []
+     },
+     {
+      "ru": "Работа двигателя: исправна, без посторонних звуков",
+      "en": "Engine operation: normal, no abnormal noises",
+      "panels": []
+     },
+     {
+      "ru": "Трансмиссия: исправна, без перебоев",
+      "en": "Transmission: normal, no interruptions",
+      "panels": []
+     },
+     {
+      "ru": "Уровни жидкостей: охлаждающая жидкость в норме",
+      "en": "Fluid levels: coolant normal",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Заключение",
+    "en": "Conclusion",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Данный автомобиль находится в отличном состоянии, что подтверждается тщательной проверкой всех ключевых узлов и агрегатов",
+      "en": "This vehicle is in excellent condition, as confirmed by a thorough inspection of all key components and assemblies",
+      "panels": []
+     }
+    ]
+   }
+  ],
+  "source": "inspector_report_ru.txt",
+  "model": "muse-spark-1.3",
+  "ms": 21472
+ },
+ "bmw-530i-8053": {
+  "facts": [
+   {
+    "ru": "Модель",
+    "en": "Model",
+    "value_ru": "bmw g60 530i",
+    "value_en": "bmw g60 530i"
+   },
+   {
+    "ru": "Год",
+    "en": "Year",
+    "value_ru": "2023/09",
+    "value_en": "2023/09"
+   },
+   {
+    "ru": "Двигатель",
+    "en": "Engine",
+    "value_ru": "2.0 gasoline",
+    "value_en": "2.0 gasoline"
+   },
+   {
+    "ru": "Привод",
+    "en": "Drive",
+    "value_ru": "xdrive",
+    "value_en": "xdrive"
+   },
+   {
+    "ru": "Комплектация",
+    "en": "Trim",
+    "value_ru": "m sport",
+    "value_en": "m sport"
+   },
+   {
+    "ru": "Пробег",
+    "en": "Mileage",
+    "value_ru": "21 тыс. км",
+    "value_en": "21,000 km"
+   }
+  ],
+  "sections": [
+   {
+    "ru": "Экстерьер",
+    "en": "Exterior",
+    "state": "note",
+    "items": [
+     {
+      "ru": "Лакокрасочное покрытие: заводское",
+      "en": "Paintwork: factory original",
+      "panels": []
+     },
+     {
+      "ru": "Замены: отсутствуют",
+      "en": "Replacements: none",
+      "panels": []
+     },
+     {
+      "ru": "Кузов: незначительные следы эксплуатации",
+      "en": "Body: minor signs of use",
+      "panels": []
+     },
+     {
+      "ru": "Лобовое стекло: без повреждений",
+      "en": "Windshield: no damage",
+      "panels": []
+     },
+     {
+      "ru": "Колесные диски: без повреждений",
+      "en": "Wheels: no damage",
+      "panels": []
+     },
+     {
+      "ru": "Резина передняя ось: michelin",
+      "en": "Front tires: michelin",
+      "panels": []
+     },
+     {
+      "ru": "Резина задняя ось: michelin",
+      "en": "Rear tires: michelin",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Интерьер",
+    "en": "Interior",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Посторонние запахи и прожженные участки: отсутствуют",
+      "en": "Foreign odors and burn marks: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по рулевому колесу: отсутствуют",
+      "en": "Steering wheel damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по торпедке: отсутствуют",
+      "en": "Dashboard damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по потолку: отсутствуют",
+      "en": "Headliner damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по коже: отсутствуют",
+      "en": "Leather damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по пластику: отсутствуют",
+      "en": "Plastic trim damage: none",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Функции интерьера",
+    "en": "Interior functions",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Электроника: исправна",
+      "en": "Electronics: working",
+      "panels": []
+     },
+     {
+      "ru": "Стеклоподъемники: исправны",
+      "en": "Power windows: working",
+      "panels": []
+     },
+     {
+      "ru": "Парктроники: исправны",
+      "en": "Parking sensors: working",
+      "panels": []
+     },
+     {
+      "ru": "Климат контроль: исправен",
+      "en": "Climate control: working",
+      "panels": []
+     },
+     {
+      "ru": "Оптика: исправна",
+      "en": "Lights: working",
+      "panels": []
+     },
+     {
+      "ru": "Аудио система: исправна",
+      "en": "Audio system: working",
+      "panels": []
+     },
+     {
+      "ru": "Камера 360: исправна",
+      "en": "360 camera: working",
+      "panels": []
+     },
+     {
+      "ru": "Проекция на лобовое: исправна",
+      "en": "Head-up display: working",
+      "panels": []
+     },
+     {
+      "ru": "Панорама: исправна",
+      "en": "Panoramic roof: working",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Багажное пространство",
+    "en": "Trunk",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Повреждения по пластику: отсутствуют",
+      "en": "Plastic trim damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по материалу: отсутствуют",
+      "en": "Upholstery damage: none",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по погрузочной зоне: отсутствуют",
+      "en": "Loading area damage: none",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Моторное пространство и трансмиссия",
+    "en": "Engine bay and transmission",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Проверка на подтеки: отсутствуют, без запотеваний",
+      "en": "Leak check: none, no misting",
+      "panels": []
+     },
+     {
+      "ru": "Работа двигателя: исправна, без посторонних звуков",
+      "en": "Engine operation: normal, no abnormal noises",
+      "panels": []
+     },
+     {
+      "ru": "Трансмиссия: исправна, без перебоев",
+      "en": "Transmission: normal, no interruptions",
+      "panels": []
+     },
+     {
+      "ru": "Уровни жидкостей: охлаждающая жидкость в норме",
+      "en": "Fluid levels: coolant level normal",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Заключение",
+    "en": "Conclusion",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Данный автомобиль находится в отличном состоянии, что подтверждается тщательной проверкой всех ключевых узлов и агрегатов",
+      "en": "This vehicle is in excellent condition, as confirmed by thorough inspection of all key components and assemblies",
+      "panels": []
+     }
+    ]
+   }
+  ],
+  "source": "inspector_report_ru.txt",
+  "model": "muse-spark-1.3",
+  "ms": 19149
+ },
+ "audi-a5-2005": {
+  "facts": [
+   {
+    "ru": "Модель",
+    "en": "Model",
+    "value_ru": "Audi A5 40TFSI",
+    "value_en": "Audi A5 40TFSI"
+   },
+   {
+    "ru": "Комплектация",
+    "en": "Trim",
+    "value_ru": "S line black edition",
+    "value_en": "S line black edition"
+   },
+   {
+    "ru": "Двигатель",
+    "en": "Engine",
+    "value_ru": "2.0 gasoline",
+    "value_en": "2.0 gasoline"
+   },
+   {
+    "ru": "Привод",
+    "en": "Drive",
+    "value_ru": "Quattro",
+    "value_en": "Quattro"
+   },
+   {
+    "ru": "Год",
+    "en": "Year",
+    "value_ru": "2025.06",
+    "value_en": "2025.06"
+   },
+   {
+    "ru": "Пробег",
+    "en": "Mileage",
+    "value_ru": "14.ххх км",
+    "value_en": "14.xxx km"
+   }
+  ],
+  "sections": [
+   {
+    "ru": "Кузов",
+    "en": "Body",
+    "state": "issue",
+    "items": [
+     {
+      "ru": "Проверка на окрасы: без окрасов кузовных элементов",
+      "en": "Paint check: no repainted body panels",
+      "panels": []
+     },
+     {
+      "ru": "Освежался задний бампер",
+      "en": "Rear bumper refreshed",
+      "panels": [
+       "rear_bumper"
+      ]
+     },
+     {
+      "ru": "Замены: без замен",
+      "en": "Replacements: none",
+      "panels": []
+     },
+     {
+      "ru": "Тормозные диски без дефектов",
+      "en": "Brake discs with no defects",
+      "panels": []
+     },
+     {
+      "ru": "Диски не подлежали реставрации, без деформаций",
+      "en": "Wheels never restored, with no deformation",
+      "panels": []
+     },
+     {
+      "ru": "Лобовое стекло без трещин и паутин",
+      "en": "Windshield with no cracks or spider cracks",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Моторный отсек и трансмиссия",
+    "en": "Engine bay and transmission",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Проверка на потеки: потеки отсутствуют",
+      "en": "Leak check: no leaks",
+      "panels": []
+     },
+     {
+      "ru": "Двигатель функционирует исправно, без перебоев и посторонних звуков",
+      "en": "Engine runs properly, with no misfires or unusual noises",
+      "panels": []
+     },
+     {
+      "ru": "Трансмиссия полностью исправна",
+      "en": "Transmission fully operational",
+      "panels": []
+     },
+     {
+      "ru": "Уровень жидкостей в пределах нормы",
+      "en": "Fluid levels within normal range",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Багажный отсек",
+    "en": "Luggage compartment",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Состояние без повреждений",
+      "en": "Condition with no damage",
+      "panels": []
+     },
+     {
+      "ru": "Отделочный материал без повреждений",
+      "en": "Trim material with no damage",
+      "panels": []
+     },
+     {
+      "ru": "Погрузочная зона без трещин, подготовлена для использования",
+      "en": "Loading area with no cracks, ready for use",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Салон и интерьер",
+    "en": "Interior",
+    "state": "note",
+    "items": [
+     {
+      "ru": "Общее состояние без повреждений, незначительные следы эксплуатации",
+      "en": "General condition with no damage, minor signs of use",
+      "panels": []
+     },
+     {
+      "ru": "Аудиосистема исправна, обеспечивает качественный звук",
+      "en": "Audio system works, provides quality sound",
+      "panels": []
+     },
+     {
+      "ru": "Отделка без прожженных участков",
+      "en": "Trim with no burn marks",
+      "panels": []
+     },
+     {
+      "ru": "Дверные карты без трещин и разломов",
+      "en": "Door panels with no cracks or breaks",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Функции интерьера",
+    "en": "Interior functions",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Стеклоподъемники исправны и функционируют без сбоев",
+      "en": "Power windows work properly without issues",
+      "panels": []
+     },
+     {
+      "ru": "Оптика: элементы освещения работают корректно",
+      "en": "Lights: lighting elements work correctly",
+      "panels": []
+     },
+     {
+      "ru": "Электроника полностью исправна",
+      "en": "Electronics fully operational",
+      "panels": []
+     },
+     {
+      "ru": "Камера 360 функционирует исправно",
+      "en": "360 camera works properly",
+      "panels": []
+     },
+     {
+      "ru": "Парктронники функционируют исправно, без задержек",
+      "en": "Parking sensors work properly without delay",
+      "panels": []
+     },
+     {
+      "ru": "Кондиционер работает эффективно, охлаждает в пределах нормы",
+      "en": "Air conditioner works efficiently, cools within normal range",
+      "panels": []
+     }
+    ]
+   }
+  ],
+  "source": "inspector_report_ru.txt",
+  "model": "muse-spark-1.3",
+  "ms": 17575
+ },
+ "kia-morning": {
+  "facts": [
+   {
+    "ru": "Модель",
+    "en": "Model",
+    "value_ru": "Kia morning urban",
+    "value_en": "Kia morning urban"
+   },
+   {
+    "ru": "Год",
+    "en": "Year",
+    "value_ru": "2022.06",
+    "value_en": "2022.06"
+   },
+   {
+    "ru": "Двигатель",
+    "en": "Engine",
+    "value_ru": "1.0 gasoline",
+    "value_en": "1.0 gasoline"
+   },
+   {
+    "ru": "Привод",
+    "en": "Drive",
+    "value_ru": "передний",
+    "value_en": "Front-wheel drive"
+   },
+   {
+    "ru": "Комплектация",
+    "en": "Trim",
+    "value_ru": "prestige",
+    "value_en": "Prestige"
+   },
+   {
+    "ru": "Пробег",
+    "en": "Mileage",
+    "value_ru": "29~ тыс. км",
+    "value_en": "~29,000 km"
+   }
+  ],
+  "sections": [
+   {
+    "ru": "Экстерьер",
+    "en": "Exterior",
+    "state": "issue",
+    "items": [
+     {
+      "ru": "Окрас заднего правого крыла со стойкой (окрасы бамперов)",
+      "en": "Rear right fender with pillar repainted (bumpers repainted)",
+      "panels": [
+       "rear_right_fender"
+      ]
+     },
+     {
+      "ru": "Замены отсутствуют",
+      "en": "No replacements",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по кузову отсутствуют",
+      "en": "No body damage",
+      "panels": []
+     },
+     {
+      "ru": "Лобовое стекло без трещин и паутин",
+      "en": "Windshield with no cracks or spider cracks",
+      "panels": []
+     },
+     {
+      "ru": "На колесных дисках есть притертости",
+      "en": "Wheels have scuffs",
+      "panels": []
+     },
+     {
+      "ru": "Резина передняя ось: Nexen",
+      "en": "Front axle tires: Nexen",
+      "panels": []
+     },
+     {
+      "ru": "Резина задняя ось: Kumho",
+      "en": "Rear axle tires: Kumho",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Интерьер",
+    "en": "Interior",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Посторонние запахи и прожженные участки отсутствуют",
+      "en": "No strange smells or burn marks",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по рулевому колесу отсутствуют",
+      "en": "No steering wheel damage",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по торпедке отсутствуют",
+      "en": "No dashboard damage",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по потолку отсутствуют",
+      "en": "No ceiling damage",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по коже отсутствуют",
+      "en": "No leather damage",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по пластику отсутствуют",
+      "en": "No plastic damage",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Функции интерьера",
+    "en": "Interior functions",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Электроника исправна",
+      "en": "Electronics work properly",
+      "panels": []
+     },
+     {
+      "ru": "Стеклоподъемники исправны",
+      "en": "Power windows work properly",
+      "panels": []
+     },
+     {
+      "ru": "Парктроники исправны",
+      "en": "Parking sensors work properly",
+      "panels": []
+     },
+     {
+      "ru": "Климат-контроль исправен",
+      "en": "Climate control works properly",
+      "panels": []
+     },
+     {
+      "ru": "Оптика исправна",
+      "en": "Lights work properly",
+      "panels": []
+     },
+     {
+      "ru": "Аудиосистема исправна",
+      "en": "Audio system works properly",
+      "panels": []
+     },
+     {
+      "ru": "Камера исправна",
+      "en": "Camera works properly",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Багажное пространство",
+    "en": "Trunk",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Повреждения по пластику отсутствуют",
+      "en": "No plastic damage",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по материалу отсутствуют",
+      "en": "No trim material damage",
+      "panels": []
+     },
+     {
+      "ru": "Повреждения по погрузочной зоне отсутствуют",
+      "en": "No loading area damage",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Моторное пространство и трансмиссия",
+    "en": "Engine bay and transmission",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Подтеки отсутствуют",
+      "en": "No leaks",
+      "panels": []
+     },
+     {
+      "ru": "Работа двигателя исправна, без посторонних звуков",
+      "en": "Engine runs properly, no strange noises",
+      "panels": []
+     },
+     {
+      "ru": "Трансмиссия исправна, без перебоев",
+      "en": "Transmission works properly, no issues",
+      "panels": []
+     },
+     {
+      "ru": "Охлаждающая жидкость в норме",
+      "en": "Coolant level normal",
+      "panels": []
+     },
+     {
+      "ru": "Масло в двигателе в норме",
+      "en": "Engine oil level normal",
+      "panels": []
+     }
+    ]
+   },
+   {
+    "ru": "Заключение",
+    "en": "Conclusion",
+    "state": "ok",
+    "items": [
+     {
+      "ru": "Данный автомобиль находится в отличном состоянии, что подтверждается тщательной проверкой всех ключевых узлов и агрегатов",
+      "en": "This vehicle is in excellent condition, confirmed by thorough inspection of all key components and assemblies",
+      "panels": []
+     }
+    ]
+   }
+  ],
+  "source": "inspector_report_ru.txt",
+  "model": "muse-spark-1.3",
+  "ms": 34366
+ }
+}

@@ -7,6 +7,8 @@ import { PANELS, type PanelId } from "@/lib/domain/panels";
 import { classifyPaint } from "@/lib/domain/paint";
 import { blobUrl, readMediaText } from "@/lib/agent/media";
 import NOTES_RU from "./notes-ru.json";
+import SHEETS from "./inspector-sheets.json";
+import GAUGE from "./gauge-videos.json";
 
 export type PanelStatus = "factory" | "repaint" | "putty" | "replaced" | "damage" | "unconfirmed" | "clean";
 export interface PanelPhoto { id: string; url: string; note: string; noteRu?: string; closeUp: boolean; view: string }
@@ -18,6 +20,9 @@ export interface PanelState {
   findings: PanelFinding[];
   photos: PanelPhoto[];
 }
+export interface SheetItem { ru: string; en: string; panels?: string[] }
+/** the inspector's original checklist, structured by Muse Spark (scripts/film4/build-sheets.mjs) */
+export interface InspectorSheet { facts: { ru: string; en: string; value_ru: string; value_en: string }[]; sections: { ru: string; en: string; state: string; items: SheetItem[] }[] }
 export interface GarageData {
   carId: string;
   title: string;
@@ -26,6 +31,8 @@ export interface GarageData {
   reasons?: { en: string[]; ru: string[] };
   panels: PanelState[];
   photoTotal: number;
+  sheet?: InspectorSheet;
+  gaugeVideo?: { url: string; poster: string };
 }
 
 interface IndexEntry { photoId: string; view?: string; whole_car?: boolean; close_up?: boolean; panels?: string[]; note?: string }
@@ -93,5 +100,7 @@ export async function garageData(carId: string, report?: Report, title?: string)
     reasons: report ? { en: report.verdict.reasons_en, ru: report.verdict.reasons_ru } : undefined,
     panels,
     photoTotal: entries.length,
+    sheet: (SHEETS as unknown as Record<string, InspectorSheet>)[carId],
+    gaugeVideo: (GAUGE as Record<string, { url: string }>)[carId] ? { url: (GAUGE as Record<string, { url: string }>)[carId].url, poster: `/garage/gauge/${carId}.jpg` } : undefined,
   };
 }

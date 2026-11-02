@@ -22,8 +22,8 @@ const STATUS_NOTE: Record<Lang, Record<PanelStatus, string>> = {
 };
 const KIND: Record<string, [string, string]> = { repaint: ["Repainted", "Перекрас"], putty: ["Filler under the paint", "Шпатлёвка под краской"], panel_replaced: ["Panel replaced", "Деталь заменена"], dent: ["Dent", "Вмятина"], scratch: ["Scratch", "Царапина"], rust: ["Rust", "Ржавчина"], mechanical: ["Mechanical", "Механика"], other: ["Note", "Замечание"] };
 const T = {
-  en: { explode: "Take apart", assemble: "Put together", reset: "Reset view", hint: "Drag to turn · click a panel", photos: "Real photos of this panel", noPhotos: "No photos of this panel", findings: "Findings", gauge: "Paint gauge", points: "points", noGauge: "No gauge reading on this panel", verified: "verified", unconfirmed: "unconfirmed", report: "Full report", close: "Close", panels: "13 body panels", loading: "Bringing the car into the bay…", noWebgl: "3D is off on this device — the panel list still works.", of: "of", voice: "voice", frame: "frame" },
-  ru: { explode: "Разобрать", assemble: "Собрать", reset: "Вид по умолчанию", hint: "Тяните, чтобы вращать · кликните деталь", photos: "Реальные фото этой детали", noPhotos: "Фото этой детали нет", findings: "Находки", gauge: "Толщиномер", points: "точек", noGauge: "Замера толщиномером по этой детали нет", verified: "подтверждено", unconfirmed: "не подтверждено", report: "Полный отчёт", close: "Закрыть", panels: "13 деталей кузова", loading: "Машина въезжает в бокс…", noWebgl: "3D на этом устройстве выключено — список деталей работает.", of: "из", voice: "голос", frame: "кадр" },
+  en: { explode: "Take apart", assemble: "Put together", reset: "Reset view", hint: "Drag to turn · click a panel", photos: "Real photos of this panel", noPhotos: "No photos of this panel", findings: "Findings", gauge: "Paint gauge", points: "points", noGauge: "No gauge reading on this panel", verified: "verified", unconfirmed: "unconfirmed", report: "Full report", close: "Close", panels: "13 body panels", loading: "Bringing the car into the bay…", noWebgl: "3D is off on this device — the panel list still works.", of: "of", voice: "voice", frame: "frame", materials: "Inspection materials", sheet: "Inspector's sheet", video: "Paint gauge video", fromSheet: "From the inspector's sheet", original: "original in Russian", videoNote: "The inspector measures every panel with a paint gauge — the readings and the voice behind this report." },
+  ru: { explode: "Разобрать", assemble: "Собрать", reset: "Вид по умолчанию", hint: "Тяните, чтобы вращать · кликните деталь", photos: "Реальные фото этой детали", noPhotos: "Фото этой детали нет", findings: "Находки", gauge: "Толщиномер", points: "точек", noGauge: "Замера толщиномером по этой детали нет", verified: "подтверждено", unconfirmed: "не подтверждено", report: "Полный отчёт", close: "Закрыть", panels: "13 деталей кузова", loading: "Машина въезжает в бокс…", noWebgl: "3D на этом устройстве выключено — список деталей работает.", of: "из", voice: "голос", frame: "кадр", materials: "Материалы осмотра", sheet: "Лист осмотра", video: "Видео толщиномера", fromSheet: "Из листа осмотра", original: "оригинал на русском", videoNote: "Инспектор проходит толщиномером каждую деталь — это исходник замеров и голоса в отчёте." },
 } as const;
 /** Glimmer photo notes are English; RU comes from the one-off Muse Spark translation (notes-ru.json) */
 const photoNote = (ph: PanelPhoto, lang: Lang) => (lang === "ru" ? ph.noteRu ?? ph.note : ph.note);
@@ -40,6 +40,7 @@ export default function GarageStudio({ data, lang, embedded = false }: { data: G
   const [sel, setSel] = useState<PanelId | null>(null);
   const [exploded, setExploded] = useState(false);
   const [zoom, setZoom] = useState<number | null>(null);
+  const [mat, setMat] = useState<null | "sheet" | "video">(null);
   const t = T[lang];
   const byId = useMemo(() => new Map(data.panels.map((p) => [p.panel, p])), [data]);
   const remarks = data.panels.filter((p) => !["clean", "factory"].includes(p.status));
@@ -116,8 +117,13 @@ export default function GarageStudio({ data, lang, embedded = false }: { data: G
         <div>
           <div className="font-mono text-[10.5px] uppercase tracking-[.3em] text-sodium">{lang === "ru" ? "Гараж осмотра" : "Inspection bay"} · {data.photoTotal} {lang === "ru" ? "фото" : "photos"}</div>
           <h2 className="mt-1 font-display text-[clamp(28px,3.4vw,46px)] font-medium leading-none">{data.title}</h2>
+          {data.sheet && <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[10.5px] uppercase tracking-[.14em] text-bone-2">{data.sheet.facts.filter((f) => !/model|модель/i.test(f.en + f.ru)).slice(0, 4).map((f) => <span key={f.en}><span className="text-mist">{lang === "ru" ? f.ru : f.en}</span> {lang === "ru" ? f.value_ru : f.value_en}</span>)}</div>}
         </div>
         <div className="flex items-center gap-3">
+          {(data.sheet || data.gaugeVideo) && <div className="flex gap-1.5">
+            {data.gaugeVideo && <button onClick={() => { setMat("video"); setSel(null); }} className={`rounded-full border px-4 py-2 font-mono text-[10.5px] uppercase tracking-[.16em] backdrop-blur-md ${mat === "video" ? "border-sodium bg-sodium text-ink" : "border-sodium/60 bg-ink/50 text-sodium-hi hover:border-sodium"}`}>▶ {t.video}</button>}
+            {data.sheet && <button onClick={() => { setMat("sheet"); setSel(null); }} className={`rounded-full border px-4 py-2 font-mono text-[10.5px] uppercase tracking-[.16em] backdrop-blur-md ${mat === "sheet" ? "border-sodium bg-sodium text-ink" : "border-bone/25 bg-ink/50 hover:border-sodium"}`}>{t.sheet}</button>}
+          </div>}
           {data.decision && <span className="border px-3 py-1 font-mono text-[12px] uppercase tracking-[.2em]" style={{ color: dColor(data.decision), borderColor: dColor(data.decision), background: "rgba(6,7,8,.6)" }}>{data.decision.replace("_", " ")}</span>}
           {data.reportId && !embedded && <a href={`/r/${data.reportId}${q}`} className="rounded-full border border-bone/25 px-4 py-2 font-mono text-[10.5px] uppercase tracking-[.18em] hover:border-sodium">{t.report} ↗</a>}
         </div>
@@ -127,7 +133,7 @@ export default function GarageStudio({ data, lang, embedded = false }: { data: G
       <div className="pointer-events-none absolute inset-y-0 left-0 z-[5] hidden w-[340px] md:block" style={{ background: "linear-gradient(90deg, rgba(6,7,8,.88), rgba(6,7,8,.55) 65%, transparent)" }} />
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-32" style={{ background: "linear-gradient(180deg, rgba(6,7,8,.85), transparent)" }} />
       {/* panel rail */}
-      <div className="absolute bottom-24 left-4 top-28 z-[6] hidden w-[230px] flex-col sm:left-8 md:flex">
+      <div className="absolute bottom-24 left-4 top-36 z-[6] hidden w-[230px] flex-col sm:left-8 md:flex">
         <div className="mb-2 font-mono text-[10px] uppercase tracking-[.26em] text-mist">{t.panels}{remarks.length ? ` · ${remarks.length} !` : ""}</div>
         <div className="flex-1 space-y-px overflow-y-auto pr-1">
           {PANELS.map(({ id }) => {
@@ -161,7 +167,8 @@ export default function GarageStudio({ data, lang, embedded = false }: { data: G
       <div className="pointer-events-none absolute bottom-7 right-8 z-[6] hidden font-mono text-[10px] uppercase tracking-[.22em] text-mist lg:block">{t.hint}</div>
 
       {/* panel card */}
-      {cur && <PanelCard p={cur} lang={lang} onClose={() => setSel(null)} onZoom={setZoom} />}
+      {cur && <PanelCard p={cur} lang={lang} sheet={data.sheet} onClose={() => setSel(null)} onZoom={setZoom} />}
+      {!cur && mat && <Materials data={data} lang={lang} tab={mat} setTab={setMat} onClose={() => setMat(null)} />}
 
       {/* lightbox */}
       {cur && zoom !== null && cur.photos[zoom] && (
@@ -198,7 +205,8 @@ function Legend({ lang, panels }: { lang: Lang; panels: PanelState[] }) {
   );
 }
 
-function PanelCard({ p, lang, onClose, onZoom }: { p: PanelState; lang: Lang; onClose: () => void; onZoom: (i: number) => void }) {
+function PanelCard({ p, lang, sheet, onClose, onZoom }: { p: PanelState; lang: Lang; sheet?: GarageData["sheet"]; onClose: () => void; onZoom: (i: number) => void }) {
+  const sheetLines = (sheet?.sections ?? []).flatMap((sc) => sc.items.filter((it) => it.panels?.includes(p.panel)));
   const t = T[lang]; const c = STATUS_COLOR[p.status];
   const note = (ph: PanelPhoto) => photoNote(ph, lang);
   return (
@@ -249,6 +257,13 @@ function PanelCard({ p, lang, onClose, onZoom }: { p: PanelState; lang: Lang; on
           </section>
         )}
 
+        {sheetLines.length > 0 && (
+          <section>
+            <div className="mb-2 font-mono text-[10px] uppercase tracking-[.22em] text-mist">{t.fromSheet}</div>
+            {sheetLines.map((it, i) => <p key={i} className="border-l-2 border-sodium/50 pl-3 text-[13.5px] leading-snug text-bone">{lang === "ru" ? it.ru : it.en}{lang === "en" && <span className="mt-1 block text-[12px] italic text-mist">«{it.ru}» — {t.original}</span>}</p>)}
+          </section>
+        )}
+
         <section>
           <div className="mb-2 font-mono text-[10px] uppercase tracking-[.22em] text-mist">{p.photos.length ? `${t.photos} · ${p.photos.length}` : t.noPhotos}</div>
           <div className="grid grid-cols-2 gap-1.5">
@@ -261,6 +276,51 @@ function PanelCard({ p, lang, onClose, onZoom }: { p: PanelState; lang: Lang; on
             ))}
           </div>
         </section>
+      </div>
+    </aside>
+  );
+}
+
+const STATE_COLOR: Record<string, string> = { ok: "#86cfa2", note: "#eea65a", issue: "#e2574c" };
+
+/** The inspection's own materials: the inspector's checklist (structured from the original text) and the paint-gauge video. */
+function Materials({ data, lang, tab, setTab, onClose }: { data: GarageData; lang: Lang; tab: "sheet" | "video"; setTab: (v: "sheet" | "video") => void; onClose: () => void }) {
+  const t = T[lang];
+  return (
+    <aside className="absolute inset-x-3 bottom-3 z-[8] flex max-h-[70svh] flex-col overflow-hidden rounded-[6px] border border-bone/12 bg-ink/90 shadow-[0_40px_120px_rgba(0,0,0,.7)] backdrop-blur-xl md:inset-x-auto md:bottom-24 md:right-8 md:top-28 md:max-h-none md:w-[440px]"
+      style={{ animation: "hb-card-in .45s cubic-bezier(.2,.8,.2,1)" }}>
+      <style>{`@keyframes hb-card-in{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}`}</style>
+      <div className="flex items-start justify-between gap-3 border-b border-bone/10 px-5 py-4">
+        <div>
+          <div className="font-mono text-[10px] uppercase tracking-[.22em] text-sodium">{t.materials}</div>
+          <div className="mt-2 flex gap-1">
+            {data.sheet && <button onClick={() => setTab("sheet")} className={`px-3 py-1 font-display text-[20px] ${tab === "sheet" ? "text-bone" : "text-mist hover:text-bone-2"}`}>{t.sheet}</button>}
+            {data.gaugeVideo && <button onClick={() => setTab("video")} className={`px-3 py-1 font-display text-[20px] ${tab === "video" ? "text-bone" : "text-mist hover:text-bone-2"}`}>{t.video}</button>}
+          </div>
+        </div>
+        <button onClick={onClose} className="rounded-full border border-bone/20 px-2.5 py-1 font-mono text-[11px] text-bone-2 hover:border-sodium" aria-label={t.close}>✕</button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-5 py-4">
+        {tab === "video" && data.gaugeVideo && (
+          <div>
+            <video key={data.gaugeVideo.url} src={data.gaugeVideo.url} poster={data.gaugeVideo.poster} controls playsInline preload="none" className="max-h-[52svh] w-full rounded-[4px] bg-black object-contain" />
+            <p className="mt-3 text-[13px] leading-relaxed text-bone-2">{t.videoNote}</p>
+          </div>
+        )}
+        {tab === "sheet" && data.sheet && (
+          <div className="space-y-5">
+            {data.sheet.facts.length > 0 && <dl className="grid grid-cols-2 gap-x-4 gap-y-2">{data.sheet.facts.map((f) => (
+              <div key={f.en}><dt className="font-mono text-[9.5px] uppercase tracking-[.18em] text-mist">{lang === "ru" ? f.ru : f.en}</dt><dd className="text-[14px] text-bone">{lang === "ru" ? f.value_ru : f.value_en}</dd></div>))}</dl>}
+            {data.sheet.sections.map((sc) => (
+              <section key={sc.en}>
+                <div className="mb-2 flex items-center gap-2"><i className="h-2 w-2 rounded-full" style={{ background: STATE_COLOR[sc.state] ?? "#8d949b", boxShadow: `0 0 8px ${STATE_COLOR[sc.state] ?? "transparent"}` }} /><h4 className="font-display text-[22px] font-medium">{lang === "ru" ? sc.ru : sc.en}</h4></div>
+                <ul className="space-y-1.5">{sc.items.map((it, i) => (
+                  <li key={i} className="flex gap-2.5 text-[13.5px] leading-snug text-bone-2"><span className="mt-[3px] font-mono text-[10px] text-sodium">✓</span><span>{lang === "ru" ? it.ru : it.en}</span></li>))}</ul>
+              </section>
+            ))}
+            <p className="border-t border-bone/10 pt-3 font-mono text-[9.5px] uppercase leading-relaxed tracking-[.16em] text-mist">{lang === "ru" ? "Оригинальный текст инспектора, разложен по разделам моделью Muse Spark" : "The inspector's original text (Russian), structured and translated by Muse Spark"}</p>
+          </div>
+        )}
       </div>
     </aside>
   );

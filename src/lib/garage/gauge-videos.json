@@ -1,0 +1,26 @@
+{
+ "kia-sportage": {
+  "url": "https://w8cg01wtfgfsm1zk.public.blob.vercel-storage.com/demo/kia-sportage/gauge/kia-sportage-gauge.mp4",
+  "source": "245538_file_245538_0.mp4"
+ },
+ "kia-morning": {
+  "url": "https://w8cg01wtfgfsm1zk.public.blob.vercel-storage.com/demo/kia-morning/gauge/kia-morning-gauge.mp4",
+  "source": "VIDEO-2026-10-27-15-02-03.mp4"
+ },
+ "audi-a5-2005": {
+  "url": "https://w8cg01wtfgfsm1zk.public.blob.vercel-storage.com/demo/audi-a5-2005/gauge/audi-a5-2005-gauge.mp4",
+  "source": "9e399e1d-aa27-4150-a5f4-1dfc1dbb2cfd.mp4"
+ },
+ "bmw-x3-8278": {
+  "url": "https://w8cg01wtfgfsm1zk.public.blob.vercel-storage.com/demo/bmw-x3-8278/gauge/bmw-x3-8278-gauge.mp4",
+  "source": "578920ee-896b-4fb9-bec4-d3c6d766bdca.mp4"
+ },
+ "bmw-530i-8053": {
+  "url": "https://w8cg01wtfgfsm1zk.public.blob.vercel-storage.com/demo/bmw-530i-8053/gauge/bmw-530i-8053-gauge.mp4",
+  "source": "VIDEO-2026-04-14-21-10-10.mp4"
+ },
+ "mini-cooper-s": {
+  "url": "https://w8cg01wtfgfsm1zk.public.blob.vercel-storage.com/demo/mini-cooper-s/gauge/mini-cooper-s-gauge.mp4",
+  "source": "paint_gauge.mp4"
+ }
+}
