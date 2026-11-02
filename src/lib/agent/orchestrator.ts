@@ -18,7 +18,7 @@ import { transcribeNote } from "./tools/voice";
 import { readGaugeVideo } from "./tools/gauge";
 import { makeListingPhoto, getOrCreateHeroImage, assertFindingsFreeOfListingEvidence } from "./tools/listing";
 import { getShippingStatus } from "./tools/shipping";
-import { indexPhotos, pickDefectPhotos, pickListingCandidates } from "./tools/photoIndex";
+import { indexPhotos, pickDefectPhotos, pickListingCandidates, type PhotoIndex } from "./tools/photoIndex";
 import { glimmerConfigured } from "@/lib/meta/glimmer";
 import { readDiagnosticReport } from "./tools/diagnostic";
 import { readInspectorReport } from "./tools/inspector";
@@ -46,6 +46,7 @@ const WHY: Record<string, string> = {
   estimate_landed_cost: "Landed cost policy check (no invented numbers)",
   handoff_to_manager: "Low confidence / critical uncertainty -> human manager",
   finalize_report: "Assemble verified report and verdict",
+  recheck_panel: "Agent decided to re-check one panel on a photo picked from the Glimmer index",
 };
 
 const fn = (name: string, description: string, properties: Record<string, unknown>, required: string[] = []) => ({
@@ -63,6 +64,7 @@ export const AGENT_TOOLS: ToolDef[] = [
   fn("get_shipping_status", "Shipping stage for this report", {}),
   fn("estimate_landed_cost", "Landed/customs cost estimate", {}),
   fn("handoff_to_manager", "Hand off to a human manager", { reason: { type: "string" } }, ["reason"]),
+  fn("recheck_panel", "Re-check ONE panel on a new photo that shows it (picked from the photo index). Use when sources disagree about that panel or a finding rests on one weak source. State the reason.", { panel: { type: "string" }, reason: { type: "string" } }, ["panel", "reason"]),
   fn("finalize_report", "Finish: verifier runs, verdict is computed, report is saved", {}),
 ];
 
@@ -98,8 +100,10 @@ export async function runInspection(opts: {
   const heroPromise = getOrCreateHeroImage(`hero-${opts.carId}`); // one generated hero per car, not per run (saves a Muse Image call + a Blob put)
   heroPromise.catch(() => undefined);
 
-  const step = (tool: string, argsSummary: string, ok: boolean, outputSummary: string, ms: number) => {
-    const s: AgentStep = { i: trace.length + 1, tool, argsSummary: argsSummary.slice(0, 200), why: WHY[tool] ?? "", ms, ok, outputSummary: outputSummary.slice(0, 500) };
+  let photoIdx: PhotoIndex | null = null;
+  let rechecks = 0;
+  const step = (tool: string, argsSummary: string, ok: boolean, outputSummary: string, ms: number, why?: string) => {
+    const s: AgentStep = { i: trace.length + 1, tool, argsSummary: argsSummary.slice(0, 200), why: (why ?? WHY[tool] ?? "").slice(0, 300), ms, ok, outputSummary: outputSummary.slice(0, 500) };
     trace.push(s); try { opts.onStep?.(s); } catch { /* client gone: keep working, report is still saved */ } return s;
   };
   // Open-weight triage first: Muse Glimmer (our Modal GPU) indexes every photo, so Spark/SAM only see the right ones.
@@ -107,6 +111,7 @@ export async function runInspection(opts: {
     const ts = Date.now();
     try {
       const idx = await indexPhotos({ carId: opts.carId, photos: media.photos });
+      photoIdx = idx;
       const picks = pickDefectPhotos(idx, 3);
       if (picks.length) suggested = [...picks, ...suggested.filter((p) => !picks.includes(p))].slice(0, 4);
       listingFromIndex = pickListingCandidates(idx);
@@ -181,6 +186,22 @@ export async function runInspection(opts: {
         const r = await makeListingPhoto({ carId: opts.carId, photoId, imagePath: await ensurePhotoPath(opts.carId, photoId) });
         if (r.url) { listingUrl = r.url; listingPhotoId = photoId; }
         out = `url=${r.url ?? "none"} plateHidden=${r.plateHidden} backgroundEdited=${r.backgroundEdited} ${r.rejectedReason ?? ""}`;
+      } else if (name === "recheck_panel") {
+        const panel = String(args.panel ?? ""); const reason = String(args.reason ?? "").slice(0, 200);
+        if (rechecks >= 2) { step(name, key, true, "recheck budget used (2 per run)", Date.now() - ts); return "recheck budget used; finalize_report"; }
+        rechecks++;
+        const seen = new Set(photoViews.keys());
+        const EXTERIOR = (v: string) => !["interior", "engine", "document", "underbody", "other"].includes(v);
+        const byIndex = (photoIdx?.entries ?? []).filter((e) => e.panels.includes(panel) && EXTERIOR(e.view) && !seen.has(e.photoId))
+          .sort((a, b) => a.panels.length - b.panels.length); // the most focused shot of that panel first
+        const photoId = byIndex[0]?.photoId ?? spreadPhotos(media.photos, 12).find((p) => !seen.has(p));
+        if (!photoId) { step(name, key, true, `no unseen photo of ${panel}`, Date.now() - ts, `Re-check decided by the agent: ${reason}`); return "no photo for that panel"; }
+        const r = await findDefects({ carId: opts.carId, photoId, image: await readFile(await ensurePhotoPath(opts.carId, photoId)) });
+        addFindings(r.findings); photoViews.set(photoId, r.view);
+        const onPanel = r.findings.filter((f) => f.panel === panel);
+        out = `panel=${panel} photo=${photoId} (${byIndex.length ? "picked from Glimmer index" : "fallback spread"}) view=${r.view} panelVisible=${r.panels_visible.includes(panel as never)} onPanel=${onPanel.map((f) => `${f.kind}/${f.severity}`).join(",") || "nothing visible"}`;
+        step(name, key, true, out, Date.now() - ts, `Re-check decided by the agent: ${reason}`);
+        return out;
       } else if (name === "get_shipping_status") {
         shipping = getShippingStatus(reportId);
         out = `stage=${shipping.stage} source=${shipping.source}`;
@@ -208,7 +229,7 @@ export async function runInspection(opts: {
     hasInspectorReport: media.hasInspectorReport, hasAuctionSheet: media.hasAuctionSheet,
   };
   const messages: ChatMessage[] = [
-    { role: "system", content: "You are the Hanbridge inspection agent. Every claim needs evidence: no evidence, no finding (tools enforce this). Cross-check independent sources: voice vs gauge-screen colour vs photos vs inspector text. Agreement of two sources raises confidence; contradiction -> conflict. Call tools, then finalize_report. Budget: find_defects on at most 3 suggested photos, transcribe_note on at most ONE video (prefer paint_gauge.mp4 when present), read_gauge_video only when gaugeVideo is present, read_diagnostic_report only when a PDF is listed. Always call analyze_paint_readings after voice/gauge, estimate_landed_cost once, and make_listing_photo once. If a source is absent the tool says so — do not invent it." },
+    { role: "system", content: "You are the Hanbridge inspection agent. Every claim needs evidence: no evidence, no finding (tools enforce this). Cross-check independent sources: voice vs gauge-screen colour vs photos vs inspector text. Agreement of two sources raises confidence; contradiction -> conflict. Call tools, then finalize_report. Budget: find_defects on at most 3 suggested photos, transcribe_note on at most ONE video (prefer paint_gauge.mp4 when present), read_gauge_video only when gaugeVideo is present, read_diagnostic_report only when a PDF is listed. Always call analyze_paint_readings after voice/gauge, estimate_landed_cost once, and make_listing_photo once. When sources disagree about a panel (voice numbers vs gauge-screen colour vs inspector text vs photos), or a finding rests on a single source, call recheck_panel(panel, reason) for that panel (at most 2 times) BEFORE finalize_report, and say in reason which sources disagree. If a source is absent the tool says so — do not invent it." },
     { role: "user", content: `Inspect this car and finalize a report. Available media:\n${JSON.stringify(inventory, null, 2)}` },
   ];
 
@@ -231,6 +252,12 @@ export async function runInspection(opts: {
     for (const r of results) messages.push({ role: "tool", tool_call_id: r.id, content: r.out });
   }
   if (!finalized) step("finalize_report", "auto after step budget", true, "step budget reached; finalizing with collected evidence", 0);
+
+  // agent rule: a panel claim backed by one source only gets one photo re-check if the agent did not ask for it itself
+  if (!rechecks && Date.now() - t0 < 150_000) {
+    const weak = findings.find((f) => f.panel !== "unknown" && new Set(f.evidence.map((e) => e.type)).size === 1 && f.evidence.every((e) => e.type === "gauge" || e.type === "transcript"));
+    if (weak) await execute("recheck_panel", { panel: weak.panel, reason: `${weak.panel}/${weak.kind} rests on one source (${weak.evidence[0]?.type}) — looking for photo evidence` });
+  }
 
   // deterministic paint findings win/merge
   addFindings(findingsFromPaintReadings([...paint.entries()].map(([panel, microns]) => ({ panel, microns }))));

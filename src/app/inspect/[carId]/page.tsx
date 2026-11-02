@@ -22,6 +22,7 @@ const MODEL_OF: Record<string, string[]> = {
   make_listing_photo: ["SAM 3.1", "Muse Image"],
   finalize_report: ["Muse Spark"],
   verifier: ["Muse Spark Open · Baseten"],
+  recheck_panel: ["Glimmer index", "SAM 3.1", "Muse Spark"],
   sparkChat: ["Muse Spark"],
 };
 
