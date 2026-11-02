@@ -1,0 +1,27 @@
+{
+  "model": "muse-image-1.0",
+  "created": "2026-11-02T13:45:27.872Z",
+  "shots": [
+    {
+      "i": 0,
+      "status": 200,
+      "ms": 28193,
+      "prompt": "cinematic aerial drone photograph at blue hour, a large dark car carrier ro-ro vessel sailing across a deep blue open sea, seen from high above and behind at three-quarter angle, the stern ramp is fully closed and folded flat against the hull, no open doors, warm deck lights and lit bridge windows, long white foamy wake, light mist, moody teal and sodium orange color grade, photorealistic, 16:9, no text, no logos",
+      "ok": true
+    },
+    {
+      "i": 1,
+      "status": 200,
+      "ms": 22096,
+      "prompt": "photorealistic aerial view at dusk of a big roll-on roll-off car transport ship crossing the Sea of Japan, open water to the horizon, ship hull closed with stern ramp raised and sealed shut, warm lights on deck and superstructure, white wake trailing behind, dark navy sea with gentle swell, cinematic film still, 16:9, no text",
+      "ok": true
+    },
+    {
+      "i": 2,
+      "status": 200,
+      "ms": 10831,
+      "prompt": "film still, high wide aerial shot, night sea, a car carrier ship moving forward leaving a bright wake, the ship's rear loading ramp closed and raised vertical, sodium deck lights, wisps of fog over the water, deep blue and amber palette, anamorphic, photorealistic, no text",
+      "ok": true
+    }
+  ]
+}

@@ -85,19 +85,19 @@ export const SCENES: Scene[] = [
 
   // ── III · the crossing ──
   { id: "act3", card: { n: "III", title: ACTS[2].title, sub: { en: "Korea · the sea · the border", ru: "Корея · море · граница" } }, vh: 75, sec: 3.5, act: 2, in: "dip", insured: true },
-  { id: "load", clip: "k4-1", vh: 105, sec: 5, act: 2, in: "dip", insured: true, toast: L.kr, lines: [
-    { en: "Deregistered. Export papers ready.", ru: "Снята с учёта. Экспортные документы готовы." }] },
-  { id: "hwy", clip: "s4-2", vh: 90, sec: 4, act: 2, in: "wipe", insured: true, posM: "35% 50%", lines: [
+  // k4-1 (carrier at the port) was cut: the car on top reads silver, not our white Kia
+  { id: "hwy", clip: "s4-2", vh: 125, sec: 6, act: 2, in: "dip", insured: true, toast: L.kr, posM: "35% 50%", lines: [
+    { en: "Deregistered. Export papers ready.", ru: "Снята с учёта. Экспортные документы готовы." },
     { en: "Course: Busan.", ru: "Курс — Пусан." }] },
   { id: "mapkr", insert: "mapKr", bg: "s4-2", vh: 80, sec: 4, act: 2, insured: true },
   { id: "busan", clip: "s5-1", vh: 160, sec: 9, act: 2, insured: true, receipt: "busan", posM: "60% 50%", lines: [
     { en: "In Korea, you pay one invoice.", ru: "В Корее вы оплачиваете один инвойс." },
     { en: "The car, the platform fee, freight at the carrier's public tariff.", ru: "Машина, комиссия площадки и фрахт по открытому тарифу перевозчика." },
     { en: "Nothing on top.", ru: "Сверху — ничего." }] },
-  { id: "sea", clip: "s6-1", vh: 120, sec: 6, act: 2, in: "zoom", insured: true, lines: [
+  { id: "sea", clip: "sea-v4", /* Muse Image still (closed stern ramp), push-in; the Wan clip s6-1 sailed with the ramp open */ vh: 120, sec: 6, act: 2, in: "zoom", insured: true, lines: [
     { en: "A few days at sea.", ru: "Несколько дней в море." },
     { en: "You see where she is — in your portal and in Telegram.", ru: "Где она сейчас — видно в кабинете и в Telegram." }] },
-  { id: "fan", insert: "mapFan", bg: "s6-1", vh: 130, sec: 7, act: 2, insured: true, lines: [
+  { id: "fan", insert: "mapFan", bg: "sea-v4", vh: 130, sec: 7, act: 2, insured: true, lines: [
     { en: "From Vladivostok, the roads split —", ru: "Из Владивостока дороги расходятся —" },
     { en: "Moscow, Minsk, Prague, Almaty, Tashkent.", ru: "в Москву, Минск, Прагу, Алматы, Ташкент." }] },
   { id: "bay", clip: "s7-1", vh: 95, sec: 5, act: 2, in: "wipe", insured: true, big: true, lines: [
