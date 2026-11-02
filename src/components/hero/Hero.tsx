@@ -90,7 +90,7 @@ export default function Hero({ reports, lang }: { reports: Report[]; lang: Lang 
                 {report ? (
                   <span style={{ fontSize: 13, color: "#8b94a1" }}>
                     <span style={{ fontWeight: 800, color: verdictColor(report.verdict.decision) }}>{report.verdict.decision.replace("_", " ")}</span>
-                    {" · "}{report.findings.length} {lang === "ru" ? ruFindings(report.findings.length) : t.findings}, {report.findings.filter((f) => f.verified).length} {t.verified}
+                    {" · "}{report.findings.length} {lang === "ru" ? ruFindings(report.findings.length) : report.findings.length === 1 ? "finding" : t.findings}, {report.findings.filter((f) => f.verified).length} {t.verified}
                   </span>
                 ) : <span style={{ fontSize: 13, color: "#8b94a1" }}>{t.noReport}</span>}
                 <div style={{ display: "flex", gap: 8, marginTop: "auto", flexWrap: "wrap" }}>
