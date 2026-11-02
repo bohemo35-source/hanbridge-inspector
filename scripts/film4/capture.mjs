@@ -21,7 +21,7 @@ const open = async () => {
   browser = await launch();
   page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   page.on("pageerror", (e) => errs.push(String(e)));
-  await page.goto(url, { waitUntil: "networkidle", timeout: 90000 });
+  await page.goto(url + (url.includes("?") ? "&" : "?") + "capture=1", { waitUntil: "networkidle", timeout: 90000 });
   await page.waitForFunction(() => window.__film4, null, { timeout: 30000 });
 };
 await open();

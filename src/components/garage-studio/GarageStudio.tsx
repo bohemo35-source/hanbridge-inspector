@@ -5,7 +5,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PANELS, panelLabel, type PanelId } from "@/lib/domain/panels";
-import type { GarageData, PanelState, PanelStatus } from "@/lib/garage/data";
+import type { GarageData, PanelPhoto, PanelState, PanelStatus } from "@/lib/garage/data";
 import type { StudioHandle } from "./scene";
 
 type Lang = "en" | "ru";
@@ -22,9 +22,11 @@ const STATUS_NOTE: Record<Lang, Record<PanelStatus, string>> = {
 };
 const KIND: Record<string, [string, string]> = { repaint: ["Repainted", "Перекрас"], putty: ["Filler under the paint", "Шпатлёвка под краской"], panel_replaced: ["Panel replaced", "Деталь заменена"], dent: ["Dent", "Вмятина"], scratch: ["Scratch", "Царапина"], rust: ["Rust", "Ржавчина"], mechanical: ["Mechanical", "Механика"], other: ["Note", "Замечание"] };
 const T = {
-  en: { explode: "Take apart", assemble: "Put together", reset: "Reset view", hint: "Drag to turn · click a panel", photos: "Real photos of this panel", noPhotos: "No photos of this panel", findings: "Findings", gauge: "Paint gauge", points: "points", noGauge: "No gauge reading on this panel", verified: "verified", unconfirmed: "unconfirmed", report: "Full report", close: "Close", panels: "13 body panels", loading: "Bringing the car into the bay…", noWebgl: "3D is off on this device — the panel list still works.", of: "of" },
-  ru: { explode: "Разобрать", assemble: "Собрать", reset: "Вид по умолчанию", hint: "Тяните, чтобы вращать · кликните деталь", photos: "Реальные фото этой детали", noPhotos: "Фото этой детали нет", findings: "Находки", gauge: "Толщиномер", points: "точек", noGauge: "Замера толщиномером по этой детали нет", verified: "подтверждено", unconfirmed: "не подтверждено", report: "Полный отчёт", close: "Закрыть", panels: "13 деталей кузова", loading: "Машина въезжает в бокс…", noWebgl: "3D на этом устройстве выключено — список деталей работает.", of: "из" },
+  en: { explode: "Take apart", assemble: "Put together", reset: "Reset view", hint: "Drag to turn · click a panel", photos: "Real photos of this panel", noPhotos: "No photos of this panel", findings: "Findings", gauge: "Paint gauge", points: "points", noGauge: "No gauge reading on this panel", verified: "verified", unconfirmed: "unconfirmed", report: "Full report", close: "Close", panels: "13 body panels", loading: "Bringing the car into the bay…", noWebgl: "3D is off on this device — the panel list still works.", of: "of", voice: "voice", frame: "frame" },
+  ru: { explode: "Разобрать", assemble: "Собрать", reset: "Вид по умолчанию", hint: "Тяните, чтобы вращать · кликните деталь", photos: "Реальные фото этой детали", noPhotos: "Фото этой детали нет", findings: "Находки", gauge: "Толщиномер", points: "точек", noGauge: "Замера толщиномером по этой детали нет", verified: "подтверждено", unconfirmed: "не подтверждено", report: "Полный отчёт", close: "Закрыть", panels: "13 деталей кузова", loading: "Машина въезжает в бокс…", noWebgl: "3D на этом устройстве выключено — список деталей работает.", of: "из", voice: "голос", frame: "кадр" },
 } as const;
+/** Glimmer photo notes are English; RU comes from the one-off Muse Spark translation (notes-ru.json) */
+const photoNote = (ph: PanelPhoto, lang: Lang) => (lang === "ru" ? ph.noteRu ?? ph.note : ph.note);
 const thumb = (url: string, w = 640) => `/_next/image?url=${encodeURIComponent(url)}&w=${w}&q=72`;
 const tc = (t?: number) => (t === undefined ? "" : `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")} `);
 
@@ -43,7 +45,16 @@ export default function GarageStudio({ data, lang, embedded = false }: { data: G
   const remarks = data.panels.filter((p) => !["clean", "factory"].includes(p.status));
   const q = lang === "ru" ? "?lang=ru" : "";
 
+  // embedded far down a long page: the 12 MB model, the parts and the HDRI load only when the bay comes near
+  const [near, setNear] = useState(!embedded);
   useEffect(() => {
+    if (near || !host.current) return;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) setNear(true); }, { rootMargin: "700px 0px" });
+    io.observe(host.current); return () => io.disconnect();
+  }, [near]);
+
+  useEffect(() => {
+    if (!near) return;
     let ok = false;
     try { ok = !!document.createElement("canvas").getContext("webgl2"); } catch { ok = false; }
     if (!ok || new URLSearchParams(location.search).has("no3d")) { setWebgl(false); return; }
@@ -64,7 +75,7 @@ export default function GarageStudio({ data, lang, embedded = false }: { data: G
       }, { mobile: window.matchMedia("(max-width: 768px)").matches, zoom: !embedded });
     });
     return () => { alive = false; studio.current?.dispose(); studio.current = null; };
-  }, [embedded]);
+  }, [embedded, near]);
 
   useEffect(() => {
     if (!ready) return;
@@ -157,9 +168,9 @@ export default function GarageStudio({ data, lang, embedded = false }: { data: G
         <div className="absolute inset-0 z-[9] flex items-center justify-center bg-ink/92 p-4 backdrop-blur-sm sm:p-10" onClick={() => setZoom(null)}>
           <figure className="relative max-h-full max-w-[1200px]" onClick={(e) => e.stopPropagation()}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={thumb(cur.photos[zoom].url, 1920)} alt={cur.photos[zoom].note} className="max-h-[78svh] w-auto rounded-[4px] object-contain" />
+            <img src={thumb(cur.photos[zoom].url, 1920)} alt={photoNote(cur.photos[zoom], lang)} className="max-h-[78svh] w-auto rounded-[4px] object-contain" />
             <figcaption className="mt-3 flex items-start justify-between gap-6 text-[13px] text-bone-2">
-              <span><span className="font-mono text-[10px] uppercase tracking-[.2em] text-sodium">{panelLabel(cur.panel, lang)} · {zoom + 1} {t.of} {cur.photos.length}</span><br />{cur.photos[zoom].note}</span>
+              <span><span className="font-mono text-[10px] uppercase tracking-[.2em] text-sodium">{panelLabel(cur.panel, lang)} · {zoom + 1} {t.of} {cur.photos.length}</span><br />{photoNote(cur.photos[zoom], lang)}</span>
               <span className="flex shrink-0 gap-2">
                 <button onClick={() => setZoom((z) => (z! + cur.photos.length - 1) % cur.photos.length)} className="rounded-full border border-bone/25 px-3 py-1.5">←</button>
                 <button onClick={() => setZoom((z) => (z! + 1) % cur.photos.length)} className="rounded-full border border-bone/25 px-3 py-1.5">→</button>
@@ -189,6 +200,7 @@ function Legend({ lang, panels }: { lang: Lang; panels: PanelState[] }) {
 
 function PanelCard({ p, lang, onClose, onZoom }: { p: PanelState; lang: Lang; onClose: () => void; onZoom: (i: number) => void }) {
   const t = T[lang]; const c = STATUS_COLOR[p.status];
+  const note = (ph: PanelPhoto) => photoNote(ph, lang);
   return (
     <aside key={p.panel} className="absolute inset-x-3 bottom-3 z-[8] max-h-[62svh] overflow-y-auto rounded-[6px] border border-bone/12 bg-ink/88 shadow-[0_40px_120px_rgba(0,0,0,.7)] backdrop-blur-xl md:inset-x-auto md:bottom-24 md:right-8 md:top-28 md:max-h-none md:w-[400px]"
       style={{ animation: "hb-card-in .45s cubic-bezier(.2,.8,.2,1)" }}>
@@ -223,8 +235,14 @@ function PanelCard({ p, lang, onClose, onZoom }: { p: PanelState; lang: Lang; on
                     <b className="font-display text-[20px] font-medium">{KIND[f.kind]?.[lang === "ru" ? 1 : 0] ?? f.kind}{f.microns ? ` · ${f.microns} µm` : ""}</b>
                     <span className={`font-mono text-[9.5px] uppercase tracking-[.16em] ${f.verified ? "text-ok" : "text-mist"}`}>{f.verified ? t.verified : t.unconfirmed}</span>
                   </div>
-                  {f.quotes.map((qq, k) => <p key={k} className="mt-1 text-[13px] italic leading-snug text-bone-2">🎙 {tc(qq.t)}«{qq.quote}»</p>)}
+                  {f.quotes.map((qq, k) => <p key={k} className="mt-1 text-[13px] italic leading-snug text-bone-2"><span className="mr-1.5 font-mono text-[9.5px] not-italic uppercase tracking-[.16em] text-sodium">{t.voice} {tc(qq.t)}</span>«{qq.quote}»</p>)}
                   {!f.quotes.length && <p className="mt-1 text-[13px] leading-snug text-bone-2">{lang === "ru" ? f.ru : f.en}</p>}
+                  {f.frames.length > 0 && <div className="mt-2 flex gap-1.5">{f.frames.slice(0, 3).map((fr) => (
+                    <a key={fr.id} href={fr.url} target="_blank" rel="noreferrer" className="relative block h-14 w-20 overflow-hidden rounded-[3px] border border-bone/15" title={fr.id}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={thumb(fr.url, 256)} alt={fr.id} loading="lazy" className="h-full w-full object-cover" />
+                      <span className="absolute inset-x-0 bottom-0 bg-ink/75 px-1 font-mono text-[8px] uppercase tracking-[.1em] text-sodium-hi">{t.frame}</span>
+                    </a>))}</div>}
                 </div>
               ))}
             </div>
@@ -237,8 +255,8 @@ function PanelCard({ p, lang, onClose, onZoom }: { p: PanelState; lang: Lang; on
             {p.photos.map((ph, i) => (
               <button key={ph.id} onClick={() => onZoom(i)} className={`group relative overflow-hidden rounded-[3px] bg-ink-3 ${i === 0 ? "col-span-2 aspect-[16/10]" : "aspect-[4/3]"}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={thumb(ph.url, i === 0 ? 828 : 384)} alt={ph.note} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
-                {i === 0 && <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/90 to-transparent px-3 pb-2 pt-6 text-left text-[12px] leading-snug text-bone-2">{ph.note}</span>}
+                <img src={thumb(ph.url, i === 0 ? 828 : 384)} alt={note(ph)} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
+                {i === 0 && <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/90 to-transparent px-3 pb-2 pt-6 text-left text-[12px] leading-snug text-bone-2">{note(ph)}</span>}
               </button>
             ))}
           </div>

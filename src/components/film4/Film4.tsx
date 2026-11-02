@@ -13,7 +13,7 @@ import { ACTS, RECEIPT_BUSAN, RECEIPT_CUSTOMS, SCENES, UI, type Lang, type Line,
 const GarageScene = dynamic(() => import("@/components/garage-3d/GarageScene"), { ssr: false });
 const GarageStudio = dynamic(() => import("@/components/garage-studio/GarageStudio"), { ssr: false });
 
-/** hackathon build: say how we earn. Set false for the production site. */
+/** say how we earn (Korea export VAT refund) under the zero-commission line — a business fact the owner wants shown */
 const SHOW_VAT_NOTE = true;
 /** share of a scene (its tail) used for the transition into the next one */
 const TW = 0.26;
@@ -33,7 +33,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
   const autoRef = useRef(false);
 
   /* capture scripts read the timeline from here */
-  useEffect(() => { (window as unknown as { __film4: unknown }).__film4 = { ids: SCENES.map((x) => x.id), starts, vhs: SCENES.map((x) => x.vh) }; }, []);
+  useEffect(() => { if (location.search.includes("capture")) (window as unknown as { __film4: unknown }).__film4 = { ids: SCENES.map((x) => x.id), starts, vhs: SCENES.map((x) => x.vh) }; }, []);
 
   /* scroll → scene index + local progress, video scrubbing */
   useEffect(() => {
@@ -84,6 +84,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     };
     requestAnimationFrame(step);
   }, [stopAuto]);
+  useEffect(() => () => { autoRef.current = false; }, []); // unmount stops the autoscroll loop
   useEffect(() => {
     if (!auto) return;
     const user = () => stopAuto();
@@ -98,7 +99,6 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
   const near = (k: number) => k >= pos.i - 1 && k <= pos.i + 3;
   const next = SCENES[pos.i + 1] as Scene | undefined;
   const e = next ? ease(seg(pos.t, 1 - TW, 1)) : 0; // transition progress into the next scene
-  const inK = seg(pos.t, 0, 0.06);
   const outK = 1 - e;
   const insured = SCENES.slice(0, pos.i + 1).some((x) => x.insured);
   const ledger = SCENES.slice(0, pos.i + 1).filter((x) => x.toast || x.receipt).length;
@@ -113,7 +113,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
           <div className="absolute inset-0">
             {SCENES.map((x, k) => {
               const cur = k === pos.i, inc = k === pos.i + 1 && e > 0;
-              if (!cur && !inc && !(x.clip && Math.abs(k - pos.i) <= 2)) return null;
+              if (!cur && !inc && !(x.clip && near(k))) return null;
               const st = layerStyle(x, cur ? "cur" : inc ? "inc" : "off", cur ? pos.t : 0, e, next?.in);
               if (x.card || x.end) {
                 if (!cur && !inc) return null;
@@ -237,8 +237,13 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
 }
 
 /** How a layer looks: current scene (Ken Burns), incoming scene (by its transition), or hidden. */
+const REDUCED = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 function layerStyle(x: Scene, role: "cur" | "inc" | "off", t: number, e: number, how: Scene["in"] = "dissolve") {
   const grade = "contrast(1.07) saturate(.9)";
+  if (REDUCED) { // plain crossfade, no push-in, zoom or blur
+    const op = role === "cur" ? 1 : role === "inc" ? e : 0;
+    return { opacity: op, z: role === "inc" ? 2 : 1, style: { opacity: op, filter: grade } as React.CSSProperties };
+  }
   const kb = 1.02 + 0.05 * t; // slow push-in
   if (role === "off") return { opacity: 0, z: 0, style: { opacity: 0 } as React.CSSProperties };
   if (role === "cur") {
@@ -259,7 +264,7 @@ function layerStyle(x: Scene, role: "cur" | "inc" | "off", t: number, e: number,
 
 function PlayButton({ on, onClick, lang }: { on: boolean; onClick: () => void; lang: Lang }) {
   return (
-    <button onClick={onClick} className="group flex items-center gap-4 rounded-full border border-bone/30 bg-ink/30 py-2 pl-2 pr-6 backdrop-blur-md transition-colors hover:border-sodium">
+    <button onClick={onClick} aria-label={on ? UI.stop[lang] : UI.watch[lang]} className="group flex items-center gap-4 rounded-full border border-bone/30 bg-ink/30 py-2 pl-2 pr-6 backdrop-blur-md transition-colors hover:border-sodium">
       <span className="grid h-11 w-11 place-items-center rounded-full bg-sodium text-ink shadow-[0_0_40px_rgba(238,166,90,.45)]">
         {on ? <svg width="12" height="14" viewBox="0 0 12 14"><rect width="4" height="14" fill="currentColor" /><rect x="8" width="4" height="14" fill="currentColor" /></svg>
           : <svg width="13" height="15" viewBox="0 0 13 15"><path d="M0 0 13 7.5 0 15Z" fill="currentColor" /></svg>}

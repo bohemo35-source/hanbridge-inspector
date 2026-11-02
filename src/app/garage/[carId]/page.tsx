@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ carId: string }> }): Promise<Metadata> {
   const { carId } = await params; const car = getCar(carId);
-  return { title: car ? `${car.year} ${car.make} ${car.model} · Hanbridge garage` : "Hanbridge garage" };
+  return { title: car ? `${car.year} ${car.make} ${car.model} · Hanbridge garage` : "Hanbridge garage", robots: { index: false, follow: false } }; // same report data as /r/:id
 }
 
 export default async function GaragePage({ params, searchParams }: { params: Promise<{ carId: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {

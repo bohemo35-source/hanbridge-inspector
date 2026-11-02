@@ -72,7 +72,7 @@ function Pick({ t, lang }: { t: number; lang: Lang }) {
   const chosen = t > 0.5;
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 px-4">
-      <div className="font-mono text-[10.5px] uppercase tracking-[.3em] text-sodium" style={{ opacity: seg(t, 0, 0.1) }}>{tr(lang, "Selection from your manager", "Подборка от менеджера")}</div>
+      <div className="font-mono text-[10.5px] uppercase tracking-[.3em] text-sodium" style={{ opacity: seg(t, 0, 0.1) }}>{tr(lang, "Selection from your manager · illustration", "Подборка от менеджера · иллюстрация")}</div>
       <div className="grid w-full max-w-[920px] grid-cols-3 gap-2 sm:gap-4">
         {cars.map((c, i) => {
           const on = chosen && i === 1;
@@ -88,7 +88,7 @@ function Pick({ t, lang }: { t: number; lang: Lang }) {
                 <div className="text-xs font-medium sm:text-sm">Kia Sportage · {c.y}</div>
                 <div className="text-[10px] text-mist sm:text-xs">{c.km} {tr(lang, "km", "км")}</div>
                 <div className="mt-1 text-sm font-semibold text-sodium-hi sm:text-base">{c.p}</div>
-                <div className="text-[9px] uppercase tracking-wider text-mist sm:text-[10px]">{tr(lang, "platform price", "цена площадки")}</div>
+                <div className="text-[9px] uppercase tracking-wider text-mist sm:text-[10px]">{tr(lang, "example · platform price", "пример · цена площадки")}</div>
               </div>
             </Card>
           );
@@ -104,16 +104,17 @@ function Pick({ t, lang }: { t: number; lang: Lang }) {
 /** The agent at work on the real report: which Meta model did what, one real finding with its proof, the verdict. */
 function AgentReport({ t, lang, report }: { t: number; lang: Lang; report?: Report }) {
   const r = report;
-  const steps = r?.trace.length ?? 14;
-  const readings = r?.paintReadings.length ?? 13;
+  // only what this report actually holds: no invented numbers when it is missing
   const fnd = r?.findings ?? [];
   const ver = fnd.filter((f) => f.verified).length;
+  const quotes = fnd.flatMap((f) => f.evidence).filter((e) => e.type === "transcript").length;
+  const gauge = r?.paintReadings.length ?? 0;
   const rows: [string, string][] = [
     ["SAM 3.1", tr(lang, "car, panels and plate segmented", "машина, детали и номер выделены")],
     ["Muse Glimmer", tr(lang, "every photo indexed and described", "каждое фото описано и в индексе")],
-    ["Muse Voice Transcribe", readings ? tr(lang, `inspector's voice → ${readings} readings`, `голос инспектора → ${readings} замеров`) : tr(lang, "inspector's voice → quotes with timecodes", "голос инспектора → цитаты с таймкодами")],
-    ["Muse Spark", tr(lang, `${steps} agent steps · ${fnd.length} findings`, `${steps} шагов агента · находок: ${fnd.length}`)],
-    ["Muse Spark Open", tr(lang, `independent check · ${ver}/${fnd.length} verified`, `независимая проверка · ${ver}/${fnd.length} подтверждено`)],
+    ["Muse Voice Transcribe", quotes ? tr(lang, `inspector's voice → ${quotes} quotes with timecodes`, `голос инспектора → цитат с таймкодами: ${quotes}`) : tr(lang, "inspector's voice → quotes with timecodes", "голос инспектора → цитаты с таймкодами")],
+    ["Muse Spark", r ? tr(lang, `${r.trace.length} agent steps${gauge ? ` · gauge ${gauge} panels` : ""} · ${fnd.length} findings`, `${r.trace.length} шагов агента${gauge ? ` · толщиномер ${gauge} дет.` : ""} · находок: ${fnd.length}`) : tr(lang, "plans the inspection, calls the tools, writes the verdict", "ведёт осмотр, вызывает инструменты, пишет вердикт")],
+    ["Muse Spark Open", r ? tr(lang, `independent check · ${ver}/${fnd.length} verified`, `независимая проверка · ${ver}/${fnd.length} подтверждено`) : tr(lang, "independent check of every finding", "независимая проверка каждой находки")],
   ];
   // the strongest proof to show: a verified finding with a photo, else any finding with a photo
   const KIND: Record<string, [string, string]> = { repaint: ["Repainted", "Перекрас"], putty: ["Putty under the paint", "Шпатлёвка под краской"], panel_replaced: ["Panel replaced", "Деталь заменена"], dent: ["Dent", "Вмятина"], scratch: ["Scratch", "Царапина"], rust: ["Rust", "Ржавчина"], mechanical: ["Mechanical issue", "Механика"], other: ["Note", "Замечание"] };
@@ -123,14 +124,14 @@ function AgentReport({ t, lang, report }: { t: number; lang: Lang; report?: Repo
   const img = ev ? r?.mediaUrls?.[ev.mediaId] : undefined;
   const quote = f?.evidence.find((e) => e.quote)?.quote;
   const microns = f?.evidence.find((e) => e.gaugeMicrons)?.gaugeMicrons;
-  const dec = r?.verdict.decision ?? "BUY";
-  const decColor = dec === "BUY" ? "#86cfa2" : dec === "WALK_AWAY" ? "#e2574c" : "#eea65a";
+  const dec = r?.verdict.decision;
+  const decColor = !dec ? "" : dec === "BUY" ? "#86cfa2" : dec === "WALK_AWAY" ? "#e2574c" : "#eea65a";
   const kR = seg(t, 0.5, 0.62), kV = seg(t, 0.7, 0.8);
   return (
     <div className="flex h-full items-center justify-center px-4">
-      <div className="grid w-full max-w-[1060px] items-center gap-4 sm:grid-cols-[1.05fr_1fr] sm:gap-6">
+      <div className={`grid w-full items-center gap-4 sm:gap-6 ${r && f ? "max-w-[1060px] sm:grid-cols-[1.05fr_1fr]" : "max-w-[560px]"}`}>
         <Card k={seg(t, 0, 0.1)}>
-          <Label>{tr(lang, "Agent · Meta models", "Агент · модели Meta")} — {r ? `${r.vehicle.make} ${r.vehicle.model}` : "Kia Sportage"}</Label>
+          <Label>{tr(lang, "Agent · Meta models", "Агент · модели Meta")}{r ? ` — ${r.vehicle.make} ${r.vehicle.model}` : ""}</Label>
           {rows.map(([m, d], i) => {
             const k = seg(t, 0.08 + i * 0.08, 0.15 + i * 0.08);
             return (
@@ -142,7 +143,7 @@ function AgentReport({ t, lang, report }: { t: number; lang: Lang; report?: Repo
             );
           })}
         </Card>
-        <div className="relative" style={{ opacity: ease(kR), transform: `translateY(${(1 - ease(kR)) * 18}px)` }}>
+        {r && f && <div className="relative" style={{ opacity: ease(kR), transform: `translateY(${(1 - ease(kR)) * 18}px)` }}>
           <div className="overflow-hidden rounded-[6px] border border-bone/12 bg-ink/80 shadow-[0_40px_120px_rgba(0,0,0,.6)] backdrop-blur-xl">
             {img && (
               <div className="relative aspect-[16/9] overflow-hidden">
@@ -152,21 +153,21 @@ function AgentReport({ t, lang, report }: { t: number; lang: Lang; report?: Repo
               </div>
             )}
             <div className="p-4 sm:p-5">
-              {f ? <>
+              <>
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="font-mono text-[11px] uppercase tracking-[.16em] text-sodium">{panelLabel(f.panel, lang)}</span>
                   <span className={`font-mono text-[10px] uppercase tracking-[.16em] ${f.verified ? "text-ok" : "text-mist"}`}>{f.verified ? tr(lang, "verified", "подтверждено") : tr(lang, "unconfirmed", "не подтверждено")}</span>
                 </div>
                 <p className="mt-2 font-display text-[24px] font-medium leading-tight text-bone">{KIND[f.kind]?.[lang === "ru" ? 1 : 0] ?? f.kind}{microns ? ` · ${microns} µm` : ""}</p>
                 {quote && <p className="mt-2 border-l border-sodium/60 pl-3 text-[13px] italic leading-snug text-bone-2">«{quote.slice(0, 110)}» <span className="not-italic text-mist">— {tr(lang, "inspector, voice note", "инспектор, голосовая заметка")}</span></p>}
-              </> : <p className="text-[15px] text-bone">{tr(lang, "No defects found.", "Дефектов не найдено.")}</p>}
+              </>
             </div>
           </div>
-          <div className="absolute -bottom-5 -right-2 rotate-[-4deg] border-2 px-4 py-1.5 font-mono text-[18px] font-medium uppercase tracking-[.2em] sm:-right-6 sm:text-[22px]"
+          {dec && <div className="absolute -bottom-5 -right-2 rotate-[-4deg] border-2 px-4 py-1.5 font-mono text-[18px] font-medium uppercase tracking-[.2em] sm:-right-6 sm:text-[22px]"
             style={{ color: decColor, borderColor: decColor, background: "rgba(6,7,8,.85)", opacity: kV, transform: `rotate(-4deg) scale(${1.4 - 0.4 * ease(kV)})`, boxShadow: `0 0 40px ${decColor}55` }}>
             {dec.replace("_", " ")}
-          </div>
-        </div>
+          </div>}
+        </div>}
       </div>
     </div>
   );

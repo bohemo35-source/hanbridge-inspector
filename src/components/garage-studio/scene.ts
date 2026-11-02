@@ -95,8 +95,9 @@ function buildBay(scene: THREE.Scene, mobile: boolean) {
   const cyc = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 12, 64, 1, true), new THREE.MeshBasicMaterial({ map: gradientTexture([[0, "#07080a"], [0.55, "#121619"], [0.82, "#0b0d10"], [1, "#060708"]]), side: THREE.BackSide, fog: false }));
   cyc.position.y = 5.2; g.add(cyc);
   // floor: dim reflection under a dark glossy plane whose alpha fades out from the centre
+  let refl: Reflector | null = null;
   if (!mobile) {
-    const refl = new Reflector(new THREE.CircleGeometry(16, 64), { textureWidth: 1024, textureHeight: 1024, color: 0x1a1d21, clipBias: 0.003 });
+    refl = new Reflector(new THREE.CircleGeometry(16, 64), { textureWidth: 1024, textureHeight: 1024, color: 0x1a1d21, clipBias: 0.003 });
     refl.rotation.x = -Math.PI / 2; refl.position.y = -0.001; g.add(refl);
   }
   const floor = new THREE.Mesh(new THREE.CircleGeometry(16, 64), new THREE.MeshStandardMaterial({ color: 0x0a0c0e, roughness: 0.42, metalness: 0.3, transparent: !mobile, opacity: mobile ? 1 : 0.86 }));
@@ -150,7 +151,7 @@ function buildBay(scene: THREE.Scene, mobile: boolean) {
   const rubber = new THREE.MeshStandardMaterial({ color: 0x0b0b0c, roughness: 0.92 });
   const tyres = new THREE.Group(); tyres.position.set(-5.4, 0, -2.0); g.add(tyres); props.push(tyres);
   for (let i = 0; i < 3; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.12, 12, 32), rubber); t.rotation.x = Math.PI / 2; t.position.set(0, 0.12 + i * 0.25, 0); t.castShadow = true; tyres.add(t); }
-  return { group: g, table, props };
+  return { group: g, table, props, reflector: refl };
 }
 
 export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile: boolean; zoom: boolean }): StudioHandle {
@@ -209,7 +210,10 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 0.75, 0); controls.enableDamping = true; controls.dampingFactor = 0.07;
   controls.minDistance = 4.2; controls.maxDistance = 12.5 * distK(); controls.maxPolarAngle = Math.PI * 0.48; controls.minPolarAngle = Math.PI * 0.12;
-  controls.enablePan = false; controls.enableZoom = opts.zoom; controls.autoRotate = true; // embedded in a scrolling page: the wheel scrolls the page controls.autoRotateSpeed = 0.45;
+  controls.enablePan = false; controls.autoRotate = true; controls.autoRotateSpeed = 0.45;
+  // embedded in a scrolling page: the wheel and vertical swipes scroll the page, horizontal drags turn the car
+  controls.enableZoom = opts.zoom;
+  renderer.domElement.style.touchAction = opts.zoom ? "none" : "pan-y";
   controls.update();
 
   let composer: EffectComposer | null = null;
@@ -256,7 +260,6 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
       if (disposed) return;
       const root = pg.scene; norm(root); root.updateMatrixWorld(true);
       buildPieces(root);
-      (window as unknown as { __garage: unknown }).__garage = { centers: Object.fromEntries([...byPanel].map(([k, v]) => [k, v.center.toArray()])) }; // capture scripts
       ready = true; scanT = 0; ev.onReady();
     });
   });
@@ -442,8 +445,20 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
     dispose() {
       disposed = true; cancelAnimationFrame(raf); io.disconnect(); ro.disconnect(); controls.dispose();
       renderer.domElement.removeEventListener("pointermove", onMove); renderer.domElement.removeEventListener("pointerdown", onDown); renderer.domElement.removeEventListener("pointerup", onUp);
-      scene.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.geometry?.dispose(); (Array.isArray(m.material) ? m.material : [m.material]).forEach((x) => x?.dispose()); } });
-      pmrem.dispose(); composer?.dispose(); renderer.dispose(); renderer.domElement.remove();
+      bay.reflector?.dispose(); // its render target
+      const texs = new Set<THREE.Texture>();
+      scene.traverse((o) => {
+        const m = o as THREE.Mesh | THREE.Line; if (!(m as THREE.Mesh).isMesh && !(m as THREE.Line).isLine) return;
+        m.geometry?.dispose();
+        (Array.isArray(m.material) ? m.material : [m.material]).forEach((x) => {
+          if (!x) return;
+          for (const v of Object.values(x)) if (v instanceof THREE.Texture) texs.add(v);
+          x.dispose();
+        });
+      });
+      texs.forEach((t) => t.dispose());
+      scene.environment?.dispose(); pmrem.dispose(); composer?.dispose();
+      renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove();
     },
   };
 }
