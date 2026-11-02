@@ -16,6 +16,7 @@ const T = {
     sub: "The agent reads the walk-around photos, paint-gauge video, the inspector's voice note and the diagnostic report, checks each finding in a second independent pass, and returns BUY / NEGOTIATE / WALK AWAY — with a link the buyer can click through to the frame or the voice quote.",
     who: "For car exporters and dealers: one verifiable link per car instead of 40 photos in a chat.",
     open: "Open report",
+    garage: "3D garage",
     live: "Watch the agent live (~1.5 min)",
     findings: "findings",
     verified: "verified",
@@ -31,6 +32,7 @@ const T = {
     sub: "Агент читает фото обхода, видео толщиномера, голосовую заметку инспектора и диагностику, перепроверяет каждую находку отдельным проходом и выдаёт BUY / NEGOTIATE / WALK AWAY — со ссылкой, где покупатель кликает до кадра или цитаты.",
     who: "Для экспортёров и дилеров: одна проверяемая ссылка на машину вместо 40 фото в чате.",
     open: "Открыть отчёт",
+    garage: "3D-гараж",
     live: "Смотреть агента вживую (~1,5 мин)",
     findings: "находок",
     verified: "подтверждено",
@@ -104,6 +106,7 @@ export default function Hero({ reports, lang }: { reports: Report[]; lang: Lang 
                 ) : <span className="text-[13px] text-mist">{t.noReport}</span>}
                 <div className="mt-auto flex flex-wrap gap-2 pt-2">
                   {report && <a href={`/r/${report.id}${q}`} className="rounded-full bg-bone px-4 py-2 font-mono text-[10.5px] uppercase tracking-[.16em] text-ink hover:bg-sodium-hi">{t.open}</a>}
+                  <a href={`/garage/${car.carId}${q}`} className="rounded-full border border-sodium/60 px-4 py-2 font-mono text-[10.5px] uppercase tracking-[.16em] text-sodium-hi hover:border-sodium">{t.garage}</a>
                   <a href={`/inspect/${car.carId}${q}`} className="rounded-full border border-bone/25 px-4 py-2 font-mono text-[10.5px] uppercase tracking-[.16em] text-bone hover:border-sodium">{t.live}</a>
                 </div>
               </div>

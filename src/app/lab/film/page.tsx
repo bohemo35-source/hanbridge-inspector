@@ -7,6 +7,7 @@
 import type { Metadata } from "next";
 import { Fraunces } from "next/font/google";
 import { listReportsAsync } from "@/lib/store/reports";
+import { garageData } from "@/lib/garage/data";
 import FilmJourney from "@/components/film/FilmJourney";
 import FilmV3 from "@/components/film3/FilmV3";
 import Film4 from "@/components/film4/Film4";
@@ -22,10 +23,11 @@ export default async function LabFilmPage({ searchParams }: { searchParams: Prom
   const lang = q.lang === "ru" ? "ru" : "en";
   const reports = await listReportsAsync().catch(() => []);
   const report = reports.find((r) => r.carId === (typeof q.car === "string" ? q.car : "kia-sportage")) ?? reports[0];
+  const garage = report?.carId ? await garageData(report.carId, report, `${report.vehicle.year ?? ""} ${report.vehicle.make} ${report.vehicle.model}`.trim()).catch(() => undefined) : undefined;
   return (
     <main className={`${serif.variable} w-full`} style={{ ["--tw-font-serif" as string]: "var(--font-serif)" }}>
       <style>{`.font-serif{font-family:var(--font-serif),Georgia,serif}`}</style>
-      {q.v === "2" ? <FilmJourney report={report} lang={lang} /> : q.v === "3" ? <FilmV3 report={report} lang={lang} /> : <Film4 report={report} lang={lang} />}
+      {q.v === "2" ? <FilmJourney report={report} lang={lang} /> : q.v === "3" ? <FilmV3 report={report} lang={lang} /> : <Film4 report={report} lang={lang} garage={garage} />}
     </main>
   );
 }

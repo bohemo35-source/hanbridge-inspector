@@ -2,22 +2,25 @@
 // @project: hanbridge-inspector
 // @purpose: Public report view: verdict, InspectionMap, findings/Unconfirmed, listing, agent trace, chat, delivery tab (EN/RU)
 // @created: 2026-10-29
+// @updated: 2026-11-02 claude-code — garage studio (one neutral 3D car, panels from this report, real photos) replaces the parametric map when the car has a photo index
 "use client";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import type { Report } from "@/lib/schema";
+import type { GarageData } from "@/lib/garage/data";
 import { InspectionMap } from "@/components/damage-map-3d/InspectionMap";
 import { guessBodyType } from "@/components/damage-map-3d/bodyTypeMap";
 import { isStageId } from "@/components/journey-3d/route";
 
 const JourneyScene = dynamic(() => import("@/components/journey-3d/JourneyScene"), { ssr: false });
+const GarageStudio = dynamic(() => import("@/components/garage-studio/GarageStudio"), { ssr: false });
 
 const T = {
   ru: { confirmed: "Подтверждённые находки", unconfirmed: "Unconfirmed — не подтверждены верификатором", trace: "Трасса агента", delivery: "Доставка", report: "Отчёт", chat: "Чат с экспертом", ask: "Спросить по этому отчёту…", send: "Отправить", listing: "Фото объявления (номер скрыт)", handoff: "Передано менеджеру", cost: "Растаможка и итоговая стоимость — расчёт менеджера (manager_quote_required)" },
   en: { confirmed: "Confirmed findings", unconfirmed: "Unconfirmed — not supported by the verifier", trace: "Agent trace", delivery: "Delivery", report: "Report", chat: "Expert chat", ask: "Ask about this report…", send: "Send", listing: "Listing photo (plate hidden)", handoff: "Handed off to a manager", cost: "Customs / landed cost — manager quote required" },
 } as const;
 
-export function ReportView({ report }: { report: Report }) {
+export function ReportView({ report, garage }: { report: Report; garage?: GarageData }) {
   const [lang, setLang] = useState<"ru" | "en">("ru");
   const [tab, setTab] = useState<"report" | "delivery">("report");
   const [chat, setChat] = useState<Array<{ role: string; content: string }>>([]);
@@ -81,7 +84,7 @@ export function ReportView({ report }: { report: Report }) {
       {tab === "delivery" ? (
         <JourneyScene compact currentStage={stage} bodyType={bodyType} doors={report.vehicle.doors} lang={lang} reportSummary={{ findings: report.findings.length, confirmed: verified.length }} />
       ) : (<>
-        <InspectionMap report={report} lang={lang} mediaUrl={(id) => report.mediaUrls?.[id]} />
+        {garage ? <div style={{ margin: "14px -20px", borderRadius: 8, overflow: "hidden" }}><GarageStudio data={garage} lang={lang} embedded /></div> : <InspectionMap report={report} lang={lang} mediaUrl={(id) => report.mediaUrls?.[id]} />}
         <h2>{t.confirmed} ({verified.length})</h2>
         <div style={{ display: "grid", gap: 10 }}>{verified.map((f) => <FindingCard key={f.id} f={f} />)}</div>
         <h2>{t.unconfirmed} ({unconfirmed.length})</h2>

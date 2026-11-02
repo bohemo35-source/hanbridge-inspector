@@ -6,10 +6,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Report } from "@/lib/schema";
+import type { GarageData } from "@/lib/garage/data";
 import InsertView from "./Inserts";
 import { ACTS, RECEIPT_BUSAN, RECEIPT_CUSTOMS, SCENES, UI, type Lang, type Line, type Scene } from "./story";
 
 const GarageScene = dynamic(() => import("@/components/garage-3d/GarageScene"), { ssr: false });
+const GarageStudio = dynamic(() => import("@/components/garage-studio/GarageStudio"), { ssr: false });
 
 /** hackathon build: say how we earn. Set false for the production site. */
 const SHOW_VAT_NOTE = true;
@@ -22,7 +24,7 @@ const seg = (t: number, a: number, b: number) => cl((t - a) / (b - a));
 const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
 const actStart = ACTS.map((_, a) => starts[SCENES.findIndex((s) => s.act === a)] ?? 0);
 
-export default function Film4({ report, lang }: { report?: Report; lang: Lang }) {
+export default function Film4({ report, lang, garage }: { report?: Report; lang: Lang; garage?: GarageData }) {
   const wrap = useRef<HTMLDivElement>(null);
   const vids = useRef<(HTMLVideoElement | null)[]>([]);
   const [pos, setPos] = useState({ i: 0, t: 0 });
@@ -227,7 +229,8 @@ export default function Film4({ report, lang }: { report?: Report; lang: Lang })
           <h2 className="mt-5 font-display text-[clamp(34px,5vw,64px)] font-medium leading-[1.02]">{UI.proofTitle[lang]}</h2>
           <p className="mt-4 text-[17px] text-bone-2">{UI.proofSub[lang]}</p>
         </div>
-        <GarageScene report={report} lang={lang} />
+        {garage ? <GarageStudio data={garage} lang={lang} embedded /> : <GarageScene report={report} lang={lang} />}
+        {garage && <div className="pb-16 pt-6 text-center"><a href={`/garage/${garage.carId}${lang === "ru" ? "?lang=ru" : ""}`} className="font-mono text-[11px] uppercase tracking-[.22em] text-bone-2 hover:text-sodium">{UI.allGarages[lang]} →</a></div>}
       </section>
     </div>
   );

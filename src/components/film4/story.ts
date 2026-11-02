@@ -151,5 +151,6 @@ export const UI = {
   checkOwn: { en: "Check your own car", ru: "Проверить свою машину" },
   proofKicker: { en: "Epilogue · the evidence", ru: "Эпилог · доказательства" },
   proofTitle: { en: "This was a real car. Here is her real inspection.", ru: "Это была реальная машина. Вот её настоящий осмотр." },
-  proofSub: { en: "Take it apart — panel by panel.", ru: "Разберите её — деталь за деталью." },
+  proofSub: { en: "Take it apart — panel by panel. Every panel opens its real photos.", ru: "Разберите её — деталь за деталью. Каждая деталь открывает свои настоящие фото." },
+  allGarages: { en: "Open the garage of every inspection", ru: "Гараж каждого осмотра" },
 };
