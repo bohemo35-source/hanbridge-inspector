@@ -2,8 +2,9 @@
 // @project: hanbridge-inspector
 // @purpose: Garage studio data: panel status ranking (gauge class raised by findings, unverified → unconfirmed) and photo-note relevance
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code — uploaded car (no photo index) gets a full garage from its report; prototype keys are not car ids
 import { describe, expect, it } from "vitest";
-import { noteScore, panelStatus } from "../src/lib/garage/data";
+import { bodyKind, garageData, noteScore, panelStatus } from "../src/lib/garage/data";
 import type { Report } from "../src/lib/schema";
 
 const finding = (panel: string, kind: Report["findings"][number]["kind"], verified: boolean): Report["findings"][number] => ({
@@ -41,5 +42,23 @@ describe("noteScore", () => {
     expect(noteScore("front_left_fender", "Front left wing with scratches")).toBe(2);
     expect(noteScore("trunk", "Open tailgate, cargo area")).toBe(1);
     expect(noteScore("hood", "Bonnet open, engine bay")).toBe(1);
+  });
+});
+
+describe("garageData for an uploaded car", () => {
+  it("no photo index: 13 panels from the report, no photos, body from the report", async () => {
+    const r = report({ carId: "u-0123456789", vehicle: { make: "BMW", model: "X3", bodyType: "suv" }, paintReadings: [{ panel: "front_left_door", microns: 245 }], findings: [finding("front_left_door", "putty", true)] } as Partial<Report>);
+    const g = await garageData("u-0123456789", r, "2023 BMW X3");
+    expect(g.panels).toHaveLength(13);
+    expect(g.photoTotal).toBe(0);
+    expect(g.panels.every((p) => p.photos.length === 0)).toBe(true);
+    expect(g.panels.find((p) => p.panel === "front_left_door")).toMatchObject({ status: "putty", reading: { microns: 245 } });
+    expect(g.body).toBe("suv");
+    expect(g.sheet).toBeUndefined();
+    expect(g.gaugeVideo).toBeUndefined();
+  });
+  it("prototype keys are not cars", () => {
+    expect(bodyKind("constructor")).toBe("suv");
+    expect(bodyKind("__proto__")).toBe("suv");
   });
 });

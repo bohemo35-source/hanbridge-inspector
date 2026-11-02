@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Garage studio data per inspection: status, gauge spread, findings (with inspector quotes) and real photos of every one of the 13 panels (photos picked from the Muse Glimmer photo index)
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code — own-key lookups only (carId from a stored report must not hit Object.prototype)
 import type { Report } from "@/lib/schema";
 import { PANELS, type PanelId } from "@/lib/domain/panels";
 import { classifyPaint } from "@/lib/domain/paint";
@@ -28,7 +29,7 @@ export interface InspectorSheet { facts: { ru: string; en: string; value_ru: str
 export type BodyKind = "suv" | "sedan" | "hatchback" | "compact" | "city";
 const BODY_OF: Record<string, BodyKind> = { "mini-cooper-s": "compact", "kia-morning": "city" };
 export function bodyKind(carId: string, report?: Report): BodyKind {
-  if (BODY_OF[carId]) return BODY_OF[carId];
+  if (Object.hasOwn(BODY_OF, carId)) return BODY_OF[carId];
   const t = getCar(carId)?.bodyType ?? report?.vehicle.bodyType;
   return t === "sedan" ? "sedan" : t === "hatchback" ? ((getCar(carId)?.doors ?? report?.vehicle.doors) === 3 ? "compact" : "hatchback") : "suv";
 }
@@ -86,7 +87,7 @@ export async function garageData(carId: string, report?: Report, title?: string)
       .sort((a, b) => b.s - a.s)
       .map((x) => x.e)
       .slice(0, 8)
-      .map((e) => ({ id: e.photoId, url: blobUrl(carId, "photos", e.photoId) ?? "", note: e.note ?? "", noteRu: (NOTES_RU as Record<string, Record<string, string>>)[carId]?.[e.photoId], closeUp: !!e.close_up, view: e.view ?? "" }))
+      .map((e) => ({ id: e.photoId, url: blobUrl(carId, "photos", e.photoId) ?? "", note: e.note ?? "", noteRu: Object.hasOwn(NOTES_RU, carId) ? (NOTES_RU as Record<string, Record<string, string>>)[carId][e.photoId] : undefined, closeUp: !!e.close_up, view: e.view ?? "" }))
       .filter((p) => p.url);
     return {
       panel: id,
@@ -111,7 +112,7 @@ export async function garageData(carId: string, report?: Report, title?: string)
     panels,
     photoTotal: entries.length,
     body: bodyKind(carId, report),
-    sheet: (SHEETS as unknown as Record<string, InspectorSheet>)[carId],
-    gaugeVideo: (GAUGE as Record<string, { url: string }>)[carId] ? { url: (GAUGE as Record<string, { url: string }>)[carId].url, poster: `/garage/gauge/${carId}.jpg` } : undefined,
+    sheet: Object.hasOwn(SHEETS, carId) ? (SHEETS as unknown as Record<string, InspectorSheet>)[carId] : undefined,
+    gaugeVideo: Object.hasOwn(GAUGE, carId) ? { url: (GAUGE as Record<string, { url: string }>)[carId].url, poster: `/garage/gauge/${carId}.jpg` } : undefined,
   };
 }

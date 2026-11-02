@@ -4,6 +4,7 @@
 // @created: 2026-10-29
 // @updated: 2026-11-02 claude-code — garage studio (one neutral 3D car, panels from this report, real photos) replaces the parametric map when the car has a photo index
 // @updated: 2026-11-02 claude-code — film v4 design: display/mono type, sodium palette, evidence chips, model badges in the agent trace, ?lang= on load
+// @updated: 2026-11-03 claude-code — «open the car's garage» only for catalog cars (uploads have no /garage page)
 "use client";
 import dynamic from "next/dynamic";
 import { useState } from "react";
@@ -115,7 +116,7 @@ export function ReportView({ report, garage, initialLang }: { report: Report; ga
         {(["report", "delivery"] as const).map((k) => (
           <button key={k} onClick={() => setTab(k)} className={`rounded-full px-5 py-2.5 font-mono text-[11px] uppercase tracking-[.2em] ${tab === k ? "bg-bone text-ink" : "border border-bone/20 text-bone-2 hover:border-sodium"}`}>{k === "report" ? t.report : t.delivery}</button>
         ))}
-        {garage && <a href={`/garage/${garage.carId}${lang === "ru" ? "?lang=ru" : ""}`} className="ml-auto self-center font-mono text-[11px] uppercase tracking-[.2em] text-sodium-hi hover:text-sodium">{t.garage}</a>}
+        {garage && garage.photoTotal > 0 && <a href={`/garage/${garage.carId}${lang === "ru" ? "?lang=ru" : ""}`} className="ml-auto self-center font-mono text-[11px] uppercase tracking-[.2em] text-sodium-hi hover:text-sodium">{t.garage}</a>}
       </div>
 
       {tab === "delivery" ? (
