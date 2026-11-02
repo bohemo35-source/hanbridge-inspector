@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Agent orchestrator: Spark tool-calling loop (max 16 steps) -> cross-source merge -> open-weight verifier -> deterministic verdict -> report
 // @created: 2026-10-29
+// @updated: 2026-11-03 claude-code — a finding backed only by the owner's typed gauge reading goes to Unconfirmed and the report is handed to a manager
 import { readFile } from "node:fs/promises";
 import sharp from "sharp";
 import { z } from "zod";
@@ -22,7 +23,7 @@ import { indexPhotos, pickDefectPhotos, pickListingCandidates, type PhotoIndex }
 import { glimmerConfigured } from "@/lib/meta/glimmer";
 import { readDiagnosticReport } from "./tools/diagnostic";
 import { readInspectorReport } from "./tools/inspector";
-import { decideVerdict, detectConflict, verifyFinding } from "./verifier";
+import { decideVerdict, detectConflict, ownerReadingOnly, verifyFinding } from "./verifier";
 
 /** Vercel kills the run route at 300 s (maxDuration): past this point optional work is skipped instead of risking the whole report. */
 const RUN_SOFT_DEADLINE_MS = 235_000;
@@ -132,13 +133,15 @@ export async function runInspection(opts: {
       } else findings.push(f);
     }
   };
-  const addPaint = (rec: Record<string, number>) => { for (const [p, v] of Object.entries(rec)) paint.set(p, Math.max(paint.get(p) ?? 0, v)); };
+  // panels measured by the inspector (voice / gauge video) vs readings the visitor typed into the upload form
+  const measuredPanels = new Set<string>(), typedPanels = new Set((opts.initialPaint ?? []).map((r) => r.panel));
+  const addPaint = (rec: Record<string, number>, measured = true) => { for (const [p, v] of Object.entries(rec)) { paint.set(p, Math.max(paint.get(p) ?? 0, v)); if (measured) measuredPanels.add(p); } };
   const paintStats = new Map<string, { min: number; max: number; points: number }>();
   const addStats = (rec: Record<string, { min: number; max: number; points: number }>) => {
     for (const [p, s] of Object.entries(rec)) { const e = paintStats.get(p); paintStats.set(p, e ? { min: Math.min(e.min, s.min), max: Math.max(e.max, s.max), points: e.points + s.points } : s); }
   };
   if (opts.initialPaint?.length) addStats(Object.fromEntries(opts.initialPaint.map((r) => [r.panel, { min: r.microns, max: r.microns, points: 1 }])));
-  if (opts.initialPaint?.length) addPaint(Object.fromEntries(opts.initialPaint.map((r) => [r.panel, r.microns])));
+  if (opts.initialPaint?.length) addPaint(Object.fromEntries(opts.initialPaint.map((r) => [r.panel, r.microns])), false);
 
   async function execute(name: string, args: Record<string, unknown>): Promise<string> {
     const key = `${name}:${JSON.stringify(args)}`;
@@ -329,6 +332,18 @@ export async function runInspection(opts: {
       step("conflict_check", f.id, true, `${f.panel}/${f.kind}: conflicting sources → unconfirmed`, 0);
     }
   }
+
+  // a number typed by the visitor is a claim, not proof: alone it never confirms a finding
+  const ownerOnly: Finding[] = [];
+  for (const f of findings) {
+    if (f.verified && ownerReadingOnly(f, typedPanels, measuredPanels)) {
+      f.verified = false;
+      f.verifierNote = `${f.verifierNote ?? ""} · only the owner's typed gauge reading — no photo, inspector voice or sheet confirms it → unconfirmed`.trim();
+      step("conflict_check", f.id, true, `${f.panel}/${f.kind}: owner-typed reading only → unconfirmed`, 0);
+      ownerOnly.push(f);
+    }
+  }
+  if (ownerOnly.length && !handoffReason) handoffReason = `typed gauge reading not confirmed by photos (${ownerOnly.map((f) => `${f.panel} ${f.evidence[0]?.gaugeMicrons ?? "?"} µm`).join(", ")}) — a manager checks it`;
 
   const verified = findings.filter((f) => f.verified);
   let verdict = decideVerdict(verified);

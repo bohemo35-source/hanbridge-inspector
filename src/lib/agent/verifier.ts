@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Independent verifier: open-weight muse-spark-open-1026 (Baseten), fallback muse-spark-1.3; deterministic verdict + handoff rules
 // @created: 2026-10-29
+// @updated: 2026-11-03 claude-code — ownerReadingOnly: a reading typed by the visitor is a claim, not proof
 import { z } from "zod";
 import { classifyPaint } from "@/lib/domain/paint";
 import { sparkJson, type ChatPart } from "@/lib/meta/spark";
@@ -23,6 +24,11 @@ export function detectConflict(f: Finding, paint: Array<{ panel: string; microns
   const gaugeEv = f.evidence.find((e) => e.gaugeMicrons !== undefined);
   if (gaugeEv?.gaugeMicrons !== undefined && (f.kind === "repaint" || f.kind === "putty") && classifyPaint(gaugeEv.gaugeMicrons) === "factory") return true;
   return false;
+}
+
+/** Pure: the finding rests only on a paint reading the visitor typed into the form (no inspector voice/gauge video/photo/sheet for that panel). */
+export function ownerReadingOnly(f: Finding, typedPanels: ReadonlySet<string>, measuredPanels: ReadonlySet<string>): boolean {
+  return typedPanels.has(f.panel) && !measuredPanels.has(f.panel) && f.evidence.length > 0 && f.evidence.every((e) => e.type === "gauge" && e.mediaId === "gauge");
 }
 
 export async function verifyFinding(f: Finding, opts: { crop?: Buffer } = {}): Promise<{ result: VerifierResult; model: string }> {

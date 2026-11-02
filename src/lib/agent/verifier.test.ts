@@ -2,8 +2,9 @@
 // @project: hanbridge-inspector
 // @purpose: Verifier/verdict unit tests: handoff at 0.5, critical->WALK_AWAY, conflict detection
 // @created: 2026-10-29
+// @updated: 2026-11-03 claude-code — owner-typed reading alone is not proof
 import { describe, expect, it } from "vitest";
-import { decideVerdict, detectConflict, shouldHandoff } from "./verifier";
+import { decideVerdict, detectConflict, ownerReadingOnly, shouldHandoff } from "./verifier";
 import type { Finding } from "@/lib/schema";
 
 const f = (over: Partial<Finding>): Finding => ({
@@ -33,5 +34,27 @@ describe("detectConflict", () => {
   });
   it("gauge 190 µm vs repaint claim -> no conflict", () => {
     expect(detectConflict(f({}), [{ panel: "hood", microns: 190 }])).toBe(false);
+  });
+});
+
+describe("ownerReadingOnly", () => {
+  const typed = new Set(["front_left_door"]);
+  const typedOnly = f({ panel: "front_left_door", kind: "putty", severity: "high", evidence: [{ type: "gauge", mediaId: "gauge", gaugeMicrons: 245 }] });
+  it("a typed reading with no other source is not proof", () => {
+    expect(ownerReadingOnly(typedOnly, typed, new Set())).toBe(true);
+  });
+  it("a photo frame on the same finding makes it a second source", () => {
+    expect(ownerReadingOnly({ ...typedOnly, evidence: [...typedOnly.evidence, { type: "frame", mediaId: "p1" }] }, typed, new Set())).toBe(false);
+  });
+  it("the inspector measured that panel too (voice / gauge video) → not owner-only", () => {
+    expect(ownerReadingOnly(typedOnly, typed, new Set(["front_left_door"]))).toBe(false);
+  });
+  it("catalog car (nothing typed) → rule does not apply", () => {
+    expect(ownerReadingOnly(typedOnly, new Set(), new Set())).toBe(false);
+  });
+  it("with the owner-only finding removed the verdict is not NEGOTIATE and goes to a manager", () => {
+    const v = decideVerdict([]);
+    expect(v.decision).toBe("BUY");
+    expect(v.handoff).toBe(true);
   });
 });
