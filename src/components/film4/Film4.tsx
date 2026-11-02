@@ -22,6 +22,8 @@ const TOTAL_VH = SCENES.reduce((a, s) => a + s.vh, 0);
 const cl = (v: number, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 const seg = (t: number, a: number, b: number) => cl((t - a) / (b - a));
 const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+/** narration timing built by scripts/film4/align-narration.mts: scene id → [start, end] seconds in the voice file */
+type Narration = { file: string; duration: number; scenes: Record<string, [number, number]> };
 const actStart = ACTS.map((_, a) => starts[SCENES.findIndex((s) => s.act === a)] ?? 0);
 
 export default function Film4({ report, lang, garage }: { report?: Report; lang: Lang; garage?: GarageData }) {
@@ -62,28 +64,64 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     return () => { window.removeEventListener("scroll", on); window.removeEventListener("resize", rs); cancelAnimationFrame(raf); };
   }, []);
 
-  /* watch mode: autoscroll at each scene's pace */
-  const stopAuto = useCallback(() => { autoRef.current = false; setAuto(false); }, []);
-  const startAuto = useCallback(() => {
+  /* watch mode: music theme (CC0) + narration. With a narration timing file the scroll follows the voice;
+     without it, each scene runs at its own pace (scene.sec). */
+  const music = useRef<HTMLAudioElement | null>(null);
+  const narr = useRef<HTMLAudioElement | null>(null);
+  const timing = useRef<Narration | null | undefined>(undefined);
+  const fade = (a: HTMLAudioElement | null, to: number, ms = 900, then?: () => void) => {
+    if (!a) return; const from = a.volume, t0 = performance.now();
+    const f = (now: number) => { const k = Math.min(1, (now - t0) / ms); a.volume = from + (to - from) * k; if (k < 1) requestAnimationFrame(f); else then?.(); };
+    requestAnimationFrame(f);
+  };
+  const stopAuto = useCallback(() => {
+    autoRef.current = false; setAuto(false);
+    narr.current?.pause(); fade(music.current, 0, 700, () => music.current?.pause());
+  }, []);
+  const startAuto = useCallback(async () => {
     const el = wrap.current; if (!el) return;
     autoRef.current = true; setAuto(true);
     const top0 = el.getBoundingClientRect().top + window.scrollY;
     if (window.scrollY < top0 || window.scrollY > top0 + (TOTAL_VH - 1) * window.innerHeight / 100) window.scrollTo(0, top0);
+    if (timing.current === undefined) timing.current = await fetch(`/film3/audio/narration-${lang}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const tm = timing.current;
+    if (!music.current) { music.current = new Audio("/film3/audio/theme.mp3"); music.current.loop = true; music.current.volume = 0; }
+    music.current.play().then(() => fade(music.current, tm ? 0.22 : 0.45, 1500)).catch(() => {});
+    // where the voice should be for the current scroll position
+    const vhNow = () => window.innerHeight / 100;
+    const sceneAt = (yy: number) => { const local = (yy - top0) / vhNow(); let i = SCENES.length - 1; while (i > 0 && starts[i] > local) i--; return { i, t: cl((local - starts[i]) / SCENES[i].vh) }; };
+    if (tm) {
+      if (!narr.current || narr.current.dataset.lang !== lang) { narr.current?.pause(); narr.current = new Audio(tm.file); narr.current.dataset.lang = lang; }
+      const { i, t } = sceneAt(window.scrollY); const w = tm.scenes[SCENES[i].id];
+      if (w) narr.current.currentTime = w[0] + t * (w[1] - w[0]);
+      narr.current.play().catch(() => {});
+    }
     let y = window.scrollY, prev = performance.now();
     const step = (now: number) => {
       if (!autoRef.current) return;
       const dt = Math.min(64, now - prev); prev = now;
-      const vh = window.innerHeight / 100;
-      const local = (y - top0) / vh;
-      let i = SCENES.length - 1; while (i > 0 && starts[i] > local) i--;
-      const sc = SCENES[i];
-      y += (sc.vh * vh) / (sc.sec * 1000) * dt;
-      if (local >= TOTAL_VH - 0.5) { stopAuto(); return; }
+      const vh = vhNow();
+      const a = narr.current;
+      if (tm && a && !a.paused) {
+        // follow the voice: find the scene whose window holds the audio time
+        const time = a.currentTime;
+        let j = SCENES.findIndex((sc) => { const w = tm.scenes[sc.id]; return w && time >= w[0] && time < w[1]; });
+        if (j < 0) j = time >= tm.duration - 0.05 ? SCENES.length - 1 : sceneAt(y).i;
+        const w = tm.scenes[SCENES[j].id];
+        const k = w ? cl((time - w[0]) / Math.max(0.01, w[1] - w[0])) : 0;
+        y = top0 + (starts[j] + k * SCENES[j].vh) * vh;
+        if (a.ended) { stopAuto(); return; }
+      } else {
+        const { i } = sceneAt(y); const sc = SCENES[i];
+        y += (sc.vh * vh) / (sc.sec * 1000) * dt;
+      }
+      if ((y - top0) / vh >= TOTAL_VH - 0.5) { stopAuto(); return; }
       window.scrollTo(0, y);
       requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
-  }, [stopAuto]);
+  }, [stopAuto, lang]);
+  useEffect(() => () => { music.current?.pause(); narr.current?.pause(); }, []);
   useEffect(() => () => { autoRef.current = false; }, []); // unmount stops the autoscroll loop
   useEffect(() => {
     if (!auto) return;

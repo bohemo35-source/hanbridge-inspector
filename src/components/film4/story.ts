@@ -84,7 +84,7 @@ export const SCENES: Scene[] = [
     { en: "From this minute, she is insured.", ru: "С этой минуты авто застраховано." }] },
 
   // ── III · the crossing ──
-  { id: "act3", card: { n: "III", title: ACTS[2].title, sub: { en: "Korea · the sea · the border", ru: "Корея · море · граница" } }, vh: 75, sec: 3.5, act: 2, in: "dip", insured: true },
+  { id: "act3", card: { n: "III", title: ACTS[2].title, sub: { en: "Korea. The sea. The border.", ru: "Корея. Море. Граница." } }, vh: 75, sec: 3.5, act: 2, in: "dip", insured: true },
   // k4-1 (carrier at the port) was cut: the car on top reads silver, not our white Kia
   { id: "hwy", clip: "s4-2", vh: 125, sec: 6, act: 2, in: "dip", insured: true, toast: L.kr, posM: "35% 50%", lines: [
     { en: "Deregistered. Export papers ready.", ru: "Снято с учёта. Экспортные документы готовы." },
