@@ -60,6 +60,13 @@ function floatGeometry(src: THREE.BufferGeometry): THREE.BufferGeometry {
   const P = new Float32Array(pos.count * 3);
   for (let i = 0; i < pos.count; i++) P.set([pos.getX(i), pos.getY(i), pos.getZ(i)], i * 3);
   g.setAttribute("position", new THREE.BufferAttribute(P, 3));
+  // keep the model's smooth normals and UVs: recomputed normals on split triangles look faceted, and templates keep their texture
+  for (const [name, size] of [["normal", 3], ["uv", 2]] as const) {
+    const at = src.getAttribute(name); if (!at) continue;
+    const A = new Float32Array(at.count * size);
+    for (let i = 0; i < at.count; i++) { A[i * size] = at.getX(i); A[i * size + 1] = at.getY(i); if (size === 3) A[i * size + 2] = at.getZ(i); }
+    g.setAttribute(name, new THREE.BufferAttribute(A, size));
+  }
   if (src.index) g.setIndex(Array.from(src.index.array as ArrayLike<number>));
   return g;
 }
@@ -219,8 +226,9 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
   const back = new THREE.RectAreaLight(0xf3efe6, 3.0, 1.4, 1.0); back.position.set(-3.8, 2.6, -5.6);
   // front fill from above the camera: long highlight along the doors
   const front = new THREE.RectAreaLight(0xf1f4f8, 2.2, 5, 0.6); front.position.set(4.5, 3.4, 5.5); front.lookAt(0, 0.7, 0); back.lookAt(0, 0.8, 0);
-  const warm = new THREE.SpotLight(SODIUM, 22, 30, 0.38, 0.8, 1.4); warm.position.set(-7, 2.4, -6); warm.target.position.set(0, 0.7, 0);
-  const cool = new THREE.SpotLight(SIGNAL, 26, 30, 0.42, 0.8, 1.4); cool.position.set(7.5, 2.2, -5.5); cool.target.position.set(0, 0.7, 0);
+  // short reach + aimed high: past the car the beam fades out instead of painting a hot spot on the glossy floor in front of the camera
+  const warm = new THREE.SpotLight(SODIUM, 60, 10.5, 0.3, 0.9, 2); warm.position.set(-7, 2.4, -6); warm.target.position.set(0, 1.25, 0);
+  const cool = new THREE.SpotLight(SIGNAL, 60, 10.5, 0.3, 0.9, 2); cool.position.set(7.5, 2.2, -5.5); cool.target.position.set(0, 1.25, 0);
   const key = new THREE.DirectionalLight(0xffffff, 0.55); key.position.set(3, 9, 4); key.castShadow = true; key.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048);
   Object.assign(key.shadow.camera, { left: -5, right: 5, top: 5, bottom: -5, far: 25 });
   scene.add(soft, sideL, sideR, back, front, warm, warm.target, cool, cool.target, key, new THREE.HemisphereLight(0x8fa3b8, 0x0b0907, 0.35));
@@ -255,7 +263,8 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
   const pieces: Piece[] = [];
   const byPanel = new Map<PanelId, Piece>();
   const overlayMats = new Map<PanelId, THREE.MeshBasicMaterial>();
-  const paintMats = new Map<PanelId, THREE.MeshPhysicalMaterial>();
+  const paintMats = new Map<PanelId, THREE.MeshStandardMaterial>();
+  let heroMat: THREE.MeshStandardMaterial | null = null; // templates: exploded pieces keep the model's own texture
   let hero: THREE.Object3D | null = null;
   let disposed = false;
   let ready = false;
@@ -315,23 +324,30 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
   /** Template models: bake the textured mesh into car space and sort every triangle into a panel by where it sits and where it faces. */
   function buildPiecesFromHero(root: THREE.Object3D) {
     const box = new THREE.Box3().setFromObject(root); const L = box.max.x - box.min.x, H = box.max.y - box.min.y, W = box.max.z - box.min.z;
-    const buckets = new Map<string, number[][]>(); // key -> [positions[], normals[]]
+    const buckets = new Map<string, number[][]>(); // key -> [positions[], normals[], uvs[]]
     const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), nn = new THREE.Vector3();
     root.traverse((o) => {
       const m = o as THREE.Mesh; if (!m.isMesh) return;
+      heroMat ??= (Array.isArray(m.material) ? m.material[0] : m.material) as THREE.MeshStandardMaterial;
       const geo = floatGeometry(m.geometry).applyMatrix4(m.matrixWorld).toNonIndexed();
-      const pos = geo.getAttribute("position");
+      const pos = geo.getAttribute("position"), nor = geo.getAttribute("normal"), uv = geo.getAttribute("uv");
       for (let i = 0; i < pos.count; i += 3) {
         a.fromBufferAttribute(pos, i); b.fromBufferAttribute(pos, i + 1); c.fromBufferAttribute(pos, i + 2);
         nn.crossVectors(e1.subVectors(b, a), e2.subVectors(c, a)).normalize();
         const k = classifyTriangle((a.x + b.x + c.x) / 3 / (L / 2), ((a.y + b.y + c.y) / 3 - box.min.y) / H, (a.z + b.z + c.z) / 3 / (W / 2), nn, model.doors);
-        let bk = buckets.get(k); if (!bk) buckets.set(k, (bk = [[], []]));
+        let bk = buckets.get(k); if (!bk) buckets.set(k, (bk = [[], [], []]));
         bk[0].push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+        for (let j = 0; j < 3; j++) {
+          if (nor) bk[1].push(nor.getX(i + j), nor.getY(i + j), nor.getZ(i + j));
+          if (uv) bk[2].push(uv.getX(i + j), uv.getY(i + j));
+        }
       }
       geo.dispose();
     });
-    for (const [k, [P]] of buckets) {
-      const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3)); g.computeVertexNormals();
+    for (const [k, [P, N, UV]] of buckets) {
+      const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3));
+      if (N.length === P.length) g.setAttribute("normal", new THREE.Float32BufferAttribute(N, 3)); else g.computeVertexNormals();
+      if (UV.length) g.setAttribute("uv", new THREE.Float32BufferAttribute(UV, 2));
       addPiece(k, g);
     }
   }
@@ -342,7 +358,7 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
     root.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) meshes.push(m); });
     for (const m of meshes) {
       const n = Number((m.name || m.parent?.name || "").replace("tripo_part_", ""));
-      const geo = floatGeometry(m.geometry).applyMatrix4(m.matrixWorld).toNonIndexed(); geo.computeVertexNormals();
+      const geo = floatGeometry(m.geometry).applyMatrix4(m.matrixWorld).toNonIndexed(); if (!geo.getAttribute("normal")) geo.computeVertexNormals();
       for (const [key, g] of splitPart(n, geo)) addPiece(key, g);
     }
   }
@@ -352,8 +368,9 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
         const panel = (key.startsWith("p:") ? key.slice(2) : null) as PanelId | null;
         g.computeBoundingBox(); const center = g.boundingBox!.getCenter(new THREE.Vector3());
         let mat: THREE.Material;
-        if (panel) { const pm = matteInside(paintBase.clone()); paintMats.set(panel, pm); mat = pm; }
-        else mat = key === "cabin" ? glassMat : darkMat;
+        if (panel && heroMat) { const pm = heroMat.clone(); pm.side = THREE.DoubleSide; paintMats.set(panel, pm); mat = pm; }
+        else if (panel) { const pm = matteInside(paintBase.clone()); paintMats.set(panel, pm); mat = pm; }
+        else mat = heroMat ?? (key === "cabin" ? glassMat : darkMat);
         const mesh = new THREE.Mesh(g, mat); mesh.castShadow = true; mesh.visible = false; car.add(mesh);
         // templates: only the 13 body panels peel off, the dark core (glass, wheels, underbody) stays put — one mesh, no real parts to scatter
         const dir = panel ? new THREE.Vector3(...EXPLODE[panel]) : !model.parts ? new THREE.Vector3() : new THREE.Vector3(center.x * 0.25, key === "cabin" ? 0.55 : 0.05, Math.sign(center.z) * (Math.abs(center.z) > 0.6 ? 0.55 : 0));
