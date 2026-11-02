@@ -133,6 +133,11 @@ export async function runInspection(opts: {
     }
   };
   const addPaint = (rec: Record<string, number>) => { for (const [p, v] of Object.entries(rec)) paint.set(p, Math.max(paint.get(p) ?? 0, v)); };
+  const paintStats = new Map<string, { min: number; max: number; points: number }>();
+  const addStats = (rec: Record<string, { min: number; max: number; points: number }>) => {
+    for (const [p, s] of Object.entries(rec)) { const e = paintStats.get(p); paintStats.set(p, e ? { min: Math.min(e.min, s.min), max: Math.max(e.max, s.max), points: e.points + s.points } : s); }
+  };
+  if (opts.initialPaint?.length) addStats(Object.fromEntries(opts.initialPaint.map((r) => [r.panel, { min: r.microns, max: r.microns, points: 1 }])));
   if (opts.initialPaint?.length) addPaint(Object.fromEntries(opts.initialPaint.map((r) => [r.panel, r.microns])));
 
   async function execute(name: string, args: Record<string, unknown>): Promise<string> {
@@ -157,7 +162,7 @@ export async function runInspection(opts: {
         const videoId = String(args.videoId ?? media.videos[0] ?? "");
         if (!videoId) { step(name, key, true, "source absent: no videos for this car", Date.now() - ts); return "source absent: no videos"; }
         const r = await transcribeNote({ video: await ensureVideoPath(opts.carId, videoId), mediaId: videoId });
-        addFindings(r.findings); addPaint(r.paint); contextOverrides.push(...r.conflicts);
+        addFindings(r.findings); addPaint(r.paint); addStats(r.paintStats); contextOverrides.push(...r.conflicts);
         out = `chunks=${r.chunks.length} readings=${r.readings.length} findings=${r.findings.length} conflicts=${r.conflicts.map((c) => c.panel).join(",") || "none"} paint=${JSON.stringify(r.paint)}`;
       } else if (name === "read_gauge_video") {
         if (!media.gaugeVideo) { step(name, key, true, "source absent: no paint_gauge.mp4 for this car", Date.now() - ts); return "source absent: no paint_gauge.mp4"; }
@@ -265,7 +270,7 @@ export async function runInspection(opts: {
 
   // deterministic paint findings win/merge
   addFindings(findingsFromPaintReadings([...paint.entries()].map(([panel, microns]) => ({ panel, microns }))));
-  const paintList = [...paint.entries()].map(([panel, microns]) => ({ panel, microns }));
+  const paintList = [...paint.entries()].map(([panel, microns]) => { const st = paintStats.get(panel); return st && st.points > 1 ? { panel, microns, ...st } : { panel, microns }; });
 
   // inspector context beats the numeric rule (e.g. MINI contrast roof): drop numeric-only findings on those panels
   for (const c of contextOverrides) {

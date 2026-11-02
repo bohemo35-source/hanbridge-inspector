@@ -28,6 +28,8 @@ export interface PanelVisual {
   /** 0..1 how strongly the colour replaces the base paint */
   strength: number;
   microns?: number;
+  /** spread of all measured points on the panel (several zones), when more than one */
+  range?: { min: number; max: number; points: number };
   findings: Finding[];
   /** short label for the 3D tag, e.g. "238 мкм" or "? 128 мкм" */
   tag?: string;
@@ -36,7 +38,9 @@ export interface PanelVisual {
 const SEVERITY_RANK = { low: 1, medium: 2, high: 3, critical: 4 } as const;
 
 export function panelVisual(panel: PanelId, readings: PaintReading[], findings: Finding[]): PanelVisual {
-  const microns = readings.find((r) => r.panel === panel)?.microns;
+  const reading = readings.find((r) => r.panel === panel);
+  const microns = reading?.microns;
+  const range = reading && reading.min !== undefined && reading.max !== undefined && (reading.points ?? 0) > 1 ? { min: reading.min, max: reading.max, points: reading.points ?? 0 } : undefined;
   const own = findings
     .filter((f) => f.panel === panel)
     .sort((a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity]);
@@ -58,7 +62,7 @@ export function panelVisual(panel: PanelId, readings: PaintReading[], findings: 
     own.length > 0
       ? `${verified.length === 0 ? "? " : ""}${microns !== undefined ? `${microns} ${unit}` : own[0].kind}`
       : undefined;
-  return { panel, state, color, strength, microns, findings: own, tag };
+  return { panel, state, color, strength, microns, ...(range ? { range } : {}), findings: own, tag };
 }
 
 export function allPanelVisuals(readings: PaintReading[], findings: Finding[]): PanelVisual[] {

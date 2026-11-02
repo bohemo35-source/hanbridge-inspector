@@ -4,7 +4,7 @@
 // @created: 2026-10-29
 import { describe, expect, it } from "vitest";
 import { FindingSchema } from "@/lib/schema";
-import { normalizeText, quoteInText, voiceFindings, voicePaintJson, type VoiceReading } from "./voice";
+import { normalizeText, quoteInText, voiceFindings, voicePaintJson, voicePaintStats, type VoiceReading } from "./voice";
 
 const r = (panel: VoiceReading["panel"], microns: number[], inspectorVerdict: VoiceReading["inspectorVerdict"], quote = "сто восемьдесят один"): VoiceReading => ({
   panel, microns, inspectorVerdict, quote, chunk: 2, tStart: 30, tEnd: 45,
@@ -58,5 +58,11 @@ describe("voice findings", () => {
 
   it("paint.json takes the median per panel and skips unknown panels", () => {
     expect(voicePaintJson(readings)).toEqual({ hood: 189, front_left_fender: 68, trunk: 86, rear_right_door: 198 }); // roof: inspector says factory despite 159 µm → excluded from the numeric rule
+  });
+
+  it("paint stats keep the spread of all points per panel (zones of one panel are not hidden behind one number)", () => {
+    const st = voicePaintStats([r("hood", [181, 197, 225], "unknown"), r("hood", [233, 664], "repaint"), r("roof", [159, 160], "factory")]);
+    expect(st.hood).toEqual({ min: 181, max: 664, points: 5 });
+    expect(st.roof).toBeUndefined();
   });
 });

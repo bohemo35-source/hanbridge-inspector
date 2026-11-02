@@ -54,6 +54,10 @@ export const VerdictSchema = z.object({
 export const PaintReadingSchema = z.object({
   panel: z.string(),
   microns: z.number(),
+  /** all spoken/typed points on this panel: an inspector measures several zones, one number hides the repair area */
+  min: z.number().optional(),
+  max: z.number().optional(),
+  points: z.number().optional(),
 });
 
 export const AgentStepSchema = z.object({

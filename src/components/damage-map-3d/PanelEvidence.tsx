@@ -55,7 +55,8 @@ export function PanelEvidence({ visual, lang = "ru", mediaUrl }: { visual: Panel
         <div className="pe-gauge">
           <div className="pe-scale"><div className="pe-needle" style={{ left: `calc(${pct}% - 1px)` }} /></div>
           <div className="pe-ticks"><span>0</span><span>150</span><span>220</span><span>300 {lang === "ru" ? "мкм" : "µm"}</span></div>
-          <div className="pe-val" style={{ color: gaugeColor }}>{visual.microns}<small>{lang === "ru" ? "мкм" : "µm"} · {stateText}</small></div>
+          <div className="pe-val" style={{ color: gaugeColor }}>{visual.microns}<small>{lang === "ru" ? "мкм (медиана)" : "µm (median)"} · {stateText}</small></div>
+          {visual.range && <div className="pe-range" style={{ font: "12px ui-monospace, Menlo, monospace", color: "#8b94a1", marginTop: 4 }}>{lang === "ru" ? `разброс ${visual.range.min}–${visual.range.max} мкм · ${visual.range.points} замеров по зонам панели` : `spread ${visual.range.min}–${visual.range.max} µm · ${visual.range.points} points across the panel`}</div>}
         </div>
       )}
       {visual.findings.length === 0 && <p className="pe-empty">{lang === "ru" ? "Находок нет. Агент ничего не отметил на этой панели." : "No findings on this panel."}</p>}

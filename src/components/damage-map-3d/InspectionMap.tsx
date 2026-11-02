@@ -43,7 +43,7 @@ export function InspectionMap({ report, lang = "ru", bodyTypeOverride, initialPa
                   <span className="im-stripe" style={{ background: col }} />
                   <span>
                     <span className="im-t">{panelLabel(f.panel, lang)}</span>
-                    <span className="im-d">{v.microns !== undefined ? `${v.microns} ${lang === "ru" ? "мкм" : "µm"} · ` : ""}{f.severity} · {f.confidence.toFixed(2)}</span>
+                    <span className="im-d">{v.microns !== undefined ? `${v.range ? `${v.range.min}–${v.range.max}` : v.microns} ${lang === "ru" ? "мкм" : "µm"} · ` : ""}{f.severity} · {f.confidence.toFixed(2)}</span>
                   </span>
                   <span className="im-s" style={{ color: f.verified ? COLORS.factory : COLORS.unconfirmed }}>{f.verified ? (lang === "ru" ? "✓ проверено" : "✓ verified") : lang === "ru" ? "✗ не подтв." : "✗ unconfirmed"}</span>
                 </button>

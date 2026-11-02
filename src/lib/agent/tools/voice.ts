@@ -167,6 +167,18 @@ export function voicePaintJson(readings: VoiceReading[]): Record<string, number>
   return out;
 }
 
+/** Spread of all points per panel (same panels as voicePaintJson): min, max and how many points were spoken. */
+export function voicePaintStats(readings: VoiceReading[]): Record<string, { min: number; max: number; points: number }> {
+  const out: Record<string, { min: number; max: number; points: number }> = {};
+  for (const r of mergeVoiceReadings(readings)) {
+    const v = r.microns.filter((m) => m > 0 && m < 3000);
+    if (!v.length || r.panel === "unknown") continue;
+    if (r.inspectorVerdict === "factory" && median(v) > 150) continue;
+    out[r.panel] = { min: Math.min(...v), max: Math.max(...v), points: v.length };
+  }
+  return out;
+}
+
 // ---------- IO ----------
 export async function audioChunks(video: string, chunkSec = 15): Promise<{ i: number; tStart: number; tEnd: number; wav: Buffer }[]> {
   const dir = await mkdtemp(path.join(tmpdir(), "voice-"));
@@ -234,6 +246,7 @@ export interface TranscribeNoteResult {
   findings: Finding[];
   conflicts: { panel: Panel; median: number; quote: string; tStart: number }[];
   paint: Record<string, number>;
+  paintStats: Record<string, { min: number; max: number; points: number }>;
   stats: { chunks: number; asrMs: number; sparkMs: number; ms: number };
 }
 
@@ -289,6 +302,7 @@ export async function transcribeNote(opts: { video: string; mediaId?: string; ch
     findings,
     conflicts,
     paint: voicePaintJson(readings),
+    paintStats: voicePaintStats(readings),
     stats: { chunks: chunks.length, asrMs, sparkMs, ms: Date.now() - t0 },
   };
 }
