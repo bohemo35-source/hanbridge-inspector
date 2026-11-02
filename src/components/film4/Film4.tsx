@@ -64,7 +64,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     return () => { window.removeEventListener("scroll", on); window.removeEventListener("resize", rs); cancelAnimationFrame(raf); };
   }, []);
 
-  /* watch mode: music theme (CC0) + narration. With a narration timing file the scroll follows the voice;
+  /* watch mode: drums only (CC0, unfa) + narration. With a narration timing file the scroll follows the voice;
      without it, each scene runs at its own pace (scene.sec). */
   const music = useRef<HTMLAudioElement | null>(null);
   const narr = useRef<HTMLAudioElement | null>(null);
@@ -85,7 +85,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     if (window.scrollY < top0 || window.scrollY > top0 + (TOTAL_VH - 1) * window.innerHeight / 100) window.scrollTo(0, top0);
     if (timing.current === undefined) timing.current = await fetch(`/film3/audio/narration-${lang}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     const tm = timing.current;
-    if (!music.current) { music.current = new Audio("/film3/audio/theme.mp3"); music.current.loop = true; music.current.volume = 0; }
+    if (!music.current) { music.current = new Audio("/film3/audio/drums.mp3"); music.current.loop = true; music.current.volume = 0; }
     music.current.play().then(() => fade(music.current, tm ? 0.22 : 0.45, 1500)).catch(() => {});
     // where the voice should be for the current scroll position
     const vhNow = () => window.innerHeight / 100;
