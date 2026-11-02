@@ -182,7 +182,7 @@ export async function extractFrames(video: string, maxFrames = 60): Promise<{ t:
   try {
     await run(await ffmpegBin(), ["-v", "error", "-i", video, "-vf", `fps=1/${step},scale='min(960,iw)':-2`, "-q:v", "2", path.join(dir, "f%04d.jpg")]);
     const files = (await readdir(dir)).filter((f) => f.endsWith(".jpg")).sort();
-    return Promise.all(files.slice(0, maxFrames).map(async (f, i) => ({ t: i * step, jpg: await readFile(path.join(dir, f)) })));
+    return await Promise.all(files.slice(0, maxFrames).map(async (f, i) => ({ t: i * step, jpg: await readFile(path.join(dir, f)) })));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

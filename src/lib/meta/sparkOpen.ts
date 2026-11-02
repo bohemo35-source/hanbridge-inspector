@@ -19,7 +19,7 @@ export async function sparkOpenChat(opts: { messages: ChatMessage[]; maxTokens?:
     const res = await fetch("https://inference.baseten.co/v1/chat/completions", {
       method: "POST", signal: ctrl.signal,
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: SPARK_OPEN_MODEL, messages: opts.messages, max_tokens: opts.maxTokens ?? 2000 }),
+      body: JSON.stringify({ model: SPARK_OPEN_MODEL, messages: opts.messages, max_tokens: opts.maxTokens ?? 2000, temperature: 0 }),
     });
     console.log(JSON.stringify({ model: SPARK_OPEN_MODEL, path: "baseten/chat/completions", ms: Date.now() - t0, status: res.status }));
     if (!res.ok) throw new SparkOpenError("http_error", `Baseten ${res.status}: ${(await res.text().catch(() => "")).slice(0, 200)}`);

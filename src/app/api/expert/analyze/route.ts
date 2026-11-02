@@ -19,6 +19,7 @@ const InputSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  if (process.env.VERCEL) return NextResponse.json({ error: "not available in the public demo" }, { status: 404 }); // dev-only endpoint, writes to Blob
   const parsed = InputSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
   const { vehicle, paintReadings, photoUrls } = parsed.data;

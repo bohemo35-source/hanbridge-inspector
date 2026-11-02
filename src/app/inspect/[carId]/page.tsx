@@ -11,7 +11,7 @@ type Step = { i?: number; tool: string; why?: string; argsSummary?: string; ms?:
 
 // Which Meta model does the work behind each agent tool (orchestrator.ts / tools/*).
 const MODEL_OF: Record<string, string[]> = {
-  index_photos: ["Muse Glimmer · open-weight"],
+  index_photos: ["Muse Glimmer · open-weight · index built once per car"],
   read_diagnostic_report: ["Muse Spark"],
   read_inspector_report: ["Muse Spark"],
   find_defects: ["SAM 3.1", "Muse Spark"],
@@ -26,8 +26,8 @@ const MODEL_OF: Record<string, string[]> = {
 };
 
 const L = {
-  en: { run: "Run the inspection", running: "Agent is working…", note: "A full live run takes about 2–3 minutes: every step below is a real call to a Meta model.", open: "Open report", elapsed: "elapsed" },
-  ru: { run: "Запустить осмотр", running: "Агент работает…", note: "Полный живой прогон идёт 2–3 минуты: каждый шаг ниже — настоящий вызов модели Meta.", open: "Открыть отчёт", elapsed: "прошло" },
+  en: { run: "Run the inspection", running: "Agent is working…", note: "A full live run takes about 1–2 minutes. Every step below is a real call to a Meta model, except the photo index: Muse Glimmer builds it once per car and the agent reuses it.", open: "Open report", elapsed: "elapsed" },
+  ru: { run: "Запустить осмотр", running: "Агент работает…", note: "Полный живой прогон идёт 1–2 минуты. Каждый шаг ниже — настоящий вызов модели Meta, кроме индекса фото: его один раз на машину строит Muse Glimmer, агент переиспользует.", open: "Открыть отчёт", elapsed: "прошло" },
 };
 
 export default function InspectPage() {

@@ -34,6 +34,7 @@ export async function sparkChat(opts: {
         model: "muse-spark-1.3",
         messages: opts.messages,
         reasoning_effort: "low",
+        temperature: 0,
         max_tokens: opts.maxTokens ?? 2000,
         ...(opts.tools ? { tools: opts.tools } : {}),
         ...(opts.json ? { response_format: { type: "json_object" } } : {}),

@@ -4,7 +4,7 @@
 // @created: 2026-11-01
 import Link from "next/link";
 import type { Report } from "@/lib/schema";
-import { CARS } from "@/lib/agent/catalog";
+import { CARS, carMedia } from "@/lib/agent/catalog";
 
 type Lang = "en" | "ru";
 
@@ -15,7 +15,7 @@ const T = {
     sub: "The agent reads the walk-around photos, paint-gauge video, the inspector's voice note and the diagnostic report, checks each finding in a second independent pass, and returns BUY / NEGOTIATE / WALK AWAY — with a link the buyer can click through to the frame or the voice quote.",
     who: "For car exporters and dealers: one verifiable link per car instead of 40 photos in a chat.",
     open: "Open report",
-    live: "Watch the agent live (~2.5 min)",
+    live: "Watch the agent live (~1.5 min)",
     findings: "findings",
     verified: "verified",
     models: "Who does what",
@@ -28,7 +28,7 @@ const T = {
     sub: "Агент читает фото обхода, видео толщиномера, голосовую заметку инспектора и диагностику, перепроверяет каждую находку отдельным проходом и выдаёт BUY / NEGOTIATE / WALK AWAY — со ссылкой, где покупатель кликает до кадра или цитаты.",
     who: "Для экспортёров и дилеров: одна проверяемая ссылка на машину вместо 40 фото в чате.",
     open: "Открыть отчёт",
-    live: "Смотреть агента вживую (~2,5 мин)",
+    live: "Смотреть агента вживую (~1,5 мин)",
     findings: "находок",
     verified: "подтверждено",
     models: "Кто что делает",
@@ -46,13 +46,15 @@ const MODELS: { name: string; role_en: string; role_ru: string }[] = [
   { name: "Muse Spark Open", role_en: "independent verifier (Baseten)", role_ru: "независимая проверка находок (Baseten)" },
 ];
 
+const ruFindings = (n: number) => { const a = n % 10, b = n % 100; return a === 1 && b !== 11 ? "находка" : a >= 2 && a <= 4 && (b < 12 || b > 14) ? "находки" : "находок"; };
 const verdictColor = (d?: string) => (d === "BUY" ? "#4fb38a" : d === "WALK_AWAY" ? "#e5544b" : "#e3a33b");
 
 export default function Hero({ reports, lang }: { reports: Report[]; lang: Lang }) {
   const t = T[lang];
   const newest = new Map<string, Report>();
   for (const r of reports) if (r.carId && !newest.has(r.carId)) newest.set(r.carId, r);
-  const cars = CARS.map((c) => ({ car: c, report: newest.get(c.carId) })).sort((a, b) => Number(!!b.report) - Number(!!a.report));
+  // only cars whose inspection media exist (local demo-data or Blob): a card must be runnable live
+  const cars = CARS.filter((c) => carMedia(c.carId).photos.length > 0).map((c) => ({ car: c, report: newest.get(c.carId) })).sort((a, b) => Number(!!b.report) - Number(!!a.report));
   const q = lang === "ru" ? "?lang=ru" : "";
 
   return (
@@ -82,7 +84,7 @@ export default function Hero({ reports, lang }: { reports: Report[]; lang: Lang 
                 {report ? (
                   <span style={{ fontSize: 13, color: "#8b94a1" }}>
                     <span style={{ fontWeight: 800, color: verdictColor(report.verdict.decision) }}>{report.verdict.decision.replace("_", " ")}</span>
-                    {" · "}{report.findings.length} {t.findings}, {report.findings.filter((f) => f.verified).length} {t.verified}
+                    {" · "}{report.findings.length} {lang === "ru" ? ruFindings(report.findings.length) : t.findings}, {report.findings.filter((f) => f.verified).length} {t.verified}
                   </span>
                 ) : <span style={{ fontSize: 13, color: "#8b94a1" }}>{t.noReport}</span>}
                 <div style={{ display: "flex", gap: 8, marginTop: "auto", flexWrap: "wrap" }}>

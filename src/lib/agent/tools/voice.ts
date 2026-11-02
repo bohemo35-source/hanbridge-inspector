@@ -173,7 +173,7 @@ export async function audioChunks(video: string, chunkSec = 15): Promise<{ i: nu
   try {
     await run(await ffmpegBin(), ["-v", "error", "-i", video, "-vn", "-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le", "-f", "segment", "-segment_time", String(chunkSec), path.join(dir, "c%04d.wav")]);
     const files = (await readdir(dir)).filter((f) => f.endsWith(".wav")).sort();
-    return Promise.all(
+    return await Promise.all(
       files.map(async (f, i) => {
         const wav = await readFile(path.join(dir, f));
         const seconds = Math.max(0, (wav.length - 44) / (16000 * 2));

@@ -2,21 +2,22 @@
 // @project: hanbridge-inspector
 // @purpose: POST /api/expert/chat — answers only from report data, EN/RU, no invented customs numbers
 // @created: 2026-10-27
+// @updated: 2026-11-02 claude: report loaded server-side by id only (no client JSON / system roles), size + rate limits
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sparkChat } from "@/lib/meta/spark";
-import { ReportSchema } from "@/lib/schema";
-import { getReport } from "@/lib/store/reports";
+import { getReportAsync } from "@/lib/store/reports";
+import { checkLimit, clientIp } from "@/lib/runtime/rateLimit";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+const Msg = z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(1000) });
 const InputSchema = z.object({
-  reportId: z.string().optional(),
-  report: ReportSchema.optional(),
-  messages: z.array(z.object({ role: z.enum(["user", "assistant", "system"]), content: z.string() })).optional(),
-  history: z.array(z.object({ role: z.enum(["user", "assistant", "system"]), content: z.string() })).optional(),
-  message: z.string().optional(),
-});
+  reportId: z.string().max(100),
+  messages: z.array(Msg).max(10).optional(),
+  history: z.array(Msg).max(10).optional(),
+  message: z.string().max(1000).optional(),
+}).passthrough();
 
 const CUSTOMS_RE = /растамож|тамож|customs|сколько будет|landed cost|итогов.*стоим/i;
 
@@ -29,8 +30,10 @@ export async function POST(req: Request) {
   if (CUSTOMS_RE.test(lastUser)) {
     return NextResponse.json({ answer: isRu ? "Точную стоимость растаможки посчитает менеджер — я не называю цифры без подтверждённого расчёта." : "A manager will calculate the exact customs cost — I do not quote figures without a confirmed calculation." });
   }
-  const report = parsed.data.report ?? (parsed.data.reportId ? getReport(parsed.data.reportId) : undefined);
-  if (!report) return NextResponse.json({ error: "report not found: pass reportId of an analyzed report or a full report object" }, { status: 404 });
+  const limited = checkLimit("chat", clientIp(req), 30, 600);
+  if (limited) return NextResponse.json({ error: limited }, { status: 429 });
+  const report = await getReportAsync(parsed.data.reportId);
+  if (!report) return NextResponse.json({ error: "report not found" }, { status: 404 });
   try {
     const res = await sparkChat({
       messages: [

@@ -95,12 +95,12 @@ export async function runInspection(opts: {
   let handoffReason: string | undefined; let finalized = false;
   let shipping = getShippingStatus(reportId);
   // hero background does not depend on findings: generate it in parallel with the inspection (~16 s saved on the critical path)
-  const heroPromise = getOrCreateHeroImage(reportId);
+  const heroPromise = getOrCreateHeroImage(`hero-${opts.carId}`); // one generated hero per car, not per run (saves a Muse Image call + a Blob put)
   heroPromise.catch(() => undefined);
 
   const step = (tool: string, argsSummary: string, ok: boolean, outputSummary: string, ms: number) => {
     const s: AgentStep = { i: trace.length + 1, tool, argsSummary: argsSummary.slice(0, 200), why: WHY[tool] ?? "", ms, ok, outputSummary: outputSummary.slice(0, 500) };
-    trace.push(s); opts.onStep?.(s); return s;
+    trace.push(s); try { opts.onStep?.(s); } catch { /* client gone: keep working, report is still saved */ } return s;
   };
   // Open-weight triage first: Muse Glimmer (our Modal GPU) indexes every photo, so Spark/SAM only see the right ones.
   if (glimmerConfigured() && media.photos.length) {
@@ -111,7 +111,7 @@ export async function runInspection(opts: {
       if (picks.length) suggested = [...picks, ...suggested.filter((p) => !picks.includes(p))].slice(0, 4);
       listingFromIndex = pickListingCandidates(idx);
       const views = idx.entries.reduce<Record<string, number>>((m, e) => { m[e.view] = (m[e.view] ?? 0) + 1; return m; }, {});
-      step("index_photos", `${media.photos.length} photos`, idx.entries.length > 0, `model=${idx.model} indexed=${idx.entries.length} failed=${idx.failed.length} wholeCar=${idx.entries.filter((e) => e.whole_car).length} views=${JSON.stringify(views)} picks=${picks.join(",")} listingCandidates=${listingFromIndex.slice(0, 3).join(",")}`, Date.now() - ts);
+      step("index_photos", `${media.photos.length} photos`, idx.entries.length > 0, `${Date.now() - ts < 5000 ? "reused index built earlier by " : "live index by "}model=${idx.model} indexed=${idx.entries.length} failed=${idx.failed.length} wholeCar=${idx.entries.filter((e) => e.whole_car).length} views=${JSON.stringify(views)} picks=${picks.join(",")} listingCandidates=${listingFromIndex.slice(0, 3).join(",")}`, Date.now() - ts);
     } catch (e) { step("index_photos", `${media.photos.length} photos`, false, `skipped: ${(e as Error).message}`, Date.now() - ts); }
   }
   const addFindings = (list: Finding[]) => {
@@ -214,6 +214,7 @@ export async function runInspection(opts: {
 
   const maxSteps = opts.maxSteps ?? 16;
   for (let s = 0; s < maxSteps && !finalized; s++) {
+    if (Date.now() - t0 > 170_000) { step("finalize_report", "time budget", true, "time budget for tool calls reached; finalizing with collected evidence", 0); finalized = true; break; }
     let res;
     try { res = await sparkChat({ messages, tools: AGENT_TOOLS, maxTokens: 3000 }); }
     catch (e) { step("sparkChat", `step ${s + 1}`, false, e instanceof Error ? e.message : "spark failed", 0); break; }
@@ -248,6 +249,7 @@ export async function runInspection(opts: {
   await mapPool(findings, 4, async (f) => {
     f.conflict = detectConflict(f, paintList) || f.conflict;
     if (f.verified && f.verifierNote?.startsWith("Deterministic")) return;
+    if (Date.now() - t0 > 250_000) { f.verified = false; f.verifierNote = "not verified: time budget reached"; step("verifier", f.id, false, f.verifierNote, 0); return; }
     let crop: Buffer | undefined;
     const ev = f.evidence.find((e) => e.type === "frame" && e.box);
     if (ev?.box) {
