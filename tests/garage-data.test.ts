@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Garage studio data: panel status ranking (gauge class raised by findings, unverified → unconfirmed) and photo-note relevance
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code — a photo sign of repaint (unverified, frame evidence only) shows as unconfirmed
 // @updated: 2026-11-03 claude-code — uploaded car (no photo index) gets a full garage from its report; prototype keys are not car ids; unconfirmed reading → unconfirmed panel
 import { describe, expect, it } from "vitest";
 import { bodyKind, garageData, noteScore, panelStatus } from "../src/lib/garage/data";
@@ -33,6 +34,10 @@ describe("panelStatus", () => {
     expect(panelStatus(report({ findings: [finding("roof", "putty", false)] }), "roof")).toBe("unconfirmed");
     expect(panelStatus(report({ paintReadings: [{ panel: "roof", microns: 300 }], findings: [finding("roof", "dent", false)] }), "roof")).toBe("putty");
     expect(panelStatus(report({ findings: [finding("roof", "putty", true)] }), "hood")).toBe("clean");
+  });
+  it("a photo sign of repaint (upload, frame evidence only, never verified) → unconfirmed, not repainted", () => {
+    const sign = { ...finding("front_left_fender", "repaint", false), id: "photo-03.jpg-paintsign-1", evidence: [{ type: "frame" as const, mediaId: "photo-03.jpg" }] };
+    expect(panelStatus(report({ findings: [sign] }), "front_left_fender")).toBe("unconfirmed");
   });
 });
 
