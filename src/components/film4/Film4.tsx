@@ -83,11 +83,15 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     };
     const on = () => { if (!raf) raf = requestAnimationFrame(tick); };
     const rs = () => { setNarrow(window.innerWidth < window.innerHeight); on(); };
-    setMob(window.innerWidth < 900 || window.innerWidth < window.innerHeight || window.matchMedia?.("(pointer: coarse)").matches);
+    // phones = touch screens or windows under 900 px (a narrow desktop window too); follows changes of the media query
+    const mq = window.matchMedia?.("(pointer: coarse), (max-width: 899px)");
+    setMob(mq ? mq.matches : window.innerWidth < 900);
+    const onMq = (e: MediaQueryListEvent) => setMob(e.matches);
+    mq?.addEventListener?.("change", onMq);
     rs();
     window.addEventListener("scroll", on, { passive: true });
     window.addEventListener("resize", rs);
-    return () => { window.removeEventListener("scroll", on); window.removeEventListener("resize", rs); cancelAnimationFrame(raf); };
+    return () => { window.removeEventListener("scroll", on); window.removeEventListener("resize", rs); mq?.removeEventListener?.("change", onMq); cancelAnimationFrame(raf); };
   }, []);
 
   /* watch mode: drums only (CC0, unfa) + narration. With a narration timing file the scroll follows the voice;
