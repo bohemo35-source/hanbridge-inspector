@@ -181,7 +181,8 @@ export async function runInspection(opts: {
         if (!media.gaugeVideo) { step(name, key, true, "source absent: no paint_gauge.mp4 for this car", Date.now() - ts); return "source absent: no paint_gauge.mp4"; }
         const r = await readGaugeVideo({ video: await ensureVideoPath(opts.carId, media.gaugeVideo), mediaId: media.gaugeVideo, ...(isUpload ? { maxFrames: 48, parallel: 4, reread: 8 } : {}) });
         addFindings(r.findings); addPaint(r.paint, !isUpload);
-        if (isUpload) Object.assign(screenPaint, r.paint);
+        // the panel of a screen reading is named by the model from the frame: count it only when it was read on ≥2 frames of that panel
+        if (isUpload) for (const m of r.measurements) if (m.microns !== null && m.frames >= 2 && m.panel !== "unknown") screenPaint[m.panel] = Math.max(screenPaint[m.panel] ?? 0, m.microns);
         out = `frames=${r.stats.frames} measurements=${r.measurements.length} findings=${r.findings.length} paint=${JSON.stringify(r.paint)}`;
       } else if (name === "read_diagnostic_report") {
         const file = String(args.file ?? media.diagnosticPdfs[0] ?? "");
@@ -287,9 +288,11 @@ export async function runInspection(opts: {
   if (isUpload) {
     const unseen = suggested.filter((p) => !photoViews.has(p));
     const gaugeLeft = media.gaugeVideo && !called.has("read_gauge_video:{}") && Date.now() - t0 < 150_000;
+    const voiceLeft = media.videos.length && ![...called].some((k) => k.startsWith("transcribe_note:")) && Date.now() - t0 < 150_000;
     await Promise.all([
       unseen.length && Date.now() - t0 < 150_000 ? mapPool(unseen, 4, async (p) => { await execute("find_defects", { photoId: p }); }) : undefined,
       gaugeLeft ? execute("read_gauge_video", {}) : undefined,
+      voiceLeft ? execute("transcribe_note", { videoId: media.videos[0] }) : undefined, // screen confirmation needs the voice too
     ]);
     // a panel counts as measured only when the screen read from the video agrees with what the visitor said
     for (const p of confirmedByScreen(voicePaint, screenPaint)) measuredPanels.add(p);
@@ -401,7 +404,7 @@ export async function runInspection(opts: {
       const candidates = [...new Set([...listingFromIndex.slice(0, 6), ...views, ...spreadPhotos(media.photos, 24)])].filter((pid) => pid !== listingPhotoId).slice(0, 24);
       const t0 = Date.now();
       let picked: string | undefined;
-      for (let i = 0; i < candidates.length && !picked; i += 6) {
+      for (let i = 0; i < candidates.length && !picked && Date.now() - t0 < RUN_SOFT_DEADLINE_MS; i += 6) {
         const batch = candidates.slice(i, i + 6);
         const ok4 = await Promise.all(batch.map(async (pid) => { try { return isWholeCar(await segOf(pid)); } catch { return false; } }));
         picked = batch.find((_, j) => ok4[j]);

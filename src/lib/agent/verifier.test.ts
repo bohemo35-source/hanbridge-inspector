@@ -121,4 +121,13 @@ describe("uploads: voice vs gauge screen (owner decision 03.11)", () => {
     expect(rule.reasons_en[0]).toContain("trunk");
     expect(applyUploadVoiceRule([], new Set()).reasons_en).toEqual([]);
   });
+  it("a replacement is never confirmed by thickness, even on a screen-measured panel", () => {
+    const repl = f({ id: "v-trunk-repl", panel: "trunk", kind: "panel_replaced", evidence: [{ type: "transcript", mediaId: "owner_video.mp4", quote: "была замена" }] });
+    const paintOk = f({ id: "v-trunk-paint", panel: "trunk", kind: "repaint", evidence: [{ type: "gauge", mediaId: "owner_video.mp4", gaugeMicrons: 175 }] });
+    const rule = applyUploadVoiceRule([repl, paintOk], new Set(["trunk"]));
+    expect(rule.claims.map((x) => x.id)).toEqual(["v-trunk-repl"]);
+    expect(repl.verified).toBe(false);
+    expect(paintOk.verified).toBe(true);
+    expect(repl.verifierNote).toContain("replacement");
+  });
 });

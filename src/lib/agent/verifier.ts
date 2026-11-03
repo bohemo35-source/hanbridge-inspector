@@ -80,19 +80,20 @@ export function confirmedByScreen(voice: Readonly<Record<string, number>>, scree
   return Object.keys(voice).filter((p) => screen[p] !== undefined && classifyPaint(voice[p]) === classifyPaint(screen[p]));
 }
 
-/** Pure (mutates): on a visitor's upload, paint work on a panel no readable gauge screen confirmed (voice, photos or typed numbers only) → unconfirmed. Owner decision 03.11. */
+/** Pure (mutates): on a visitor's upload, paint work on a panel no readable gauge screen confirmed (voice, photos or typed numbers only) → unconfirmed;
+ *  a replacement is never confirmed from the owner's video (thickness does not prove a replaced panel — that needs our inspector). Owner decision 03.11. */
 export function applyUploadVoiceRule(findings: Finding[], measuredPanels: ReadonlySet<string>) {
-  const claims = findings.filter((f) => f.verified && PAINT_KINDS.has(f.kind) && !measuredPanels.has(f.panel));
+  const claims = findings.filter((f) => f.verified && PAINT_KINDS.has(f.kind) && (f.kind === "panel_replaced" || !measuredPanels.has(f.panel)));
   for (const f of claims) {
     f.verified = false;
-    f.verifierNote = `${f.verifierNote ?? ""} · the visitor's video says so, but no readable gauge screen with matching digits → unconfirmed`.replace(/^ · /, "");
+    f.verifierNote = `${f.verifierNote ?? ""} · ${f.kind === "panel_replaced" ? "a replacement is not proven by a gauge reading from the owner's video" : "no readable gauge screen matching a spoken number in the owner's video"} → unconfirmed`.replace(/^ · /, "");
   }
   if (!claims.length) return { claims, reasons_en: [] as string[], reasons_ru: [] as string[] };
   const panels = [...new Set(claims.map((f) => f.panel.replace(/_/g, " ")))].join(", ");
   return {
     claims,
-    reasons_en: [`Paint work named in the owner's video (${panels}) — the gauge screen is not readable or does not match, so it is not confirmed; a manager checks it.`],
-    reasons_ru: [`Окрас со слов в видео владельца (${panels}) — экран толщиномера не читается или не совпадает, поэтому не подтверждено; проверит менеджер.`],
+    reasons_en: [`Not confirmed from the owner's video (${panels}): paint counts only where a readable gauge screen matches the spoken number, a replacement needs our inspector — a manager checks it.`],
+    reasons_ru: [`Не подтверждено по видео владельца (${panels}): окрас засчитывается, только если экран толщиномера совпадает с названной цифрой, замену подтверждает только наш инспектор — проверит менеджер.`],
   };
 }
 
