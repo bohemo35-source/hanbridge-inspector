@@ -7,6 +7,7 @@
 // @updated: 2026-11-03 claude-code — phones: `hb-lite` (no SVG glow / blur / backdrop blur in inserts and maps), first poster high priority
 // @updated: 2026-11-03 claude-code — phones: light clips (film3/m/), poster image always under the clip, the clip shows once it has a frame, decoder woken once
 // @updated: 2026-11-03 claude-code — clip time spans the transition tail too: the incoming clip moves while it fades in (was parked on frame 0)
+// @updated: 2026-11-04 claude-code — Play/Stop generation counter, followY, clipSync (drift by rate, seek past 1 s); portrait: 4:3 band with equal gaps (portrait.ts), line under it, cards under the line — never over the picture
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -15,6 +16,7 @@ import type { GarageData } from "@/lib/garage/data";
 import InsertView from "./Inserts";
 import { ACTS, RECEIPT_BUSAN, RECEIPT_CUSTOMS, SCENES, UI, type Lang, type Line, type Scene } from "./story";
 import { TW, clipProgress, clipSpan, clipSync } from "./clipTime";
+import { portraitLayout } from "./portrait";
 import { followY, newVoiceClock, voiceDecision } from "./voiceFollow";
 
 const GarageScene = dynamic(() => import("@/components/garage-3d/GarageScene"), { ssr: false });
@@ -38,6 +40,9 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
   const posRef = useRef(0); posRef.current = pos.i;
   const [auto, setAuto] = useState(false);
   const [narrow, setNarrow] = useState(false);
+  /** the film stage (sticky, 100svh) in CSS px: the portrait layout is computed from it */
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [stage, setStage] = useState({ w: 390, h: 844 });
   /** phones and narrow windows get the light clips (film3/m/: 540p, ~1 MB); null until mounted, so no clip starts loading twice */
   const [mob, setMob] = useState<boolean | null>(null);
   /** clips that have a decoded frame: until then the poster image shows (phones used to see black scenes) */
@@ -86,7 +91,10 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
       });
     };
     const on = () => { if (!raf) raf = requestAnimationFrame(tick); };
-    const rs = () => { setNarrow(window.innerWidth < window.innerHeight); on(); };
+    const rs = () => {
+      const el = stageRef.current, w = el?.clientWidth || window.innerWidth, h = el?.clientHeight || window.innerHeight;
+      setNarrow(w < h); setStage((p) => (p.w === w && p.h === h ? p : { w, h })); on();
+    };
     // phones = touch screens or windows under 900 px (a narrow desktop window too); follows changes of the media query
     const mq = window.matchMedia?.("(pointer: coarse), (max-width: 899px)");
     setMob(mq ? mq.matches : window.innerWidth < 900);
@@ -191,12 +199,15 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
   const insured = SCENES.slice(0, pos.i + 1).some((x) => x.insured);
   const ledger = SCENES.slice(0, pos.i + 1).filter((x) => x.toast || x.receipt).length;
   const lb = narrow ? 0 : 7.5; // letterbox, vh (2.39:1 feel on desktop)
+  // portrait: header · band · line · card · rail with equal gaps (portrait.ts, tested); null on landscape screens and for insert/card scenes
+  const pl = (x: Scene) => (narrow && x.clip ? portraitLayout(stage.w, stage.h, cardRoom(x)) : null);
+  const P = pl(s);
   const overall = (starts[pos.i] + pos.t * s.vh) / TOTAL_VH;
 
   return (
     <div className={`bg-ink text-bone ${mob ? "hb-lite" : ""}`}>
       <div ref={wrap} style={{ height: `${TOTAL_VH + 100}vh` }} className="relative" data-testid="film4" data-scene={s.id}>
-        <div className="sticky top-0 h-[100svh] w-full overflow-hidden bg-ink">
+        <div ref={stageRef} className="sticky top-0 h-[100svh] w-full overflow-hidden bg-ink">
           {/* picture */}
           <div className="absolute inset-0">
             {SCENES.map((x, k) => {
@@ -228,9 +239,10 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
                   {/* portrait: cropping 16:9 to the screen showed a third of the frame — the whole frame goes in a band, the scene blurred behind */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {narrow && <img src={`/film3/b/${x.clip}.jpg`} alt="" className="absolute inset-0 h-full w-full object-cover" />}
-                  <div className={narrow ? "absolute inset-x-0 aspect-video overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,.6)]" : "absolute inset-0"} style={narrow ? { top: "calc(40% - 28.125vw)" } : undefined}>
+                  {/* the band: a 4:3 crop of the 16:9 clip around the scene's subject (posM), placed by portraitLayout */}
+                  <div className={narrow ? "absolute inset-x-0 overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,.6)]" : "absolute inset-0"} style={narrow ? { top: pl(x)?.bandTop, height: pl(x)?.bandH } : undefined}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/film3/${x.clip}.jpg`} alt="" decoding="async" fetchPriority={k === 0 ? "high" : "auto"} className="absolute inset-0 h-full w-full object-cover" />
+                  <img src={`/film3/${x.clip}.jpg`} alt="" decoding="async" fetchPriority={k === 0 ? "high" : "auto"} className="absolute inset-0 h-full w-full object-cover" style={narrow ? { objectPosition: x.posM } : undefined} />
                   <video ref={(v) => { vids.current[k] = v; }} muted playsInline preload={near(k) ? "auto" : "none"}
                     src={near(k) && mob !== null ? `/film3/${mob ? "m/" : ""}${x.clip}.mp4` : undefined}
                     onLoadStart={() => unmarkReady(x.id)} onLoadedData={() => markReady(x.id)} onSeeked={() => markReady(x.id)} onPlaying={() => markReady(x.id)}
@@ -240,7 +252,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
                       const v = e.currentTarget; if (mob) v.play().then(() => { if (!playSec.current || vids.current.indexOf(v) > posRef.current + 1) v.pause(); }).catch(() => {});
                     }}
                     className="absolute inset-0 h-full w-full object-cover"
-                    style={{ opacity: ready.has(x.id) ? 1 : 0 }} />
+                    style={{ opacity: ready.has(x.id) ? 1 : 0, objectPosition: narrow ? x.posM : undefined }} />
                   </div>
                 </div>
               );
@@ -292,7 +304,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
 
           {/* fact chips (right) */}
           {s.chips && (
-            <div className="absolute right-4 z-[6] flex flex-col items-end gap-2 sm:right-10" style={{ top: `${lb + 6}vh` }}>
+            <div className={`absolute z-[6] flex flex-col gap-2 ${P ? "inset-x-4 items-center" : "right-4 items-end sm:right-10"}`} style={{ top: P ? P.cardTop : `${lb + 6}vh` }}>
               {s.chips.map((c, n) => {
                 const k = seg(pos.t, 0.14 + n * 0.16, 0.24 + n * 0.16) * outK;
                 return <span key={n} className="border-l border-sodium bg-ink/55 px-3.5 py-2 font-mono text-[12px] uppercase tracking-[.14em] text-sodium-hi backdrop-blur-md" style={{ opacity: k, transform: `translateX(${(1 - k) * 18}px)` }}>{c[lang]}</span>;
@@ -300,12 +312,13 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
             </div>
           )}
 
-          {s.toast && <Toast line={s.toast} lang={lang} k={seg(pos.t, 0.16, 0.26) * seg(1 - pos.t, 0.12, 0.22)} top={lb + 6} />}
-          {s.receipt && <Receipt lines={s.receipt === "busan" ? RECEIPT_BUSAN : RECEIPT_CUSTOMS} lang={lang} k={seg(pos.t, 0.06, 0.18) * outK} top={lb + 6} />}
+          {/* portrait: cards go under the line, never over the picture */}
+          {s.toast && <Toast line={s.toast} lang={lang} k={seg(pos.t, 0.16, 0.26) * seg(1 - pos.t, 0.12, 0.22)} top={P ? P.cardTop : `${lb + 6}vh`} centred={!!P} />}
+          {s.receipt && <Receipt lines={s.receipt === "busan" ? RECEIPT_BUSAN : RECEIPT_CUSTOMS} lang={lang} k={seg(pos.t, 0.06, 0.18) * outK} top={P ? P.cardTop : `${lb + 6}vh`} compact={!!P} />}
 
           {/* trailer lines */}
           {/* portrait: big lines too sit under the picture band, not over it */}
-          {s.lines && <Lines s={s} t={pos.t} out={outK} lang={lang} bottom={lb + (narrow ? 12 : 6)} big={!!s.big && !narrow} />}
+          {s.lines && <Lines s={s} t={pos.t} out={outK} lang={lang} bottom={lb + (narrow ? 12 : 6)} top={P?.textTop} big={!!s.big && !narrow} />}
 
           {/* progress rail: four acts, inside the bottom letterbox */}
           <div className="absolute inset-x-0 bottom-0 z-[6] flex items-end px-4 sm:px-10" style={{ height: lb ? `${lb}vh` : 40, paddingBottom: lb ? "2.2vh" : 12 }}>
@@ -411,7 +424,7 @@ function EndCard({ t, lang }: { t: number; lang: Lang }) {
 }
 
 /** Trailer lines: one after another; each line's words arrive from blur, then the line leaves. */
-function Lines({ s, t, out, lang, bottom, big }: { s: Scene; t: number; out: number; lang: Lang; bottom: number; big: boolean }) {
+function Lines({ s, t, out, lang, bottom, top, big }: { s: Scene; t: number; out: number; lang: Lang; bottom: number; top?: number; big: boolean }) {
   const lines = s.lines!;
   const span = 0.9 / lines.length;
   const idx = Math.min(lines.length - 1, Math.floor(cl((t - 0.04) / 0.9) * lines.length));
@@ -419,7 +432,7 @@ function Lines({ s, t, out, lang, bottom, big }: { s: Scene; t: number; out: num
   const leave = idx === lines.length - 1 ? out : seg(1 - local, 0, 0.14);
   const words = lines[idx][lang].split(" ");
   return (
-    <div className={`absolute inset-x-0 z-[6] flex justify-center px-5 ${big ? "top-0 items-center" : ""}`} style={big ? { bottom: "26vh" } : { bottom: `${bottom}vh` }}>
+    <div className={`absolute inset-x-0 z-[6] flex justify-center px-5 ${big ? "top-0 items-center" : ""}`} style={big ? { bottom: "26vh" } : top !== undefined ? { top } : { bottom: `${bottom}vh` }}>
       <p key={`${s.id}-${idx}`} className={`max-w-[1100px] text-center font-display font-medium leading-[1.06] ${big ? "text-[clamp(40px,6.4vw,104px)]" : "text-[clamp(28px,3.5vw,54px)]"}`}
         style={{ opacity: leave, textShadow: "0 2px 30px rgba(0,0,0,.75), 0 1px 3px rgba(0,0,0,.6)" }}>
         {words.map((w, n) => {
@@ -431,20 +444,29 @@ function Lines({ s, t, out, lang, bottom, big }: { s: Scene; t: number; out: num
   );
 }
 
-function Payee({ l, lang }: { l: Line; lang: Lang }) {
+function Payee({ l, lang, inline }: { l: Line; lang: Lang; inline?: boolean }) {
   return (
     <span className="shrink-0 text-right">
       <span className={l.by === "zero" ? "font-mono text-[15px] text-ok" : "font-mono text-[11px] uppercase tracking-[.12em] text-bone"}>{l.by === "zero" ? "0" : `→ ${l.payee[lang]}`}</span>
-      {l.by !== "zero" && <span className="mt-0.5 block font-mono text-[9.5px] uppercase tracking-[.16em] text-mist">{l.by === "you" ? UI.byYou[lang] : UI.byInvoice[lang]}</span>}
+      {/* portrait receipt: who issues the invoice goes on the same line, so five lines fit under the picture */}
+      {l.by !== "zero" && <span className={`font-mono text-[9.5px] uppercase tracking-[.16em] text-mist ${inline ? "ml-2" : "mt-0.5 block"}`}>{l.by === "you" ? UI.byYou[lang] : UI.byInvoice[lang]}</span>}
     </span>
   );
 }
 
 const panel = "absolute right-4 z-[6] w-[min(340px,calc(100vw-32px))] border border-bone/12 bg-ink/70 backdrop-blur-xl sm:right-10";
+/** portrait: the card spans the screen width (16 px gutters), centred, up to 400 px */
+const centre = { left: 16, right: 16, width: "auto", maxWidth: 400, marginInline: "auto" } as const;
+/** portrait: px a scene's card takes under its line — measured on the rendered cards at 390 px (scripts/film4/portrait-shots.mjs) */
+const CARD = { receiptHead: 52, row: 34, toast: 94, toastNote: 120, chip: 42 };
+const cardRoom = (x: Scene) =>
+  x.receipt ? CARD.receiptHead + CARD.row * (x.receipt === "busan" ? RECEIPT_BUSAN : RECEIPT_CUSTOMS).length
+    : x.toast ? (x.toast.by === "zero" && SHOW_VAT_NOTE ? CARD.toastNote : CARD.toast)
+      : x.chips ? CARD.chip * x.chips.length : 0;
 
-function Toast({ line, lang, k, top }: { line: Line; lang: Lang; k: number; top: number }) {
+function Toast({ line, lang, k, top, centred }: { line: Line; lang: Lang; k: number; top: number | string; centred?: boolean }) {
   return (
-    <div className={`${panel} p-4`} style={{ top: `${top}vh`, opacity: k, transform: `translateX(${(1 - k) * 24}px)` }}>
+    <div className={`${panel} p-4`} style={{ ...(centred ? centre : {}), top, opacity: k, transform: centred ? `translateY(${(1 - k) * 10}px)` : `translateX(${(1 - k) * 24}px)` }}>
       <div className="mb-2 font-mono text-[9.5px] uppercase tracking-[.26em] text-sodium">+ {UI.ledger[lang]}</div>
       <div className="flex items-start justify-between gap-3 text-[14px]"><span className="text-bone">{line.item[lang]}</span><Payee l={line} lang={lang} /></div>
       {line.by === "zero" && SHOW_VAT_NOTE && <p className="mt-3 border-t border-bone/10 pt-3 text-[12px] leading-snug text-bone-2">{UI.zeroNote[lang]}</p>}
@@ -452,13 +474,13 @@ function Toast({ line, lang, k, top }: { line: Line; lang: Lang; k: number; top:
   );
 }
 
-function Receipt({ lines, lang, k, top }: { lines: Line[]; lang: Lang; k: number; top: number }) {
+function Receipt({ lines, lang, k, top, compact }: { lines: Line[]; lang: Lang; k: number; top: number | string; compact?: boolean }) {
   return (
-    <div className={`${panel} p-5`} style={{ top: `${top}vh`, opacity: k, transform: `translateY(${(1 - k) * 14}px)` }}>
+    <div className={`${panel} ${compact ? "px-4 py-3" : "p-5"}`} style={{ ...(compact ? centre : {}), top, opacity: k, transform: `translateY(${(1 - k) * 14}px)` }}>
       <div className="mb-3 flex items-center justify-between font-mono text-[9.5px] uppercase tracking-[.26em] text-mist"><span className="text-sodium">{UI.ledger[lang]}</span><span>{String(lines.length).padStart(2, "0")}</span></div>
       {lines.map((l, n) => (
-        <div key={n} className="flex items-start justify-between gap-3 border-t border-bone/10 py-2.5 text-[13.5px] first-of-type:border-0" style={{ opacity: cl(k * lines.length - n) }}>
-          <span className="text-bone">{l.item[lang]}</span><Payee l={l} lang={lang} />
+        <div key={n} className={`flex items-start justify-between gap-3 border-t border-bone/10 text-[13.5px] first-of-type:border-0 ${compact ? "py-1.5" : "py-2.5"}`} style={{ opacity: cl(k * lines.length - n) }}>
+          <span className="text-bone">{l.item[lang]}</span><Payee l={l} lang={lang} inline={compact} />
         </div>
       ))}
     </div>

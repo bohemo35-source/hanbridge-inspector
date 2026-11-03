@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Film v4 script ("trailer", 4 acts): scenes, transitions, trailer lines EN/RU, act cards, ledger lines; business facts kept exactly as in film v3
 // @created: 2026-11-02
+// @updated: 2026-11-04 claude-code — posM is the 4:3 portrait band focus; hand 80 %, house 48 % (the car stays whole)
 export type Lang = "en" | "ru";
 export type T = { en: string; ru: string };
 
@@ -28,7 +29,7 @@ export type Scene = {
   toast?: Line;
   receipt?: "busan" | "customs";
   insured?: boolean;
-  posM?: string;        // object-position on portrait screens
+  posM?: string;        // object-position of the 4:3 portrait band (the car stays whole: checked on all clips 04.11)
 };
 
 export const ACTS: { n: string; title: T }[] = [
@@ -125,9 +126,9 @@ export const SCENES: Scene[] = [
     { en: "insured every kilometre.", ru: "застрахован каждый километр." }] },
   { id: "street", clip: "s10-1", vh: 90, sec: 4, act: 3, in: "dip", insured: true, posM: "45% 50%", lines: [
     { en: "And one morning —", ru: "И однажды утром —" }] },
-  { id: "hand", clip: "s10-3", vh: 100, sec: 5, act: 3, insured: true, posM: "55% 50%", lines: [
+  { id: "hand", clip: "s10-3", vh: 100, sec: 5, act: 3, insured: true, posM: "80% 50%", lines: [
     { en: "the keys are in your hand.", ru: "ключи у вас в руке." }] },
-  { id: "house", clip: "s10-4", vh: 145, sec: 7, act: 3, in: "wipe", insured: true, toast: L.zero, posM: "40% 50%", lines: [
+  { id: "house", clip: "s10-4", vh: 145, sec: 7, act: 3, in: "wipe", insured: true, toast: L.zero, posM: "48% 50%", lines: [
     { en: "Dawn finds her home.", ru: "Рассвет застаёт его у дома." }, // line by Muse Wonder
     { en: "No commission. No hidden payments.", ru: "Без комиссии. Без скрытых платежей." },
     { en: "Just proof.", ru: "Только доказательства." }] },
