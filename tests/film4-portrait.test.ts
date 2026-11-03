@@ -20,7 +20,7 @@ describe("portraitLayout", () => {
     expect(portraitLayout(390, 725, 0).bandH / ((390 * 9) / 16)).toBeGreaterThan(1.3);
   });
   it("a card sits under the line, below the band, and inside the screen", () => {
-    for (const [w, h] of screens) for (const card of [74, 132, 228, 272]) {
+    for (const [w, h] of screens) for (const card of [42, 84, 94, 120, 178, 210]) { // the real cards: chips, toasts, the Busan and customs receipts
       const L = portraitLayout(w, h, card);
       expect(L.textTop).toBeGreaterThanOrEqual(L.bandTop + L.bandH + MIN_GAP - 0.01);
       expect(L.cardTop).toBeGreaterThanOrEqual(L.textTop + TEXT);

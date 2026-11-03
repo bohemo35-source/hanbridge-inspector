@@ -5,7 +5,7 @@
 //           header over an empty bottom and no card covers the picture. Short screens shrink the band, never below the full 16:9 frame.
 // @created: 2026-11-04
 
-export const HEAD = 56, RAIL = 40, MIN_GAP = 10;
+export const HEAD = 56, RAIL = 72, MIN_GAP = 10; // RAIL: the progress rail and the Play / Stop button above it
 export const TEXT = 92; // up to three lines of the scene's text at 28 px
 
 export interface PortraitLayout { bandTop: number; bandH: number; textTop: number; cardTop: number; gap: number }

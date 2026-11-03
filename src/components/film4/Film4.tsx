@@ -458,7 +458,7 @@ const panel = "absolute right-4 z-[6] w-[min(340px,calc(100vw-32px))] border bor
 /** portrait: the card spans the screen width (16 px gutters), centred, up to 400 px */
 const centre = { left: 16, right: 16, width: "auto", maxWidth: 400, marginInline: "auto" } as const;
 /** portrait: px a scene's card takes under its line — measured on the rendered cards at 390 px (scripts/film4/portrait-shots.mjs) */
-const CARD = { receiptHead: 52, row: 34, toast: 94, toastNote: 120, chip: 42 };
+const CARD = { receiptHead: 50, row: 32, toast: 94, toastNote: 120, chip: 42 };
 const cardRoom = (x: Scene) =>
   x.receipt ? CARD.receiptHead + CARD.row * (x.receipt === "busan" ? RECEIPT_BUSAN : RECEIPT_CUSTOMS).length
     : x.toast ? (x.toast.by === "zero" && SHOW_VAT_NOTE ? CARD.toastNote : CARD.toast)
@@ -479,7 +479,7 @@ function Receipt({ lines, lang, k, top, compact }: { lines: Line[]; lang: Lang; 
     <div className={`${panel} ${compact ? "px-4 py-3" : "p-5"}`} style={{ ...(compact ? centre : {}), top, opacity: k, transform: `translateY(${(1 - k) * 14}px)` }}>
       <div className="mb-3 flex items-center justify-between font-mono text-[9.5px] uppercase tracking-[.26em] text-mist"><span className="text-sodium">{UI.ledger[lang]}</span><span>{String(lines.length).padStart(2, "0")}</span></div>
       {lines.map((l, n) => (
-        <div key={n} className={`flex items-start justify-between gap-3 border-t border-bone/10 text-[13.5px] first-of-type:border-0 ${compact ? "py-1.5" : "py-2.5"}`} style={{ opacity: cl(k * lines.length - n) }}>
+        <div key={n} className={`flex items-start justify-between gap-3 border-t border-bone/10 first-of-type:border-0 ${compact ? "py-1.5 text-[12px]" : "py-2.5 text-[13.5px]"}`} style={{ opacity: cl(k * lines.length - n) }}>
           <span className="text-bone">{l.item[lang]}</span><Payee l={l} lang={lang} inline={compact} />
         </div>
       ))}
