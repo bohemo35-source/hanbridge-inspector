@@ -5,7 +5,8 @@
 // @created: 2026-11-03
 // @updated: 2026-11-03 claude-code — blackMs / posterMs (phones); BROWSER=webkit = iPhone 14 in WebKit, MBPS throttles mp4 responses, noFrameMs; the clip layer is the video's parent since 03.11
 // @updated: 2026-11-03 claude-code — frozenMs: a visible clip standing still in Play mode
-// @updated: 2026-11-04 claude-code — seekBy: seeks per video file (a looping video elsewhere on the page seeks on every loop); seekLog; frozen/noFrame look at film clips only (a paused off-screen loop is not a frozen clip)
+// @updated: 2026-11-04 claude-code — seekBy: seeks per video file (a looping video elsewhere on the page seeks on every loop); seekLog; frozen/noFrame look at film clips only (a paused off-screen loop is not a frozen clip);
+//           a freeze is not counted if the clip was paused at any frame in between (phones wake clips with a short play); Chrome muted (--mute-audio: the voice still plays, its clock runs)
 // usage: [BROWSER=webkit] [MBPS=8] node scripts/film4/stutter-scenes.mjs <url> <play|scroll> <out.json> [scrollSeconds=150]
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -27,7 +28,7 @@ if (webkit) {
   fs.rmSync(profile, { recursive: true, force: true });
   const proc = spawn("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", [
     `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, "--window-size=1600,987", "--no-first-run", "--no-default-browser-check",
-    "--autoplay-policy=no-user-gesture-required", "--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding",
+    "--autoplay-policy=no-user-gesture-required", "--mute-audio", "--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding",
     "--disable-background-timer-throttling", "--disable-features=CalculateNativeWinOcclusion,Translate", "about:blank",
   ], { stdio: "ignore", env: { ...process.env, AGENT_ID: "claude-code", AGENT_PROJECT: "hanbridge-inspector" } });
   for (let i = 0; i < 60; i++) { try { await (await fetch(`http://127.0.0.1:${port}/json/version`)).json(); break; } catch { await sleep(500); } }
@@ -63,6 +64,7 @@ await ctx.addInitScript(() => {
       const post = [...document.querySelectorAll("[data-clip]")].some((L) => L.style.visibility !== "hidden" && Number(getComputedStyle(L).opacity) > 0.3 && Number(L.querySelector("video")?.style.opacity ?? 1) < 0.5);
       if (post) s.posterMs += d;
     }
+    document.querySelectorAll("video").forEach((v) => { if (v.paused) v.__pausedSeen = true; });
     pp = n; requestAnimationFrame(raf);
   };
   requestAnimationFrame(raf);
@@ -80,9 +82,9 @@ await ctx.addInitScript(() => {
         s.clip ??= clip; s.vframes++;
         if (s.firstFrameMs === null && s.enteredAt) s.firstFrameMs = Math.round(now - s.enteredAt);
         // a freeze: the clip was playing at the previous frame and still is, yet no frame for >100 ms (pauses and preload waits are not freezes)
-        if (last && lastPlaying && !v.paused && now - last > 100) { s.freezes++; s.maxFreeze = Math.max(s.maxFreeze, now - last); (s.gaps ??= []).push(Math.round(now - last)); }
+        if (last && lastPlaying && !v.paused && !v.__pausedSeen && now - last > 100) { s.freezes++; s.maxFreeze = Math.max(s.maxFreeze, now - last); (s.gaps ??= []).push(Math.round(now - last)); }
       }
-      last = now; lastPlaying = !v.paused; v.requestVideoFrameCallback(f);
+      last = now; lastPlaying = !v.paused; v.__pausedSeen = false; v.requestVideoFrameCallback(f);
     };
     v.requestVideoFrameCallback(f);
   };

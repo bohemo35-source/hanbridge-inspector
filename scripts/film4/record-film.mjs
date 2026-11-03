@@ -4,6 +4,7 @@
 // @created: 2026-11-03
 // @updated: 2026-11-03 claude-code — window content = emulated CSS size (1600×900 @1.2 → 1920×1080), the JPEG of every frame must be W×H (a mismatched window cropped the right edge)
 // @updated: 2026-11-03 claude-code — drums level 0.58 (DRUMS env), as in the player
+// @updated: 2026-11-04 claude-code — Chrome muted (--mute-audio): the page still plays its audio, nothing comes out of the speakers (the sound is mixed from the files)
 // usage: node scripts/film4/record-film.mjs <url> <outBase> [W=1920] [H=1080]   → <outBase>-1080p.mp4, <outBase>-720p.mp4
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -24,7 +25,7 @@ fs.rmSync(profile, { recursive: true, force: true });
 const DPR = Number(process.env.DPR ?? 1.2), CW = Math.round(+W / DPR), CH = Math.round(+H / DPR);
 const proc = spawn("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", [
   `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, `--window-size=${CW},${CH + 100}`, "--no-first-run", "--no-default-browser-check", "--hide-scrollbars",
-  "--autoplay-policy=no-user-gesture-required", "--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding",
+  "--autoplay-policy=no-user-gesture-required", "--mute-audio", "--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding",
   "--disable-background-timer-throttling", "--disable-features=CalculateNativeWinOcclusion,Translate", "about:blank",
 ], { stdio: "ignore", env: { ...process.env, AGENT_ID: "claude-code", AGENT_PROJECT: "hanbridge-inspector" } });
 for (let i = 0; i < 60; i++) { try { await (await fetch(`http://127.0.0.1:${port}/json/version`)).json(); break; } catch { await sleep(500); } }

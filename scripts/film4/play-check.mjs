@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: stutter check of the film: open the page in a visible system Chrome (GPU, no background throttling), press Play, count long frames, video frames shown and seeks per scene
 // @created: 2026-11-03
+// @updated: 2026-11-04 claude-code — Chrome muted (--mute-audio): the page still plays its audio, nothing comes out of the speakers
 // usage: node scripts/film4/play-check.mjs <url> [seconds] [scroll]   ("scroll" = steady wheel scroll instead of Play)
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -15,7 +16,7 @@ const port = 9341, profile = path.join(os.tmpdir(), "hb-play-check");
 fs.rmSync(profile, { recursive: true, force: true });
 const proc = spawn("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", [
   `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, "--window-size=1600,987", "--no-first-run", "--no-default-browser-check",
-  "--autoplay-policy=no-user-gesture-required", "--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding",
+  "--autoplay-policy=no-user-gesture-required", "--mute-audio", "--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding",
   "--disable-background-timer-throttling", "--disable-features=CalculateNativeWinOcclusion,Translate", "about:blank",
 ], { stdio: "ignore", env: { ...process.env, AGENT_ID: "claude-code", AGENT_PROJECT: "hanbridge-inspector" } });
 for (let i = 0; i < 60; i++) { try { await (await fetch(`http://127.0.0.1:${port}/json/version`)).json(); break; } catch { await sleep(500); } }
