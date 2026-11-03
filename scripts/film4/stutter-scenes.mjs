@@ -5,7 +5,7 @@
 // @created: 2026-11-03
 // @updated: 2026-11-03 claude-code — blackMs / posterMs (phones); BROWSER=webkit = iPhone 14 in WebKit, MBPS throttles mp4 responses, noFrameMs; the clip layer is the video's parent since 03.11
 // @updated: 2026-11-03 claude-code — frozenMs: a visible clip standing still in Play mode
-// @updated: 2026-11-04 claude-code — seekBy: seeks per video file (a looping video elsewhere on the page seeks on every loop)
+// @updated: 2026-11-04 claude-code — seekBy: seeks per video file (a looping video elsewhere on the page seeks on every loop); seekLog; frozen/noFrame look at film clips only (a paused off-screen loop is not a frozen clip)
 // usage: [BROWSER=webkit] [MBPS=8] node scripts/film4/stutter-scenes.mjs <url> <play|scroll> <out.json> [scrollSeconds=150]
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -54,11 +54,11 @@ await ctx.addInitScript(() => {
       const d = n - pp, s = sc(cur); s.ms += d; s.raf++; if (d > 50) s.long50++; if (d > 100) s.long100++; s.maxRaf = Math.max(s.maxRaf, d);
       // a clip on screen that does not move (Play mode: the incoming clip parked on frame 0 during the transition)
       const lay = (v) => (v.closest("[data-clip]") ?? v);
-      if (S.play && [...document.querySelectorAll("video")].some((v) => lay(v).style.visibility !== "hidden" && Number(getComputedStyle(lay(v)).opacity) > 0.05 && v.paused && !v.ended)) s.frozenMs += d;
+      if (S.play && [...document.querySelectorAll("[data-clip] video")].some((v) => lay(v).style.visibility !== "hidden" && Number(getComputedStyle(lay(v)).opacity) > 0.05 && v.paused && !v.ended)) s.frozenMs += d;
       // black: a clip layer on screen with neither a decoded frame (video shown) nor a loaded poster
       const blk = [...document.querySelectorAll("[data-clip]")].some((L) => L.style.visibility !== "hidden" && Number(getComputedStyle(L).opacity) > 0.3 && !(L.querySelector("img")?.complete && L.querySelector("img")?.naturalWidth) && Number(L.querySelector("video")?.style.opacity ?? 1) < 0.5);
       if (blk) s.blackMs += d;
-      const nof = [...document.querySelectorAll("video")].some((v) => { const L = lay(v); return L.style.visibility !== "hidden" && Number(getComputedStyle(L).opacity) > 0.3 && v.readyState < 2; });
+      const nof = [...document.querySelectorAll("[data-clip] video")].some((v) => { const L = lay(v); return L.style.visibility !== "hidden" && Number(getComputedStyle(L).opacity) > 0.3 && v.readyState < 2; });
       if (nof) s.noFrameMs += d;
       const post = [...document.querySelectorAll("[data-clip]")].some((L) => L.style.visibility !== "hidden" && Number(getComputedStyle(L).opacity) > 0.3 && Number(L.querySelector("video")?.style.opacity ?? 1) < 0.5);
       if (post) s.posterMs += d;
@@ -68,7 +68,7 @@ await ctx.addInitScript(() => {
   requestAnimationFrame(raf);
   const hook = (v) => {
     if (v.__ss) return; v.__ss = 1; let last = 0, seekT = 0, lastPlaying = false;
-    v.addEventListener("seeking", () => { seekT = performance.now(); const f = (v.currentSrc || "").split("/").slice(-2).join("/"); S.seekBy[f] = (S.seekBy[f] ?? 0) + 1; });
+    v.addEventListener("seeking", () => { seekT = performance.now(); const f = (v.currentSrc || "").split("/").slice(-2).join("/"); S.seekBy[f] = (S.seekBy[f] ?? 0) + 1; (S.seekLog ??= []).push([Math.round(performance.now()), f, +v.currentTime.toFixed(2), scene(), !!S.play]); });
     v.addEventListener("seeked", () => { if (!seekT) return; const d = performance.now() - seekT, s = sc(scene()); s.seeks++; s.seekMs += d; s.maxSeek = Math.max(s.maxSeek, d); seekT = 0; });
     v.addEventListener("waiting", () => { sc(scene()).waiting++; });
     const f = (now) => {
@@ -117,6 +117,6 @@ const r = await page.evaluate(() => window.__ss);
 await closeAll();
 const rows = r.order.map((id) => { const s = r.scenes[id]; return { id, clip: s.clip, sec: +(s.ms / 1000).toFixed(1), frozenMs: Math.round(s.frozenMs), blackMs: Math.round(s.blackMs), posterMs: Math.round(s.posterMs), noFrameMs: Math.round(s.noFrameMs), fps: s.ms ? +(s.raf / (s.ms / 1000)).toFixed(0) : 0, long50: s.long50, long100: s.long100, maxRaf: Math.round(s.maxRaf), vframes: s.vframes, freezes: s.freezes, maxFreeze: Math.round(s.maxFreeze), firstFrameMs: s.firstFrameMs, seeks: s.seeks, avgSeek: s.seeks ? Math.round(s.seekMs / s.seeks) : 0, maxSeek: Math.round(s.maxSeek), waiting: s.waiting, gaps: s.gaps ?? [] }; });
 const tot = rows.reduce((a, x) => ({ long50: a.long50 + x.long50, long100: a.long100 + x.long100, freezes: a.freezes + x.freezes, waiting: a.waiting + x.waiting, frozenMs: a.frozenMs + x.frozenMs, blackMs: a.blackMs + x.blackMs, posterMs: a.posterMs + x.posterMs, noFrameMs: a.noFrameMs + x.noFrameMs, seeks: a.seeks + x.seeks, maxSeek: Math.max(a.maxSeek, x.maxSeek) }), { long50: 0, long100: 0, freezes: 0, waiting: 0, frozenMs: 0, blackMs: 0, posterMs: 0, noFrameMs: 0, seeks: 0, maxSeek: 0 });
-fs.writeFileSync(out, JSON.stringify({ url, mode, wallSec: (Date.now() - t0) / 1000, startMs: r.startMs ?? null, totals: tot, seekBy: r.seekBy, scenes: rows }, null, 1));
-console.log(mode, url, "totals", JSON.stringify(tot)); console.log("seeks by file", JSON.stringify(r.seekBy));
+fs.writeFileSync(out, JSON.stringify({ url, mode, wallSec: (Date.now() - t0) / 1000, startMs: r.startMs ?? null, totals: tot, seekBy: r.seekBy, seekLog: r.seekLog ?? [], scenes: rows }, null, 1));
+console.log(mode, url, "totals", JSON.stringify(tot)); console.log("seeks by file", JSON.stringify(r.seekBy), "log", JSON.stringify(r.seekLog ?? []));
 for (const x of rows) console.log(`${x.id.padEnd(10)} ${String(x.clip ?? "-").padEnd(13)} ${String(x.sec).padStart(5)}s frozen=${String(x.frozenMs).padStart(5)}ms noFrame=${String(x.noFrameMs).padStart(5)}ms black=${String(x.blackMs).padStart(5)}ms fps=${String(x.fps).padStart(3)} long50=${x.long50} long100=${x.long100} maxRaf=${x.maxRaf} vfr=${x.vframes} freezes=${x.freezes} maxFreeze=${x.maxFreeze} first=${x.firstFrameMs} seeks=${x.seeks} avgSeek=${x.avgSeek} maxSeek=${x.maxSeek} waiting=${x.waiting}`);

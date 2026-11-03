@@ -14,7 +14,7 @@ import type { Report } from "@/lib/schema";
 import type { GarageData } from "@/lib/garage/data";
 import InsertView from "./Inserts";
 import { ACTS, RECEIPT_BUSAN, RECEIPT_CUSTOMS, SCENES, UI, type Lang, type Line, type Scene } from "./story";
-import { TW, clipProgress, clipSpan } from "./clipTime";
+import { TW, clipProgress, clipSpan, clipSync } from "./clipTime";
 import { followY, newVoiceClock, voiceDecision } from "./voiceFollow";
 
 const GarageScene = dynamic(() => import("@/components/garage-3d/GarageScene"), { ssr: false });
@@ -74,10 +74,10 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
         const span = clipSpan(k, len);
         const target = Math.min(v.duration - 0.05, local * v.duration);
         if (sec) {
-          // watch mode: native playback at the pace of the scene; seek only on real drift
-          const rate = cl(v.duration / span, 0.25, 4);
+          // watch mode: native playback at the pace of the scene; small drift caught up by rate, seek only past 1 s (clipTime.ts, tested)
+          const { seekTo, rate } = clipSync(v.currentTime, target, v.duration / span);
           if (Math.abs(v.playbackRate - rate) > 0.02) v.playbackRate = rate;
-          if (Math.abs(v.currentTime - target) > 0.35) v.currentTime = target;
+          if (seekTo !== null) v.currentTime = seekTo;
           if (v.paused && target < v.duration - 0.1) v.play().catch(() => {});
           return;
         }
