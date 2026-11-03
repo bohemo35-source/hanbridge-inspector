@@ -53,14 +53,14 @@ const clean = (v: FormDataEntryValue | null, max = 40) => String(v ?? "").replac
 
 export async function POST(req: Request) {
   const startedAt = Date.now();
-  if (process.env.RUN_DISABLED === "1") return json(503, "live runs are paused");
   let form: FormData;
-  try { form = await req.formData(); } catch { return json(400, "expected multipart form data"); }
+  try { form = await req.formData(); } catch { return json(400, "expected multipart form data"); } // no form → no video URL to delete; the token route's sweep removes it after 30 min
   // the browser has already put the video into Blob: any refusal below must delete it, or it stays in the store for good
   const videoField = String(form.get("videoUrl") ?? "");
   const videoUrl = videoField ? ownUploadUrl(videoField) : null;
   const refuse = async (status: number, error: string) => { if (videoUrl) await del(videoUrl.toString()).catch(() => undefined); return json(status, error); };
   if (videoField && !videoUrl) return json(400, "video must be uploaded through this page");
+  if (process.env.RUN_DISABLED === "1") return refuse(503, "live runs are paused");
   const limited = checkLimit("upload", clientIp(req), Number(process.env.UPLOAD_PER_IP_HOUR ?? 2), Number(process.env.UPLOAD_DAILY_CAP ?? 15));
   if (limited) return refuse(429, limited);
 

@@ -15,9 +15,14 @@ const ABANDONED_MS = 30 * 60_000;
 /** best effort: a run deletes its own video; this catches the ones whose inspection was never sent */
 async function sweepAbandoned() {
   try {
-    const { blobs } = await list({ prefix: "uploads/", limit: 100 });
-    const old = blobs.filter((b) => Date.now() - new Date(b.uploadedAt).getTime() > ABANDONED_MS).map((b) => b.url);
-    if (old.length) await del(old);
+    let cursor: string | undefined;
+    for (let page = 0; page < 10; page++) { // every page of uploads/, not just the first 100
+      const r = await list({ prefix: "uploads/", limit: 1000, ...(cursor ? { cursor } : {}) });
+      const old = r.blobs.filter((b) => Date.now() - new Date(b.uploadedAt).getTime() > ABANDONED_MS).map((b) => b.url);
+      if (old.length) await del(old);
+      if (!r.hasMore || !r.cursor) break;
+      cursor = r.cursor;
+    }
   } catch { /* never blocks an upload */ }
 }
 
