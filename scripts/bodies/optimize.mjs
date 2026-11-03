@@ -2,21 +2,23 @@
 // @project: hanbridge-inspector
 // @purpose: Shrink Tripo body templates for the web: weld + simplify (meshoptimizer), textures → WebP ≤1024 px (sharp), meshopt compression
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code — TEX env (texture size, default 2048: 1024 looked soft in the garage)
 // usage (deps are not in the app: npm i @gltf-transform/core@4 @gltf-transform/extensions@4 @gltf-transform/functions@4 meshoptimizer sharp in a scratch dir):
-//   node scripts/bodies/optimize.mjs <in.glb> <out.glb> [ratio=0.3]
+//   [TEX=2048] [ERR=0.01] node scripts/bodies/optimize.mjs <in.glb> <out.glb> [ratio=0.6]
 import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import { dedup, prune, weld, simplify, textureCompress, meshopt, resample } from "@gltf-transform/functions";
 import { MeshoptEncoder, MeshoptSimplifier } from "meshoptimizer";
 import sharp from "sharp";
 
-const [inp, out, r = "0.3"] = process.argv.slice(2);
+const [inp, out, r = "0.6"] = process.argv.slice(2);
+const tex = Number(process.env.TEX ?? 2048);
 await MeshoptEncoder.ready; await MeshoptSimplifier.ready;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ "meshopt.encoder": MeshoptEncoder });
 const doc = await io.read(inp);
 await doc.transform(
   dedup(), weld(), simplify({ simplifier: MeshoptSimplifier, ratio: Number(r), error: Number(process.env.ERR ?? 0.01) }), resample(), prune(),
-  textureCompress({ encoder: sharp, targetFormat: "webp", resize: [1024, 1024], quality: 82 }),
+  textureCompress({ encoder: sharp, targetFormat: "webp", resize: [tex, tex], quality: 86 }),
   meshopt({ encoder: MeshoptEncoder, level: "medium" }),
 );
 await io.write(out, doc);

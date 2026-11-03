@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Garage studio UI: 3D bay + panel rail, legend, assemble/explode, panel card with status, gauge spread, findings, inspector quotes and the car's real photos (lightbox)
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code — SUV template without a brand (body-suv); the Sportage model only for Kia
 // @updated: 2026-11-03 claude-code — no photo count when the car has no photo index (uploads); neutral wording for «unconfirmed» (the source may be the owner's reading)
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -10,9 +11,10 @@ import type { GarageData, PanelPhoto, PanelState, PanelStatus } from "@/lib/gara
 import type { BodyModel, StudioHandle } from "./scene";
 import type { BodyKind } from "@/lib/garage/data";
 
-/** one neutral shape per body type (Muse Image concept → Tripo image-to-3D); SUV is the Kia Sportage model. Lengths in garage metres, Kia = 4.4 */
+/** one neutral shape per body type (Muse Image concept → Tripo image-to-3D); Kia SUVs get the Kia Sportage model (undefined = KIA_MODEL). Lengths in garage metres, Kia = 4.4 */
 const BODY_MODELS: Record<BodyKind, BodyModel | undefined> = {
-  suv: undefined,
+  suv_kia: undefined,
+  suv: { hero: "/models/body-suv.glb", length: 4.55, doors: 5 },
   sedan: { hero: "/models/body-sedan.glb", length: 4.6, doors: 5 },
   hatchback: { hero: "/models/body-hatchback.glb", length: 4.1, doors: 5 },
   compact: { hero: "/models/body-compact.glb", length: 3.7, doors: 3 },

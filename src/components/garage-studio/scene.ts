@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Garage studio 3D scene (plain three.js): film-style inspection bay, Kia Sportage hero model in neutral titanium, 13 clickable panels split from the parts model, explode, scan sweep, camera fly-to
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code — templates: panel borders cut exactly (slice.ts) + thin shut lines when assembled; body-suv template
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
@@ -14,6 +15,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import type { PanelId } from "@/lib/domain/panels";
+import { sliceTriangle, type Corner } from "./slice";
 
 export const SODIUM = 0xeea65a;
 const SIGNAL = 0x8cc7cf;
@@ -75,7 +77,7 @@ function floatGeometry(src: THREE.BufferGeometry): THREE.BufferGeometry {
  * Generic panel classifier for template bodies. u = x/(L/2) (+1 front), v = height share (0 floor), w = z/(W/2) (-1 left), n = face normal.
  * Glass, pillars, wheels and the underbody stay non-panel pieces.
  */
-export function classifyTriangle(u: number, v: number, w: number, n: THREE.Vector3, doors: 3 | 5): string {
+export function classifyTriangle(u: number, v: number, w: number, n: { x: number; y: number; z: number }, doors: 3 | 5): string {
   const side = w < 0 ? "left" : "right";
   if (v < 0.42 && Math.abs(w) > 0.5 && (Math.abs(u - 0.64) < 0.2 || Math.abs(u + 0.64) < 0.2) && Math.abs(n.z) > 0.35) return "wheel";
   if (v < 0.12) return "under";
@@ -271,6 +273,7 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
   const status = new Map<PanelId, { c: THREE.Color; w: number } | null>();
   let hover: PanelId | null = null, selected: PanelId | null = null;
   let explodeTarget = 0, explode = 0;
+  let seams: THREE.LineSegments | null = null;
   let scanT = -1; // -1 idle, 0..1 sweeping
 
   /** Template GLBs come in unknown orientation: length goes to X, and the front is the end farther from the roof (bonnets are longer than boots). */
@@ -325,29 +328,55 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
   function buildPiecesFromHero(root: THREE.Object3D) {
     const box = new THREE.Box3().setFromObject(root); const L = box.max.x - box.min.x, H = box.max.y - box.min.y, W = box.max.z - box.min.z;
     const buckets = new Map<string, number[][]>(); // key -> [positions[], normals[], uvs[]]
+    const frame = { L, H, W, minY: box.min.y, doors: model.doors };
+    const seamPts: number[] = []; // shut lines between two panels, drawn on the assembled car
+    const edgeOwner = new Map<string, string>(); // borders that follow faces (normal tests in the classifier) are found by shared edges
+    const q = (x: number) => Math.round(x * 1e4);
+    const edgeKey = (p: number[], r: number[]) => { const A = `${q(p[0])},${q(p[1])},${q(p[2])}`, B = `${q(r[0])},${q(r[1])},${q(r[2])}`; return A < B ? `${A}|${B}` : `${B}|${A}`; };
+    const seam = (p: number[], r: number[], n: THREE.Vector3) => { const o = 0.0025; seamPts.push(p[0] + n.x * o, p[1] + n.y * o, p[2] + n.z * o, r[0] + n.x * o, r[1] + n.y * o, r[2] + n.z * o); };
     const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), nn = new THREE.Vector3();
+    let hasUV = false;
     root.traverse((o) => {
       const m = o as THREE.Mesh; if (!m.isMesh) return;
       heroMat ??= (Array.isArray(m.material) ? m.material[0] : m.material) as THREE.MeshStandardMaterial;
       const geo = floatGeometry(m.geometry).applyMatrix4(m.matrixWorld).toNonIndexed();
       const pos = geo.getAttribute("position"), nor = geo.getAttribute("normal"), uv = geo.getAttribute("uv");
+      hasUV ||= Boolean(uv);
       for (let i = 0; i < pos.count; i += 3) {
         a.fromBufferAttribute(pos, i); b.fromBufferAttribute(pos, i + 1); c.fromBufferAttribute(pos, i + 2);
         nn.crossVectors(e1.subVectors(b, a), e2.subVectors(c, a)).normalize();
-        const k = classifyTriangle((a.x + b.x + c.x) / 3 / (L / 2), ((a.y + b.y + c.y) / 3 - box.min.y) / H, (a.z + b.z + c.z) / 3 / (W / 2), nn, model.doors);
-        let bk = buckets.get(k); if (!bk) buckets.set(k, (bk = [[], [], []]));
-        bk[0].push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
-        for (let j = 0; j < 3; j++) {
-          if (nor) bk[1].push(nor.getX(i + j), nor.getY(i + j), nor.getZ(i + j));
-          if (uv) bk[2].push(uv.getX(i + j), uv.getY(i + j));
+        const corner = (j: number): Corner => ({
+          p: [pos.getX(i + j), pos.getY(i + j), pos.getZ(i + j)],
+          n: nor ? [nor.getX(i + j), nor.getY(i + j), nor.getZ(i + j)] : [nn.x, nn.y, nn.z],
+          uv: uv ? [uv.getX(i + j), uv.getY(i + j)] : [0, 0],
+        });
+        const tri: [Corner, Corner, Corner] = [corner(0), corner(1), corner(2)];
+        const r = sliceTriangle(tri, nn, frame, classifyTriangle);
+        for (const pc of r.pieces) {
+          let bk = buckets.get(pc.key); if (!bk) buckets.set(pc.key, (bk = [[], [], []]));
+          for (const t of pc.tris) for (const cn of t) { bk[0].push(...cn.p); bk[1].push(...cn.n); bk[2].push(...cn.uv); }
+        }
+        for (const [p0, p1] of r.seams) seam(p0, p1, nn);
+        if (!r.cut) {
+          const k = r.pieces[0].key;
+          for (let j = 0; j < 3; j++) {
+            const ek = edgeKey(tri[j].p, tri[(j + 1) % 3].p), prev = edgeOwner.get(ek);
+            if (prev === undefined) edgeOwner.set(ek, k);
+            else if (prev !== k && prev.startsWith("p:") && k.startsWith("p:")) seam(tri[j].p, tri[(j + 1) % 3].p, nn);
+          }
         }
       }
       geo.dispose();
     });
+    if (seamPts.length) {
+      const sg = new THREE.BufferGeometry(); sg.setAttribute("position", new THREE.Float32BufferAttribute(seamPts, 3));
+      seams = new THREE.LineSegments(sg, new THREE.LineBasicMaterial({ color: 0x040506, transparent: true, opacity: 0.8 }));
+      seams.renderOrder = 1; car.add(seams);
+    }
     for (const [k, [P, N, UV]] of buckets) {
       const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(P, 3));
       if (N.length === P.length) g.setAttribute("normal", new THREE.Float32BufferAttribute(N, 3)); else g.computeVertexNormals();
-      if (UV.length) g.setAttribute("uv", new THREE.Float32BufferAttribute(UV, 2));
+      if (UV.length && hasUV) g.setAttribute("uv", new THREE.Float32BufferAttribute(UV, 2));
       addPiece(k, g);
     }
   }
@@ -459,9 +488,13 @@ export function createStudio(host: HTMLElement, ev: StudioEvents, opts: { mobile
     explode += (explodeTarget - explode) * Math.min(1, dt * 3.2);
     const ek = explode < 0.001 ? 0 : explode;
     if (hero) hero.visible = ek < 0.02;
+    if (seams) seams.visible = ek < 0.02;
+    // templates are one shell: lifting all 13 panels off reads as shards, so only panels with a remark come off (all of them on a clean car)
+    const anyRemark = [...status.values()].some((x) => x && x.w >= 1);
     for (const p of pieces) {
       p.mesh.visible = ek >= 0.02;
-      tmp.copy(p.dir).multiplyScalar(ek * (p.panel ? 1 : 0.8));
+      const stays = !model.parts && p.panel !== null && anyRemark && !((status.get(p.panel)?.w ?? 0) >= 1) && p.panel !== selected;
+      tmp.copy(p.dir).multiplyScalar(stays ? 0 : ek * (p.panel ? 1 : 0.8));
       p.mesh.position.copy(tmp);
       if (p.overlay) p.overlay.position.copy(tmp);
     }

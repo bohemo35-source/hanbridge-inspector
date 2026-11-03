@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Garage studio data per inspection: status, gauge spread, findings (with inspector quotes) and real photos of every one of the 13 panels (photos picked from the Muse Glimmer photo index)
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code — suv_kia: the Sportage model only for Kia SUVs, other SUVs get the unbranded body-suv
 // @updated: 2026-11-03 claude-code — a gauge class whose paint finding the verifier did not confirm (e.g. owner-typed reading) shows as unconfirmed; own-key lookups only (carId from a stored report must not hit Object.prototype)
 import type { Report } from "@/lib/schema";
 import { PANELS, type PanelId } from "@/lib/domain/panels";
@@ -26,12 +27,15 @@ export interface SheetItem { ru: string; en: string; panels?: string[] }
 /** the inspector's original checklist, structured by Muse Spark (scripts/film4/build-sheets.mjs) */
 export interface InspectorSheet { facts: { ru: string; en: string; value_ru: string; value_en: string }[]; sections: { ru: string; en: string; state: string; items: SheetItem[] }[] }
 /** neutral template the garage shows for this car (one shape per body type, never the exact model) */
-export type BodyKind = "suv" | "sedan" | "hatchback" | "compact" | "city";
+export type BodyKind = "suv" | "suv_kia" | "sedan" | "hatchback" | "compact" | "city";
 const BODY_OF: Record<string, BodyKind> = { "mini-cooper-s": "compact", "kia-morning": "city" };
+/** the Kia Sportage model is a real car shape: only Kia SUVs get it, every other SUV gets the unbranded template */
 export function bodyKind(carId: string, report?: Report): BodyKind {
   if (Object.hasOwn(BODY_OF, carId)) return BODY_OF[carId];
   const t = getCar(carId)?.bodyType ?? report?.vehicle.bodyType;
-  return t === "sedan" ? "sedan" : t === "hatchback" ? ((getCar(carId)?.doors ?? report?.vehicle.doors) === 3 ? "compact" : "hatchback") : "suv";
+  if (t === "sedan") return "sedan";
+  if (t === "hatchback") return (getCar(carId)?.doors ?? report?.vehicle.doors) === 3 ? "compact" : "hatchback";
+  return /^kia$/i.test((getCar(carId)?.make ?? report?.vehicle.make ?? "").trim()) ? "suv_kia" : "suv";
 }
 export interface GarageData {
   carId: string;
