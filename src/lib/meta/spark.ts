@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Muse Spark chat + JSON helpers (reasoning_effort low, max_tokens 2000)
 // @created: 2026-10-27
+// @updated: 2026-11-03 claude-code — timeoutMs option for long outputs
 import type { ZodType } from "zod";
 import { metaFetch, MetaApiError } from "./client";
 
@@ -24,11 +25,14 @@ export async function sparkChat(opts: {
   json?: boolean;
   /** default 2000; raise for long structured outputs (Spark reasons first, empty content = budget exhausted) */
   maxTokens?: number;
+  /** per-request timeout (default 30 s from metaFetch); long outputs such as 8000-token voice extraction need more */
+  timeoutMs?: number;
 }): Promise<SparkResult> {
   const attempt = async (): Promise<SparkResult> => {
     const res = await metaFetch("/chat/completions", {
       method: "POST",
       model: "muse-spark-1.3",
+      ...(opts.timeoutMs ? { timeoutMs: opts.timeoutMs } : {}),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "muse-spark-1.3",
@@ -62,10 +66,10 @@ function stripFences(s: string): string {
   return (m ? m[1] : s).trim();
 }
 
-export async function sparkJson<T>(schema: ZodType<T>, messages: ChatMessage[], spec?: string, opts: { maxTokens?: number } = {}): Promise<T> {
+export async function sparkJson<T>(schema: ZodType<T>, messages: ChatMessage[], spec?: string, opts: { maxTokens?: number; timeoutMs?: number } = {}): Promise<T> {
   const rules = "Reply with strictly valid JSON only. No markdown, no commentary." + (spec ? `\n${spec}` : "");
   const sys: ChatMessage[] = [{ role: "system", content: rules }, ...messages];
-  const first = await sparkChat({ messages: sys, json: true, maxTokens: opts.maxTokens });
+  const first = await sparkChat({ messages: sys, json: true, maxTokens: opts.maxTokens, timeoutMs: opts.timeoutMs });
   const tryParse = (text: string): { ok: true; value: T } | { ok: false; error: string } => {
     try {
       const parsed: unknown = JSON.parse(stripFences(text));
@@ -86,6 +90,7 @@ export async function sparkJson<T>(schema: ZodType<T>, messages: ChatMessage[], 
     ],
     json: true,
     maxTokens: opts.maxTokens,
+    timeoutMs: opts.timeoutMs,
   });
   const b = tryParse(second.content ?? "");
   if (b.ok) return b.value;

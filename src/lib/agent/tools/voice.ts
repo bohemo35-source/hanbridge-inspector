@@ -4,6 +4,7 @@
 //           (15 s chunks = timestamps) -> Spark extracts per-panel gauge readings and the inspector's own verdict,
 //           every item tied to a verbatim quote that must exist in the transcript chunk (else rejected).
 // @created: 2026-10-29
+// @updated: 2026-11-03 claude-code — 90 s timeout for the readings extraction
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -271,7 +272,7 @@ export async function transcribeNote(opts: { video: string; mediaId?: string; ch
     ? await sparkJson(VoiceDraftSchema, [
         { role: "system", content: "You extract structured paint-gauge readings from a used-car inspector's spoken commentary (Russian). Be literal; never invent numbers or quotes." },
         { role: "user", content: `Transcript in 15-second chunks:\n${body}` },
-      ], VOICE_SPEC, { maxTokens: 8000 })
+      ], VOICE_SPEC, { maxTokens: 8000, timeoutMs: 90_000 }) // a gauge walk-around has dozens of readings: 30 s was not enough (aborted twice on a visitor's 3-min video)
     : { readings: [], notes: [] };
   const sparkMs = Date.now() - tSpark;
 
