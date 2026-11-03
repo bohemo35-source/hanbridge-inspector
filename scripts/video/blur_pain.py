@@ -4,6 +4,7 @@
 # @purpose: Client-chat screenshots for the "before" story: blur names, avatar, licence plates and car thumbnails in quotes (boxes found by eye, 736x1600 phone shots);
 #           originals untouched, output → <out>/chat-1..8.jpg
 # @created: 2026-11-03
+# @updated: 2026-11-03 claude-code — bottom strip of the bolt shots blurred
 # @updated: 2026-11-03 claude-code — dm/ desktop shots (18.09.49 «когда она поедет?», 18.07.52 photo wall): names, plates, avatar; the photo wall pixelated whole (neighbour plates)
 # @updated: 2026-11-03 claude-code — also the two «from bolt» shots (IMG_4020/4021: «Когда отправка?», «Не отправилось»): names, company, avatars, people's names in file names
 # usage: python3 scripts/video/blur_pain.py <dir with PHOTO-*.jpg> <out dir>   (a «from bolt» subfolder, when present, gives bolt-4020.jpg / bolt-4021.jpg)

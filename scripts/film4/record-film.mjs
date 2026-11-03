@@ -2,7 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: record the film from the site to mp4 with its sound: CDP screencast of a visible Chrome (no background throttling) after pressing Play; the page logs when narration/drums start and stop, the same mix (voice 0.8, drums as in the player, fades) is rebuilt with ffmpeg and muxed; outputs a 1080p and a small 720p file
 // @created: 2026-11-03
-// @updated: 2026-11-03 claude-code — window content = emulated CSS size (1600×900 @1.2 → 1920×1080), every frame must be W×H (a mismatched window cropped the right edge)
+// @updated: 2026-11-03 claude-code — window content = emulated CSS size (1600×900 @1.2 → 1920×1080), the JPEG of every frame must be W×H (a mismatched window cropped the right edge)
 // @updated: 2026-11-03 claude-code — drums level 0.58 (DRUMS env), as in the player
 // usage: node scripts/film4/record-film.mjs <url> <outBase> [W=1920] [H=1080]   → <outBase>-1080p.mp4, <outBase>-720p.mp4
 import { createRequire } from "node:module";
@@ -61,7 +61,7 @@ await sleep(4000);
 
 const dir = path.join(os.tmpdir(), "hb-record-film-frames"); fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
 const frames = [];
-const sizes = new Map(); // every frame must be exactly W×H, or the recording is refused
+const sizes = new Map(); // logged; the JPEG size of every frame is checked after the run
 cdp.on("Page.screencastFrame", (f) => {
   const key = `${f.metadata.deviceWidth}x${f.metadata.deviceHeight}`; sizes.set(key, (sizes.get(key) ?? 0) + 1);
   const file = path.join(dir, `${String(frames.length).padStart(5, "0")}.jpg`);
@@ -92,9 +92,10 @@ await cb.close().catch(() => {}); proc.kill("SIGTERM");
 
 // the JPEG itself, not only the metadata, must be W×H (the 1847×1080 frames had correct metadata)
 const jpegSize = (file) => { const b = fs.readFileSync(file); for (let i = 2; i < b.length - 9;) { if (b[i] !== 0xff) { i++; continue; } const m = b[i + 1]; if (m === 0xc0 || m === 0xc2) return `${b.readUInt16BE(i + 7)}x${b.readUInt16BE(i + 5)}`; i += 2 + b.readUInt16BE(i + 2); } return "?"; };
-const bad = frames.filter((_, i) => i % 5 === 0).filter((f) => jpegSize(f.file) !== `${W}x${H}`).length;
-console.log("frame sizes (metadata)", JSON.stringify(Object.fromEntries(sizes)), "sampled JPEGs not", `${W}x${H}:`, bad);
-if (bad > frames.length / 5 * 0.005) { console.error("REFUSED: frames of a different size — the recording would be cropped"); process.exit(2); }
+// metadata carries the CSS size (CW×CH), so the real check is the JPEG of every frame, no tolerance
+const bad = frames.filter((f) => jpegSize(f.file) !== `${W}x${H}`).length;
+console.log("frame sizes (metadata, CSS)", JSON.stringify(Object.fromEntries(sizes)), "JPEGs not", `${W}x${H}:`, bad, "of", frames.length);
+if (bad) { console.error("REFUSED: frames of a different size — the recording would be cropped"); process.exit(2); }
 // frames arrive unevenly: concat with real durations → 30 fps CFR
 const t0 = frames[0].t, span = frames.at(-1).t - t0;
 const list = frames.map((f, i) => `file '${f.file}'\nduration ${Math.max(0.001, (frames[i + 1]?.t ?? f.t + 1 / 30) - f.t).toFixed(4)}`).join("\n") + `\nfile '${frames.at(-1).file}'\n`;

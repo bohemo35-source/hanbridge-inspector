@@ -4,6 +4,7 @@
 //           -> per-panel measurements with second-level evidence. Never invents microns: when the digits are not
 //           readable, only the gauge display colour band is used, and the finding stays low-confidence/unverified.
 // @created: 2026-10-28
+// @updated: 2026-11-03 claude-code — digitFrames in a measurement (the upload rule needs digits read on ≥2 frames)
 // @updated: 2026-11-03 claude-code — `parallel` option: frame batches read concurrently (a visitor's video must fit the 300 s route)
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
@@ -41,6 +42,8 @@ export interface GaugeMeasurement {
   tStart: number;
   tEnd: number;
   frames: number;
+  /** frames of the group where the digits were actually read (frames counts every frame with the gauge visible) */
+  digitFrames?: number;
   microns: number | null; // median of readable digits, null when no digits were readable
   band: Band | null;
   source: "digits" | "display_color";
@@ -102,6 +105,7 @@ export function mergeGaugeFrames(frames: GaugeFrame[], opts: { maxGapSec?: numbe
       tStart: g[0].t,
       tEnd: g[g.length - 1].t,
       frames: g.length,
+      digitFrames: digits.length,
       microns,
       band,
       source: microns !== null ? "digits" : "display_color",

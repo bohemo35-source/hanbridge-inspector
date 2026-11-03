@@ -68,3 +68,12 @@ describe("gauge video merge", () => {
     expect(toPaintJson(mergeGaugeFrames(FIXTURE))).toEqual({ front_left_fender: 112, front_right_door: 188 });
   });
 });
+
+describe("digitFrames", () => {
+  it("counts only the frames where the digits were read", () => {
+    const fr = (t: number, microns: number | null): GaugeFrame => ({ t, gaugeVisible: true, microns, displayColor: null, panel: "hood", panelConfidence: 0.9 });
+    const [m] = mergeGaugeFrames([fr(10, 200), fr(11, null)]);
+    expect(m.frames).toBe(2);
+    expect(m.digitFrames).toBe(1);
+  });
+});

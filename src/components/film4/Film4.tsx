@@ -103,7 +103,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     if (timing.current === undefined) timing.current = await fetch(`/film3/audio/narration-${lang}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     const tm = timing.current;
     if (!music.current) { music.current = new Audio("/film3/audio/drums.mp3"); music.current.loop = true; music.current.volume = 0; }
-    // levels (EBU R128): voice −17.4 LUFS, drums −20.8 LUFS (one loop) → at 0.8 / 0.58 the voice sits ~6.2 dB over the drums
+    // levels (EBU R128): voice −17.4 LUFS, drums −20.8 LUFS (one loop) → at 0.8 / 0.58 the voice sits 6.0 dB over the drums (measured on a 170 s drums loop; 6.2 from the one-loop figure)
     // (first mix 1.0 / 0.22 = 16.6 dB, then 0.8 / 0.35 = 10.5 dB — the owner could not hear the drums; 0.35 → 0.58 = +4.4 dB)
     music.current.play().then(() => fade(music.current, tm ? 0.58 : 0.6, 1500)).catch(() => {});
     playSec.current = (i) => { const w = tm?.scenes[SCENES[i].id]; return w ? w[1] - w[0] : SCENES[i].sec; };

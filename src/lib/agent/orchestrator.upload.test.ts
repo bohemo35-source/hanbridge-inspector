@@ -45,8 +45,10 @@ vi.mock("./tools/voice", () => ({
 vi.mock("./tools/gauge", () => ({
   readGaugeVideo: vi.fn(async () => ({
     mediaId: "owner_video.mp4", frames: [], findings: [], paint: { trunk: 175, hood: 200 },
-    // hood matches the voice (200) but was read on one frame only: its panel label is not trusted
-    measurements: [{ panel: "trunk", tStart: 70, tEnd: 95, frames: 3, microns: 175, band: "elevated", source: "digits", confidence: 0.8 }, { panel: "hood", tStart: 10, tEnd: 10, frames: 1, microns: 200, band: "elevated", source: "digits", confidence: 0.6 }],
+    // hood matches the voice (200) but its digits were read on one frame only: not trusted
+    measurements: [{ panel: "trunk", tStart: 70, tEnd: 95, frames: 3, digitFrames: 3, microns: 175, band: "elevated", source: "digits", confidence: 0.8 },
+      // hood: gauge visible on 2 frames, digits read on one only → not trusted
+      { panel: "hood", tStart: 10, tEnd: 11, frames: 2, digitFrames: 1, microns: 200, band: "elevated", source: "digits", confidence: 0.6 }],
     stats: { frames: 45, gaugeFrames: 42, digitsRead: 4, sparkCalls: 8, samCalls: 0, ms: 1 },
   })),
 }));
@@ -67,12 +69,12 @@ describe("runInspection: a visitor's upload with a gauge video", () => {
     registerLocalCar(carId, dir);
 
     const { report } = await runInspection({ carId, reportId: "r-test-upload" });
+    expect(report.trace.some((s) => s.tool === "transcribe_note")).toBe(true); // the fallback ran (the model did not call it)
     const byKey = (panel: string, kind: string) => report.findings.find((f) => f.panel === panel && f.kind === kind);
     expect(byKey("trunk", "repaint")?.verified).toBe(true);            // voice 181 and screen 175 (3 frames) agree
     expect(byKey("front_right_fender", "repaint")?.verified).toBe(false); // voice only
     expect(byKey("rear_bumper", "panel_replaced")?.verified).toBe(false); // a replacement from the owner's video
-    expect(byKey("hood", "repaint")?.verified).toBe(false);             // screen agrees, but on one frame only
-    expect(report.trace.some((s) => s.tool === "transcribe_note")).toBe(true); // the fallback ran (the model did not call it)
+    expect(byKey("hood", "repaint")?.verified).toBe(false);             // screen agrees, but digits on one frame only
     expect(report.verdict.handoff).toBe(true);
     expect(report.handoffReason).toBeTruthy();
     expect(report.trace.some((s) => s.tool === "conflict_check" && (s.outputSummary ?? "").includes("confirmed=trunk"))).toBe(true);

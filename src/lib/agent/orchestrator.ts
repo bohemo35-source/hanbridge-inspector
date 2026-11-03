@@ -181,8 +181,8 @@ export async function runInspection(opts: {
         if (!media.gaugeVideo) { step(name, key, true, "source absent: no paint_gauge.mp4 for this car", Date.now() - ts); return "source absent: no paint_gauge.mp4"; }
         const r = await readGaugeVideo({ video: await ensureVideoPath(opts.carId, media.gaugeVideo), mediaId: media.gaugeVideo, ...(isUpload ? { maxFrames: 48, parallel: 4, reread: 8 } : {}) });
         addFindings(r.findings); addPaint(r.paint, !isUpload);
-        // the panel of a screen reading is named by the model from the frame: count it only when it was read on ≥2 frames of that panel
-        if (isUpload) for (const m of r.measurements) if (m.microns !== null && m.frames >= 2 && m.panel !== "unknown") screenPaint[m.panel] = Math.max(screenPaint[m.panel] ?? 0, m.microns);
+        // the panel of a screen reading is named by the model from the frame: count it only when the digits were read on ≥2 frames of that panel
+        if (isUpload) for (const m of r.measurements) if (m.microns !== null && (m.digitFrames ?? 0) >= 2 && m.panel !== "unknown") screenPaint[m.panel] = Math.max(screenPaint[m.panel] ?? 0, m.microns);
         out = `frames=${r.stats.frames} measurements=${r.measurements.length} findings=${r.findings.length} paint=${JSON.stringify(r.paint)}`;
       } else if (name === "read_diagnostic_report") {
         const file = String(args.file ?? media.diagnosticPdfs[0] ?? "");
