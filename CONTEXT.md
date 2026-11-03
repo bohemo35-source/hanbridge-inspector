@@ -1,6 +1,6 @@
 # CONTEXT — Hanbridge Inspector
 
-<!-- @agent: muse-code · @project: hanbridge-inspector · @purpose: долгоживущий контекст проекта · @created: 2026-10-28 · @updated: 2026-11-02 claude-code -->
+<!-- @agent: muse-code · @project: hanbridge-inspector · @purpose: долгоживущий контекст проекта · @created: 2026-10-28 · @updated: 2026-11-03 claude-code -->
 
 ИИ-осмотр б/у авто в Корее для СНГ/ЦА: медиа → находки с доказательствами → verifier → вердикт BUY/NEGOTIATE/WALK AWAY → публичный отчёт `/r/:id` + чат. Хакатон Meta Global AI Developer.
 
@@ -18,6 +18,8 @@ Next.js 15 + TS strict + Tailwind, Vercel Blob, zod, sharp. Meta API тольк�
 - Скриншоты: `node scripts/journey-v2/capture.mjs http://localhost:3100` (env `ONLY/AT/PREFIX/SUFFIX/OUT_DIR/QUERY/TRANS/SKIP_*`), `node scripts/garage/capture.mjs http://localhost:3100 <фильтр>`; нужен системный Chrome (GPU) и выход из песочницы (localhost).
 
 - Главная `/` (с 02.11, ветка film-v4): `Hero` + фильм v4 `src/components/film4/` (`story.ts` — сцены/реплики/переходы, `Film4.tsx` — плеер, `Inserts.tsx` — вставки и карты) + гараж-студия в эпилоге. Гараж-студия: `src/components/garage-studio/` + `src/lib/garage/data.ts`, страница `/garage/:carId`. Токены дизайна — `src/app/globals.css`, шрифты — `src/app/layout.tsx`. Контакт-листы фильма: `node scripts/film4/capture.mjs <url> <outDir> [id@t,…|all]` (нужен выход из песочницы; WebGL-гараж headless не снимается — смотреть в браузере приложения).
+
+- Доводка 03.11: `src/components/garage-studio/slice.ts` (точные границы деталей шаблонов + швы), `src/app/api/blob-upload` (клиентская загрузка видео в Blob), `src/lib/agent/toolModels.ts`; лендинг `src/components/hero/Hero.tsx` («How it was before», «How the agent worked — up to 16 steps», ассеты `public/landing/`). Видео: `scripts/film4/record-film.mjs` (запись фильма с сайта), `scripts/film4/play-check.mjs` (замер рывков), `scripts/garage/studio-shot.mjs`, `scripts/e2e/upload-{run,page}.mjs`, `scripts/video/{tz11_timelapse,blur_pain,jury_v5,x_cut}.py`. Финальные файлы для загрузки — `~/Documents/META-HACKATON/UPLOAD/` (README внутри), исходные записи — `~/Documents/META-HACKATON/recordings/`.
 
 ## Команды
 `npx tsc --noEmit` · `npm run lint` · `npx vitest run` · `npm run build`. Каждое ТЗ: ветка `tz-0N`, отчёт `docs/reports/tz-0N.md` с сырым выводом, без пуша в main без «делай».
