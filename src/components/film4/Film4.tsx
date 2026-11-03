@@ -3,6 +3,7 @@
 // @purpose: Film v4 player ("trailer"): scroll-scrubbed clips with letterbox, grain, grade and Ken Burns; act cards; transitions (dissolve / light wipe / zoom-through / dip); word-by-word trailer lines; ledger toasts; watch mode; then the garage proof
 // @created: 2026-11-02
 // @updated: 2026-11-03 claude-code
+// @updated: 2026-11-03 claude-code — phones: `hb-lite` (no SVG glow / blur / backdrop blur in inserts and maps), first poster high priority
 // @updated: 2026-11-03 claude-code — phones: light clips (film3/m/), poster image always under the clip, the clip shows once it has a frame, decoder woken once
 // @updated: 2026-11-03 claude-code — clip time spans the transition tail too: the incoming clip moves while it fades in (was parked on frame 0)
 "use client";
@@ -173,7 +174,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
   const overall = (starts[pos.i] + pos.t * s.vh) / TOTAL_VH;
 
   return (
-    <div className="bg-ink text-bone">
+    <div className={`bg-ink text-bone ${mob ? "hb-lite" : ""}`}>
       <div ref={wrap} style={{ height: `${TOTAL_VH + 100}vh` }} className="relative" data-testid="film4" data-scene={s.id}>
         <div className="sticky top-0 h-[100svh] w-full overflow-hidden bg-ink">
           {/* picture */}
@@ -203,7 +204,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
                 <div key={x.id} className="absolute inset-0 will-change-transform" data-clip={x.clip}
                   style={{ ...st.style, zIndex: st.z, visibility: cur || inc ? "visible" : "hidden" }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/film3/${x.clip}.jpg`} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover"
+                  <img src={`/film3/${x.clip}.jpg`} alt="" decoding="async" fetchPriority={k === 0 ? "high" : "auto"} className="absolute inset-0 h-full w-full object-cover"
                     style={{ objectPosition: narrow ? x.posM ?? "50% 50%" : "50% 50%" }} />
                   <video ref={(v) => { vids.current[k] = v; }} muted playsInline preload={near(k) ? "auto" : "none"}
                     src={near(k) && mob !== null ? `/film3/${mob ? "m/" : ""}${x.clip}.mp4` : undefined}
