@@ -15,6 +15,7 @@ import type { GarageData } from "@/lib/garage/data";
 import InsertView from "./Inserts";
 import { ACTS, RECEIPT_BUSAN, RECEIPT_CUSTOMS, SCENES, UI, type Lang, type Line, type Scene } from "./story";
 import { TW, clipProgress, clipSpan } from "./clipTime";
+import { newVoiceClock, voiceDecision } from "./voiceFollow";
 
 const GarageScene = dynamic(() => import("@/components/garage-3d/GarageScene"), { ssr: false });
 const GarageStudio = dynamic(() => import("@/components/garage-studio/GarageStudio"), { ssr: false });
@@ -116,6 +117,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     const top0 = el.getBoundingClientRect().top + window.scrollY;
     if (window.scrollY < top0 || window.scrollY > top0 + (TOTAL_VH - 1) * window.innerHeight / 100) window.scrollTo(0, top0);
     if (timing.current === undefined) timing.current = await fetch(`/film3/audio/narration-${lang}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    if (!autoRef.current) return; // stopped (wheel, Stop) while the timing was loading: no music without a picture
     const tm = timing.current;
     if (!music.current) { music.current = new Audio("/film3/audio/drums.mp3"); music.current.loop = true; music.current.volume = 0; }
     // levels (EBU R128): voice −17.4 LUFS, drums −20.8 LUFS (one loop) → at 0.8 / 0.58 the voice sits 6.0 dB over the drums (measured on a 170 s drums loop; 6.2 from the one-loop figure)
@@ -136,30 +138,23 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     // it follows the voice only while the voice's clock really advances, otherwise it keeps the scene's pace; when the voice moves again
     // and is more than 1 s off, the voice is brought to the picture.
     const voiceAt = (yy: number) => { const { i, t } = sceneAt(yy); const w = tm?.scenes[SCENES[i].id]; return w ? w[0] + t * (w[1] - w[0]) : null; };
-    let lastT = -1, lastMove = 0, following = false;
+    const clock = newVoiceClock(); // see voiceFollow.ts (tested)
     const step = (now: number) => {
       if (!autoRef.current) return;
       const dt = Math.min(64, now - prev); prev = now;
       const vh = vhNow();
       const a = narr.current;
-      if (tm && a && !a.paused) {
-        if (a.currentTime !== lastT) { lastT = a.currentTime; lastMove = now; }
-        const moving = now - lastMove < 600 && a.readyState >= 3;
-        if (moving && !following) {
-          following = true;
-          const want = voiceAt(y);
-          if (want !== null && Math.abs(want - a.currentTime) > 1) { a.currentTime = want; lastT = want; } // resync once, only when it matters
-        } else if (!moving) following = false;
-      } else following = false;
-      if (tm && a && following) {
+      const d = tm && a ? voiceDecision(clock, now, { time: a.currentTime, paused: a.paused, readyState: a.readyState }, voiceAt(y)) : { follow: false, seekTo: null };
+      if (a && d.seekTo !== null) a.currentTime = d.seekTo;
+      if (tm && a && d.follow) {
         // follow the voice: find the scene whose window holds the audio time
         const time = a.currentTime;
         let j = SCENES.findIndex((sc) => { const w = tm.scenes[sc.id]; return w && time >= w[0] && time < w[1]; });
         if (j < 0) j = time >= tm.duration - 0.05 ? SCENES.length - 1 : sceneAt(y).i;
         const w = tm.scenes[SCENES[j].id];
         const k = w ? cl((time - w[0]) / Math.max(0.01, w[1] - w[0])) : 0;
-        y = top0 + (starts[j] + k * SCENES[j].vh) * vh;
-        if (a.ended) { stopAuto(); return; }
+        // never backwards: after a stall the picture waits for the voice to catch up instead of jumping back
+        y = Math.max(y, top0 + (starts[j] + k * SCENES[j].vh) * vh);
       } else {
         // the scene's own pace (the voice window when there is narration, so picture and voice stay in step)
         const { i } = sceneAt(y); const sc = SCENES[i];
