@@ -2,7 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: record the film from the site to mp4 with its sound: CDP screencast of a visible Chrome (no background throttling) after pressing Play; the page logs when narration/drums start and stop, the same mix (voice 0.8, drums as in the player, fades) is rebuilt with ffmpeg and muxed; outputs a 1080p and a small 720p file
 // @created: 2026-11-03
-// @updated: 2026-11-03 claude-code — drums level 0.55 (DRUMS env), as in the player
+// @updated: 2026-11-03 claude-code — drums level 0.58 (DRUMS env), as in the player
 // usage: node scripts/film4/record-film.mjs <url> <outBase> [W=1920] [H=1080]   → <outBase>-1080p.mp4, <outBase>-720p.mp4
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -12,7 +12,7 @@ import { spawn, spawnSync, execFileSync } from "node:child_process";
 const { chromium } = createRequire(path.join(os.homedir(), "node_modules", "x.js"))("playwright");
 const [url, outBase, W = "1920", H = "1080"] = process.argv.slice(2);
 if (!url || !outBase) { console.error("usage: record-film.mjs <url> <outBase>"); process.exit(1); }
-const DRUMS = Number(process.env.DRUMS ?? 0.55); // keep in step with Film4.tsx (watch mode with narration)
+const DRUMS = Number(process.env.DRUMS ?? 0.58); // keep in step with Film4.tsx (watch mode with narration)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const port = 9342, profile = path.join(os.tmpdir(), "hb-record-film");
 fs.rmSync(profile, { recursive: true, force: true });

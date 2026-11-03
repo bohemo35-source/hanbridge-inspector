@@ -3,6 +3,7 @@
 // @purpose: runInspection wiring for a visitor's upload (models and tools mocked, the rules real): the voice alone never confirms paint,
 //           a matching gauge screen read on ≥2 frames does, a replacement from the video stays unconfirmed, the report goes to a manager
 // @created: 2026-11-03
+// @updated: 2026-11-03 claude-code — one-frame screen reading does not confirm; transcribe_note comes from the upload fallback
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -22,10 +23,8 @@ vi.mock("@/lib/meta/spark", () => {
   let step = 0;
   return {
     sparkChat: vi.fn(async () => (step++ === 0
-      ? { content: "", raw: {}, toolCalls: [
-          { id: "1", type: "function", function: { name: "transcribe_note", arguments: JSON.stringify({ videoId: "owner_video.mp4" }) } },
-          { id: "2", type: "function", function: { name: "read_gauge_video", arguments: "{}" } },
-        ] }
+      // the model reads the screen but forgets the voice: the upload fallback must transcribe it
+      ? { content: "", raw: {}, toolCalls: [{ id: "2", type: "function", function: { name: "read_gauge_video", arguments: "{}" } }] }
       : { content: "", raw: {}, toolCalls: [{ id: "3", type: "function", function: { name: "finalize_report", arguments: "{}" } }] })),
     sparkJson: vi.fn(async (_s: unknown, _m: unknown, spec: string) => (String(spec).includes("supported") ? { supported: true, confidence: 0.9, note: "ok" } : { reasons_en: ["r"], reasons_ru: ["r"] })),
   };
@@ -39,15 +38,15 @@ vi.mock("./tools/listing", () => ({
 vi.mock("./tools/voice", () => ({
   transcribeNote: vi.fn(async () => ({
     chunks: [], readings: [], conflicts: [], paintStats: {},
-    paint: { trunk: 181, front_right_fender: 167 },
-    findings: [voiceFinding("trunk", "repaint", "багажник 181"), voiceFinding("front_right_fender", "repaint", "крыло 167"), voiceFinding("rear_bumper", "panel_replaced", "бампер замена")],
+    paint: { trunk: 181, front_right_fender: 167, hood: 200 },
+    findings: [voiceFinding("trunk", "repaint", "багажник 181"), voiceFinding("front_right_fender", "repaint", "крыло 167"), voiceFinding("rear_bumper", "panel_replaced", "бампер замена"), voiceFinding("hood", "repaint", "капот 200")],
   })),
 }));
 vi.mock("./tools/gauge", () => ({
   readGaugeVideo: vi.fn(async () => ({
-    mediaId: "owner_video.mp4", frames: [], findings: [], paint: { trunk: 175, hood: 120 },
-    // hood was read on one frame only: its panel label is not trusted
-    measurements: [{ panel: "trunk", tStart: 70, tEnd: 95, frames: 3, microns: 175, band: "elevated", source: "digits", confidence: 0.8 }, { panel: "hood", tStart: 10, tEnd: 10, frames: 1, microns: 120, band: "normal", source: "digits", confidence: 0.6 }],
+    mediaId: "owner_video.mp4", frames: [], findings: [], paint: { trunk: 175, hood: 200 },
+    // hood matches the voice (200) but was read on one frame only: its panel label is not trusted
+    measurements: [{ panel: "trunk", tStart: 70, tEnd: 95, frames: 3, microns: 175, band: "elevated", source: "digits", confidence: 0.8 }, { panel: "hood", tStart: 10, tEnd: 10, frames: 1, microns: 200, band: "elevated", source: "digits", confidence: 0.6 }],
     stats: { frames: 45, gaugeFrames: 42, digitsRead: 4, sparkCalls: 8, samCalls: 0, ms: 1 },
   })),
 }));
@@ -72,6 +71,8 @@ describe("runInspection: a visitor's upload with a gauge video", () => {
     expect(byKey("trunk", "repaint")?.verified).toBe(true);            // voice 181 and screen 175 (3 frames) agree
     expect(byKey("front_right_fender", "repaint")?.verified).toBe(false); // voice only
     expect(byKey("rear_bumper", "panel_replaced")?.verified).toBe(false); // a replacement from the owner's video
+    expect(byKey("hood", "repaint")?.verified).toBe(false);             // screen agrees, but on one frame only
+    expect(report.trace.some((s) => s.tool === "transcribe_note")).toBe(true); // the fallback ran (the model did not call it)
     expect(report.verdict.handoff).toBe(true);
     expect(report.handoffReason).toBeTruthy();
     expect(report.trace.some((s) => s.tool === "conflict_check" && (s.outputSummary ?? "").includes("confirmed=trunk"))).toBe(true);

@@ -32,7 +32,7 @@ cw = (1920 - 2 * 90 - (len(shots) - 1) * 24) // len(shots)
 for k, n in enumerate(shots):
     c = Image.open(R("recordings", "pain", f"{n}.jpg")).convert("RGB")
     if not n.startswith("dm-"): c = c.crop((0, round(c.height * 0.1125), c.width, round(c.height * 0.8875)))
-    c.thumbnail((cw, 840 if 150 == 150 else 860))
+    c.thumbnail((cw, 840))
     im.paste(c, (90 + k * (cw + 24), 150))
 f = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 24)
 t = "BEFORE HANBRIDGE · REAL CHATS WITH OUR BUYERS · NAMES AND PLATES HIDDEN"

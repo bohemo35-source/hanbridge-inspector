@@ -50,7 +50,7 @@ cw = (1920 - 2 * 90 - (len(shots) - 1) * 24) // len(shots)
 for k, n in enumerate(shots):
     c = Image.open(R("recordings", "pain", f"{n}.jpg")).convert("RGB")
     if not n.startswith("dm-"): c = c.crop((0, round(c.height * 0.1125), c.width, round(c.height * 0.8875)))
-    c.thumbnail((cw, 840 if 190 == 150 else 860))
+    c.thumbnail((cw, 860))
     im.paste(c, (90 + k * (cw + 24), 190))
 im.save(pain)
 cp = os.path.join(out, "cap-pain.png"); caption(cp, "BEFORE", "Buying a car in Korea: hundreds of photos in a chat")

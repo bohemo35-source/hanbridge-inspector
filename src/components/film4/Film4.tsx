@@ -11,14 +11,13 @@ import type { Report } from "@/lib/schema";
 import type { GarageData } from "@/lib/garage/data";
 import InsertView from "./Inserts";
 import { ACTS, RECEIPT_BUSAN, RECEIPT_CUSTOMS, SCENES, UI, type Lang, type Line, type Scene } from "./story";
+import { TW, clipProgress, clipSpan } from "./clipTime";
 
 const GarageScene = dynamic(() => import("@/components/garage-3d/GarageScene"), { ssr: false });
 const GarageStudio = dynamic(() => import("@/components/garage-studio/GarageStudio"), { ssr: false });
 
 /** say how we earn (Korea export VAT refund) under the zero-commission line — a business fact the owner wants shown */
 const SHOW_VAT_NOTE = true;
-/** share of a scene (its tail) used for the transition into the next one */
-const TW = 0.26;
 const starts = (() => { let a = 0; return SCENES.map((s) => { const v = a; a += s.vh; return v; }); })();
 const TOTAL_VH = SCENES.reduce((a, s) => a + s.vh, 0);
 const cl = (v: number, a = 0, b = 1) => Math.max(a, Math.min(b, v));
@@ -56,14 +55,11 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
       // a clip's time runs over the previous scene's transition tail (TW) plus its own scene: the incoming clip is already
       // moving while it fades in and carries on without a jump (it used to wait on frame 0 for the whole transition)
       const len = (k: number) => (sec ? Math.max(0.5, sec(k)) : SCENES[k].vh);
-      const lead = (k: number) => (k > 0 ? TW * len(k - 1) : 0);
-      const into = seg(t, 1 - TW, 1); // linear time through the transition into scene i+1
       vids.current.forEach((v, k) => {
         if (!v || !v.duration) return;
-        const inc = k === i + 1 && into > 0;
-        if (k !== i && !inc) { if (!v.paused) v.pause(); return; }
-        const span = lead(k) + len(k);
-        const local = k === i ? (lead(k) + t * len(k)) / span : (into * lead(k)) / span;
+        const local = clipProgress(k, i, t, len); // see clipTime.ts (tested)
+        if (local === null) { if (!v.paused) v.pause(); return; }
+        const span = clipSpan(k, len);
         const target = Math.min(v.duration - 0.05, local * v.duration);
         if (sec) {
           // watch mode: native playback at the pace of the scene; seek only on real drift
@@ -107,9 +103,9 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     if (timing.current === undefined) timing.current = await fetch(`/film3/audio/narration-${lang}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     const tm = timing.current;
     if (!music.current) { music.current = new Audio("/film3/audio/drums.mp3"); music.current.loop = true; music.current.volume = 0; }
-    // levels measured (EBU R128): voice −17.4 LUFS, drums −20.8 LUFS → at 0.8 / 0.55 the voice sits ~6.7 dB over the drums
-    // (first mix 1.0 / 0.22 = 16.6 dB, then 0.8 / 0.35 = 10.5 dB — the owner could not hear the drums)
-    music.current.play().then(() => fade(music.current, tm ? 0.55 : 0.6, 1500)).catch(() => {});
+    // levels (EBU R128): voice −17.4 LUFS, drums −20.8 LUFS (one loop) → at 0.8 / 0.58 the voice sits ~6.2 dB over the drums
+    // (first mix 1.0 / 0.22 = 16.6 dB, then 0.8 / 0.35 = 10.5 dB — the owner could not hear the drums; 0.35 → 0.58 = +4.4 dB)
+    music.current.play().then(() => fade(music.current, tm ? 0.58 : 0.6, 1500)).catch(() => {});
     playSec.current = (i) => { const w = tm?.scenes[SCENES[i].id]; return w ? w[1] - w[0] : SCENES[i].sec; };
     // where the voice should be for the current scroll position
     const vhNow = () => window.innerHeight / 100;

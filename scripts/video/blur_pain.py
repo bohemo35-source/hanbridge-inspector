@@ -51,6 +51,8 @@ BOLT = {
                      (42, 420, 245, 34), (40, 556, 60, 56), (98, 558, 245, 34), (94, 832, 245, 34), (322, 1062, 245, 34),  # «[name]» x4, document photo
                      (332, 758, 50, 46), (352, 1160, 50, 46)],              # reaction avatars
 }
+# the bottom strip (input bar, a phone number and a passport edge peeking in) is blurred too, though every use crops it off
+for boxes in BOLT.values(): boxes.append((0, 1160, 603, 151))
 bolt = os.path.join(src, "from bolt")
 for name, boxes in BOLT.items():
     if os.path.exists(os.path.join(bolt, name)):
