@@ -2,7 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Film v3 code inserts driven by scene progress t (0..1): route maps (Korea, sea + fan of cities, the road) and portal UI (request, selection, report, fork)
 // @created: 2026-11-01
-// @updated: 2026-11-03 claude-code — report insert on phones: the finding card only (the stacked model list overlapped the trailer line)
+// @updated: 2026-11-03 claude-code — report insert on phones: the model list and the finding share one cell, the list gives way (stacked they overlapped the trailer line; hiding the list left half the scene black)
 // @updated: 2026-11-02 claude-code — film v4 restyle (sodium palette, editorial cards, mono labels)
 "use client";
 import type { Insert, Lang } from "./story";
@@ -131,8 +131,9 @@ function AgentReport({ t, lang, report }: { t: number; lang: Lang; report?: Repo
   return (
     <div className="flex h-full items-center justify-center px-4">
       <div className={`grid w-full items-center gap-4 sm:gap-6 ${r && f ? "max-w-[1060px] sm:grid-cols-[1.05fr_1fr]" : "max-w-[560px]"}`}>
-        {/* phones: two stacked cards ran under the trailer line and the top bar — keep the finding with its proof and verdict */}
-        <Card k={seg(t, 0, 0.1)} className={r && f ? "hidden sm:block" : ""}>
+        {/* phones: two stacked cards ran under the trailer line — they share one cell, the model list gives way to the finding */}
+        <div className={r && f ? "max-sm:col-start-1 max-sm:row-start-1 max-sm:[opacity:calc(1-var(--out))]" : ""} style={{ "--out": ease(kR) } as React.CSSProperties}>
+        <Card k={seg(t, 0, 0.1)}>
           <Label>{tr(lang, "Agent · Meta models", "Агент · модели Meta")}{r ? ` — ${r.vehicle.make} ${r.vehicle.model}` : ""}</Label>
           {rows.map(([m, d], i) => {
             const k = seg(t, 0.08 + i * 0.08, 0.15 + i * 0.08);
@@ -145,7 +146,8 @@ function AgentReport({ t, lang, report }: { t: number; lang: Lang; report?: Repo
             );
           })}
         </Card>
-        {r && f && <div className="relative" style={{ opacity: ease(kR), transform: `translateY(${(1 - ease(kR)) * 18}px)` }}>
+        </div>
+        {r && f && <div className="relative max-sm:col-start-1 max-sm:row-start-1" style={{ opacity: ease(kR), transform: `translateY(${(1 - ease(kR)) * 18}px)` }}>
           <div className="overflow-hidden rounded-[6px] border border-bone/12 bg-ink/80 shadow-[0_40px_120px_rgba(0,0,0,.6)] backdrop-blur-xl">
             {img && (
               <div className="relative aspect-[16/9] overflow-hidden">

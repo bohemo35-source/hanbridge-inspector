@@ -3,6 +3,7 @@
 // @purpose: Film v4 player ("trailer"): scroll-scrubbed clips with letterbox, grain, grade and Ken Burns; act cards; transitions (dissolve / light wipe / zoom-through / dip); word-by-word trailer lines; ledger toasts; watch mode; then the garage proof
 // @created: 2026-11-02
 // @updated: 2026-11-03 claude-code
+// @updated: 2026-11-03 claude-code — portrait: the whole 16:9 frame in a band over the scene's pre-blurred picture (film3/b/); phones: pre-blurred insert backgrounds; watch mode starts without waiting for the voice; coming clips woken in watch mode
 // @updated: 2026-11-03 claude-code — phones: `hb-lite` (no SVG glow / blur / backdrop blur in inserts and maps), first poster high priority
 // @updated: 2026-11-03 claude-code — phones: light clips (film3/m/), poster image always under the clip, the clip shows once it has a frame, decoder woken once
 // @updated: 2026-11-03 claude-code — clip time spans the transition tail too: the incoming clip moves while it fades in (was parked on frame 0)
@@ -33,6 +34,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
   const wrap = useRef<HTMLDivElement>(null);
   const vids = useRef<(HTMLVideoElement | null)[]>([]);
   const [pos, setPos] = useState({ i: 0, t: 0 });
+  const posRef = useRef(0); posRef.current = pos.i;
   const [auto, setAuto] = useState(false);
   const [narrow, setNarrow] = useState(false);
   /** phones and narrow windows get the light clips (film3/m/: 540p, ~1 MB); null until mounted, so no clip starts loading twice */
@@ -130,12 +132,21 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
       narr.current.play().catch(() => {});
     }
     let y = window.scrollY, prev = performance.now();
+    // the picture does not wait for the voice to buffer (a phone stood 2.5 s on the title): scene pace until the voice plays,
+    // then the voice jumps to where the picture is and leads again
+    let voiceOn = false;
+    narr.current?.addEventListener("playing", () => {
+      if (voiceOn || !narr.current || !tm) return; voiceOn = true;
+      const { i, t } = sceneAt(y); const w = tm.scenes[SCENES[i].id];
+      if (w) narr.current.currentTime = w[0] + t * (w[1] - w[0]);
+    }, { once: true });
+    if (narr.current && !narr.current.paused && narr.current.readyState >= 3) voiceOn = true;
     const step = (now: number) => {
       if (!autoRef.current) return;
       const dt = Math.min(64, now - prev); prev = now;
       const vh = vhNow();
       const a = narr.current;
-      if (tm && a && !a.paused) {
+      if (tm && a && voiceOn && !a.paused) {
         // follow the voice: find the scene whose window holds the audio time
         const time = a.currentTime;
         let j = SCENES.findIndex((sc) => { const w = tm.scenes[sc.id]; return w && time >= w[0] && time < w[1]; });
@@ -195,8 +206,10 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
                 if (!cur && !inc) return null;
                 return (
                   <div key={x.id} className="absolute inset-0" style={{ ...st.style, zIndex: st.z }}>
+                    {/* phones: the same look from a pre-blurred image (film3/b/) — no CSS blur redrawn every frame, and never a black scene */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/film3/${x.bg}.jpg`} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl brightness-[.42] saturate-[.6]" />
+                    <img src={mob ? `/film3/b/${x.bg}.jpg` : `/film3/${x.bg}.jpg`} alt=""
+                      className={mob ? "absolute inset-0 h-full w-full object-cover" : "absolute inset-0 h-full w-full scale-110 object-cover blur-2xl brightness-[.42] saturate-[.6]"} />
                     <div className="absolute inset-0" style={{ paddingTop: `${lb + 9}vh`, paddingBottom: `${lb + 17}vh` }}>
                       <InsertView kind={x.insert} t={cur ? pos.t : 0} lang={lang} report={report} />
                     </div>
@@ -207,18 +220,23 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
                 // the poster image is always under the clip; the clip shows once it has a frame (iOS does not paint a never-played video)
                 <div key={x.id} className="absolute inset-0 will-change-transform" data-clip={x.clip}
                   style={{ ...st.style, zIndex: st.z, visibility: cur || inc ? "visible" : "hidden" }}>
+                  {/* portrait: cropping 16:9 to the screen showed a third of the frame — the whole frame goes in a band, the scene blurred behind */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/film3/${x.clip}.jpg`} alt="" decoding="async" fetchPriority={k === 0 ? "high" : "auto"} className="absolute inset-0 h-full w-full object-cover"
-                    style={{ objectPosition: narrow ? x.posM ?? "50% 50%" : "50% 50%" }} />
+                  {narrow && <img src={`/film3/b/${x.clip}.jpg`} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+                  <div className={narrow ? "absolute inset-x-0 aspect-video overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,.6)]" : "absolute inset-0"} style={narrow ? { top: "calc(40% - 28.125vw)" } : undefined}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/film3/${x.clip}.jpg`} alt="" decoding="async" fetchPriority={k === 0 ? "high" : "auto"} className="absolute inset-0 h-full w-full object-cover" />
                   <video ref={(v) => { vids.current[k] = v; }} muted playsInline preload={near(k) ? "auto" : "none"}
                     src={near(k) && mob !== null ? `/film3/${mob ? "m/" : ""}${x.clip}.mp4` : undefined}
                     onLoadStart={() => unmarkReady(x.id)} onLoadedData={() => markReady(x.id)} onSeeked={() => markReady(x.id)} onPlaying={() => markReady(x.id)}
                     onLoadedMetadata={(e) => {
-                      // phones: play once muted to wake the decoder, so scroll seeks paint frames (the tick pauses it again outside watch mode)
-                      const v = e.currentTarget; if (mob && !playSec.current) v.play().then(() => { if (!playSec.current) v.pause(); }).catch(() => {});
+                      // phones: play once muted to wake the decoder and start buffering (iOS may ignore preload), so scroll seeks paint frames
+                      // and the next clip is ready in watch mode; the tick pauses any clip that is not on screen
+                      const v = e.currentTarget; if (mob) v.play().then(() => { if (!playSec.current || vids.current.indexOf(v) > posRef.current + 1) v.pause(); }).catch(() => {});
                     }}
                     className="absolute inset-0 h-full w-full object-cover"
-                    style={{ objectPosition: narrow ? x.posM ?? "50% 50%" : "50% 50%", opacity: ready.has(x.id) ? 1 : 0 }} />
+                    style={{ opacity: ready.has(x.id) ? 1 : 0 }} />
+                  </div>
                 </div>
               );
             })}
