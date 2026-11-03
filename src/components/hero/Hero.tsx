@@ -3,11 +3,13 @@
 // @purpose: Tool-first landing hero: one-line pitch, Meta models on view, demo cars with real agent reports (instant) + live agent run
 // @created: 2026-11-01
 // @updated: 2026-11-02 claude-code — film v4 type and palette (display serif, mono labels, sodium accent)
+// @updated: 2026-11-03 claude-code — «How the agent worked — up to 16 steps»: the real step log of the hero car's report + a muted loop from the jury video
 // @updated: 2026-11-02 claude-code — first screen: 3D bridge on the right (desktop) / under the buttons (mobile); text and buttons stay in the flow above it
 import Link from "next/link";
 import type { Report } from "@/lib/schema";
 import { CARS, carMedia } from "@/lib/agent/catalog";
 import BridgeHero from "@/components/bridge-hero/BridgeHero";
+import { TOOL_MODEL } from "@/lib/agent/toolModels";
 
 type Lang = "en" | "ru";
 
@@ -23,6 +25,9 @@ const T = {
     findings: "findings",
     verified: "verified",
     models: "Who does what",
+    steps: "How the agent worked — up to 16 steps",
+    stepsSub: "A real run on the Kia Sportage. Muse Spark plans up to 16 tool steps; then every finding goes to an independent verifier. Log entries of this run:",
+    fullLog: "Open this report",
     film: "Watch the film ↓",
     noReport: "No report yet — run the agent",
     own: "Check your own car →",
@@ -39,6 +44,9 @@ const T = {
     findings: "находок",
     verified: "подтверждено",
     models: "Кто что делает",
+    steps: "Как работал агент — до 16 шагов",
+    stepsSub: "Настоящий прогон по Kia Sportage. Muse Spark планирует до 16 шагов с инструментами, затем каждая находка идёт на независимую проверку. Записей в журнале этого прогона:",
+    fullLog: "Открыть этот отчёт",
     film: "Смотреть фильм ↓",
     noReport: "Отчёта ещё нет — запустите агента",
     own: "Проверить своё авто →",
@@ -135,6 +143,33 @@ export default function Hero({ reports, lang }: { reports: Report[]; lang: Lang 
             </div>
           ))}
         </div>
+
+        {evidence && evidence.trace.length > 0 && (
+          <>
+            <h2 className="mb-2 mt-12 font-mono text-[11px] uppercase tracking-[.3em] text-sodium">{t.steps}</h2>
+            <p className="mb-4 max-w-3xl text-[14px] text-bone-2">{t.stepsSub} {evidence.trace.length} · {evidence.verdict.decision.replace("_", " ")}</p>
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+              <video src="/landing/agent-steps.mp4" poster="/landing/agent-steps.jpg" muted autoPlay loop playsInline preload="metadata" aria-label={t.steps}
+                className="w-full self-start rounded-[6px] border border-bone/10 bg-ink-2" />
+              <ol className="max-h-[440px] overflow-y-auto rounded-[6px] border border-bone/10 bg-ink-2 px-4 py-3">
+                {evidence.trace.map((s, i) => (
+                  <li key={i} className="flex gap-3 border-b border-bone/[.06] py-2 last:border-0">
+                    <span className="w-6 shrink-0 pt-px font-mono text-[10.5px] text-mist">{String(s.i ?? i + 1).padStart(2, "0")}</span>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-baseline gap-x-2">
+                        <span className={`font-mono text-[12px] ${s.ok === false ? "text-bad" : "text-bone"}`}>{s.tool}</span>
+                        {(s.model || TOOL_MODEL[s.tool]) && <span className="rounded-[2px] border border-signal/40 px-1.5 font-mono text-[9px] uppercase tracking-[.12em] text-signal">{s.model ?? TOOL_MODEL[s.tool]}</span>}
+                        <span className="font-mono text-[10px] text-mist">{((s.ms ?? 0) / 1000).toFixed(1)} s</span>
+                      </div>
+                      {s.outputSummary && <p className="mt-0.5 break-words font-mono text-[10.5px] leading-snug text-mist">{s.outputSummary.slice(0, 140)}</p>}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <a href={`${reportHref}${q}`} className="mt-3 inline-block font-mono text-[11px] uppercase tracking-[.2em] text-bone-2 hover:text-sodium">{t.fullLog} →</a>
+          </>
+        )}
       </div>
     </section>
   );

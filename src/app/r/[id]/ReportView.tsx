@@ -3,6 +3,7 @@
 // @purpose: Public report view ("personal cabinet"): verdict, garage studio / InspectionMap, findings/Unconfirmed, listing, agent trace, chat, delivery tab (EN/RU)
 // @created: 2026-10-29
 // @updated: 2026-11-02 claude-code — garage studio (one neutral 3D car, panels from this report, real photos) replaces the parametric map when the car has a photo index
+// @updated: 2026-11-03 claude-code — TOOL_MODEL moved to src/lib/agent/toolModels.ts (shared with the landing step log)
 // @updated: 2026-11-02 claude-code — film v4 design: display/mono type, sodium palette, evidence chips, model badges in the agent trace, ?lang= on load
 // @updated: 2026-11-03 claude-code — «open the car's garage» only for catalog cars (uploads have no /garage page); «Not confirmed» without «by the verifier» (an owner-typed reading never reaches it)
 "use client";
@@ -14,6 +15,7 @@ import { panelLabel } from "@/lib/domain/panels";
 import { InspectionMap } from "@/components/damage-map-3d/InspectionMap";
 import { guessBodyType } from "@/components/damage-map-3d/bodyTypeMap";
 import { isStageId } from "@/components/journey-3d/route";
+import { TOOL_MODEL } from "@/lib/agent/toolModels";
 
 const JourneyScene = dynamic(() => import("@/components/journey-3d/JourneyScene"), { ssr: false });
 const GarageStudio = dynamic(() => import("@/components/garage-studio/GarageStudio"), { ssr: false });
@@ -25,12 +27,6 @@ const T = {
 } as const;
 const KIND: Record<string, [string, string]> = { repaint: ["Repainted", "Перекрас"], putty: ["Filler under the paint", "Шпатлёвка под краской"], panel_replaced: ["Panel replaced", "Деталь заменена"], dent: ["Dent", "Вмятина"], scratch: ["Scratch", "Царапина"], rust: ["Rust", "Ржавчина"], mechanical: ["Mechanical", "Механика"], other: ["Note", "Замечание"] };
 /** which Meta model stands behind each agent tool (as in the agent's code) */
-const TOOL_MODEL: Record<string, string> = { // same map as the live run page (/inspect/[carId])
-  index_photos: "Muse Glimmer", read_diagnostic_report: "Muse Spark", read_inspector_report: "Muse Spark", find_defects: "SAM 3.1 + Muse Spark",
-  transcribe_note: "Muse Voice Transcribe + Muse Spark", read_gauge_video: "Muse Spark", analyze_paint_readings: "rules", estimate_landed_cost: "manager quote",
-  make_listing_photo: "SAM 3.1 + Muse Image", finalize_report: "Muse Spark", verifier: "Muse Spark Open", recheck_panel: "Glimmer index + SAM 3.1 + Muse Spark",
-  context_check: "rules", conflict_check: "rules",
-};
 const dColor = (d: string) => (d === "BUY" ? "var(--ok)" : d === "WALK_AWAY" ? "var(--bad)" : "var(--sodium)");
 const tc = (t?: number) => (t === undefined ? "" : `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")} `);
 
