@@ -3,6 +3,7 @@
 // @purpose: Independent verifier: open-weight muse-spark-open-1026 (Baseten), fallback muse-spark-1.3; deterministic verdict + handoff rules
 // @created: 2026-10-29
 // @updated: 2026-11-03 claude-code — ownerReadingOnly / applyOwnerOnlyRule / withOwnerReasons: a reading typed by the visitor is a claim, not proof
+// @updated: 2026-11-03 claude-code — photoPaintOnly / applyPhotoPaintRule: paint work seen on photos (+ typed numbers) is never confirmed without an inspector measurement
 import { z } from "zod";
 import { classifyPaint } from "@/lib/domain/paint";
 import { sparkJson, type ChatPart } from "@/lib/meta/spark";
@@ -45,6 +46,31 @@ export function applyOwnerOnlyRule(findings: Finding[], typedPanels: ReadonlySet
     handoffReason: `typed gauge reading not confirmed (${ownerOnly.map((f) => `${f.panel} ${µm(f)} µm`).join(", ")}) — a manager checks it`,
     reasons_en: ownerOnly.map((f) => `${f.panel.replace(/_/g, " ")}: the owner's typed reading ${µm(f)} µm points to ${f.kind === "putty" ? "filler" : "repaint"} — not confirmed; a manager checks it.`),
     reasons_ru: ownerOnly.map((f) => `${f.panel.replace(/_/g, " ")}: введённое владельцем показание ${µm(f)} мкм указывает на ${f.kind === "putty" ? "шпатлёвку" : "перекрас"} — не подтверждено, проверит менеджер.`),
+  };
+}
+
+const PAINT_KINDS = new Set(["repaint", "putty", "panel_replaced"]);
+/** Pure: a paint-work claim that rests on photos (and maybe the owner's typed numbers) only — no inspector voice, gauge video or sheet measured that panel. */
+export function photoPaintOnly(f: Finding, measuredPanels: ReadonlySet<string>): boolean {
+  return PAINT_KINDS.has(f.kind) && !measuredPanels.has(f.panel) && f.evidence.some((e) => e.type === "frame")
+    && f.evidence.every((e) => e.type === "frame" || (e.type === "gauge" && e.mediaId === "gauge"));
+}
+
+/** Pure (mutates): photo-only paint claims → verified=false; returns them, the handoff reason and the lead verdict reasons (same shape as applyOwnerOnlyRule). */
+export function applyPhotoPaintRule(findings: Finding[], measuredPanels: ReadonlySet<string>) {
+  const signs = findings.filter((f) => photoPaintOnly(f, measuredPanels));
+  for (const f of signs) {
+    f.verified = false;
+    if (!(f.verifierNote ?? "").includes("photo sign")) f.verifierNote = `${f.verifierNote ?? ""} · photo sign of paint work — a photo cannot show paint thickness; needs a gauge reading → unconfirmed`.replace(/^ · /, "");
+  }
+  if (!signs.length) return { signs, handoffReason: undefined, reasons_en: [] as string[], reasons_ru: [] as string[] };
+  const panels = [...new Set(signs.map((f) => f.panel))];
+  const name = (p: string) => p.replace(/_/g, " ");
+  return {
+    signs,
+    handoffReason: `photo signs of paint work not measured (${panels.join(", ")}) — a manager checks it`,
+    reasons_en: [`Photos show signs of paint work on: ${panels.map(name).join(", ")} — not confirmed; add paint-gauge readings or a manager checks it.`],
+    reasons_ru: [`На фото признаки окраса: ${panels.map(name).join(", ")} — не подтверждено; добавьте замеры толщиномера или это проверит менеджер.`],
   };
 }
 

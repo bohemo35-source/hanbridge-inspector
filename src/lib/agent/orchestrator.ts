@@ -3,6 +3,7 @@
 // @purpose: Agent orchestrator: Spark tool-calling loop (max 16 steps) -> cross-source merge -> open-weight verifier -> deterministic verdict -> report
 // @created: 2026-10-29
 // @updated: 2026-11-03 claude-code — a finding backed only by the owner's typed gauge reading goes to Unconfirmed and the report is handed to a manager
+// @updated: 2026-11-03 claude-code — uploads: every photo (≤10) goes through find_defects with paint signs; photo-only paint claims → Not confirmed + manager
 import { readFile } from "node:fs/promises";
 import sharp from "sharp";
 import { z } from "zod";
@@ -23,7 +24,7 @@ import { indexPhotos, pickDefectPhotos, pickListingCandidates, type PhotoIndex }
 import { glimmerConfigured } from "@/lib/meta/glimmer";
 import { readDiagnosticReport } from "./tools/diagnostic";
 import { readInspectorReport } from "./tools/inspector";
-import { applyOwnerOnlyRule, decideVerdict, detectConflict, verifyFinding, withOwnerReasons } from "./verifier";
+import { applyOwnerOnlyRule, applyPhotoPaintRule, decideVerdict, detectConflict, photoPaintOnly, verifyFinding, withOwnerReasons } from "./verifier";
 
 /** Vercel kills the run route at 300 s (maxDuration): past this point optional work is skipped instead of risking the whole report. */
 const RUN_SOFT_DEADLINE_MS = 235_000;
@@ -103,6 +104,8 @@ export async function runInspection(opts: {
   const heroPromise = getOrCreateHeroImage(isUpload ? "hero-upload" : `hero-${opts.carId}`); // one generated hero per car, not per run (saves a Muse Image call + a Blob put)
   heroPromise.catch(() => undefined);
 
+  // a visitor's upload has nothing but photos: the agent looks at every one of them (the form allows 10)
+  if (isUpload) suggested = media.photos.slice(0, 10);
   let photoIdx: PhotoIndex | null = null;
   let rechecks = 0;
   const step = (tool: string, argsSummary: string, ok: boolean, outputSummary: string, ms: number, why?: string) => {
@@ -116,7 +119,7 @@ export async function runInspection(opts: {
       const idx = await indexPhotos({ carId: opts.carId, photos: media.photos, ...(isUpload ? { firstTimeoutMs: 45_000, abortIfFirstFails: true } : {}) });
       photoIdx = idx;
       const picks = pickDefectPhotos(idx, 3);
-      if (picks.length) suggested = [...picks, ...suggested.filter((p) => !picks.includes(p))].slice(0, 4);
+      if (picks.length) suggested = [...picks, ...suggested.filter((p) => !picks.includes(p))].slice(0, isUpload ? 10 : 4);
       listingFromIndex = pickListingCandidates(idx);
       const views = idx.entries.reduce<Record<string, number>>((m, e) => { m[e.view] = (m[e.view] ?? 0) + 1; return m; }, {});
       step("index_photos", `${media.photos.length} photos`, idx.entries.length > 0, `${Date.now() - ts < 5000 ? "reused index built earlier by " : "live index by "}model=${idx.model} indexed=${idx.entries.length} failed=${idx.failed.length} wholeCar=${idx.entries.filter((e) => e.whole_car).length} views=${JSON.stringify(views)} picks=${picks.join(",")} listingCandidates=${listingFromIndex.slice(0, 3).join(",")}`, Date.now() - ts);
@@ -158,7 +161,7 @@ export async function runInspection(opts: {
       } else if (name === "find_defects") {
         const photoId = String(args.photoId ?? "");
         const image = await readFile(await ensurePhotoPath(opts.carId, photoId));
-        const r = await findDefects({ carId: opts.carId, photoId, image });
+        const r = await findDefects({ carId: opts.carId, photoId, image, paintSigns: isUpload });
         addFindings(r.findings); photoViews.set(photoId, r.view);
         out = `view=${r.view} panels=${r.panels_visible.join(",")} defects=${r.findings.length}: ${r.findings.map((f) => `${f.panel}/${f.kind}/${f.severity}`).join(", ") || "none"}`;
       } else if (name === "transcribe_note") {
@@ -207,7 +210,7 @@ export async function runInspection(opts: {
           .sort((a, b) => a.panels.length - b.panels.length); // the most focused shot of that panel first
         const photoId = byIndex[0]?.photoId ?? spreadPhotos(media.photos, 12).find((p) => !seen.has(p));
         if (!photoId) { step(name, key, true, `no unseen photo of ${panel}`, Date.now() - ts, `Re-check decided by the agent: ${reason}`); return "no photo for that panel"; }
-        const r = await findDefects({ carId: opts.carId, photoId, image: await readFile(await ensurePhotoPath(opts.carId, photoId)) });
+        const r = await findDefects({ carId: opts.carId, photoId, image: await readFile(await ensurePhotoPath(opts.carId, photoId)), paintSigns: isUpload });
         addFindings(r.findings); photoViews.set(photoId, r.view);
         const onPanel = r.findings.filter((f) => f.panel === panel);
         out = `panel=${panel} photo=${photoId} (${byIndex.length ? "picked from Glimmer index" : "fallback spread"}) view=${r.view} panelVisible=${r.panels_visible.includes(panel as never)} onPanel=${onPanel.map((f) => `${f.kind}/${f.severity}`).join(",") || "nothing visible"}`;
@@ -242,6 +245,7 @@ export async function runInspection(opts: {
   };
   const messages: ChatMessage[] = [
     { role: "system", content: "You are the Hanbridge inspection agent. Every claim needs evidence: no evidence, no finding (tools enforce this). Cross-check independent sources: voice vs gauge-screen colour vs photos vs inspector text. Agreement of two sources raises confidence; contradiction -> conflict. Call tools, then finalize_report. Budget: find_defects on at most 3 suggested photos, transcribe_note on at most ONE video (prefer paint_gauge.mp4 when present), read_gauge_video only when gaugeVideo is present, read_diagnostic_report only when a PDF is listed. Always call analyze_paint_readings after voice/gauge, estimate_landed_cost once, and make_listing_photo once. When sources disagree about a panel (voice numbers vs gauge-screen colour vs inspector text vs photos), or a finding rests on a single source, call recheck_panel(panel, reason) for that panel (at most 2 times) BEFORE finalize_report, and say in reason which sources disagree. If a source is absent the tool says so — do not invent it." },
+    ...(isUpload ? [{ role: "system" as const, content: "This car was uploaded by its owner: the photos are the main source. Override the photo budget: call find_defects on EVERY photoId in suggestedPhotoIds, all of them in your first step (parallel tool calls). The tool also reports visual signs of paint work (shade/gloss/texture differences between neighbouring panels, overspray on seals, uneven gaps); such signs are not proof of repaint — they stay unconfirmed unless a gauge reading confirms them." }] : []),
     { role: "user", content: `Inspect this car and finalize a report. Available media:\n${JSON.stringify(inventory, null, 2)}` },
   ];
 
@@ -271,6 +275,12 @@ export async function runInspection(opts: {
     if (weak) await execute("recheck_panel", { panel: weak.panel, reason: `${weak.panel}/${weak.kind} rests on one source (${weak.evidence[0]?.type}) — looking for photo evidence` });
   }
 
+  // uploads: every photo is looked at, even when the model skipped some (rule, not a model choice)
+  if (isUpload) {
+    const unseen = suggested.filter((p) => !photoViews.has(p));
+    if (unseen.length && Date.now() - t0 < 150_000) await mapPool(unseen, 4, async (p) => { await execute("find_defects", { photoId: p }); });
+  }
+
   // deterministic paint findings win/merge
   addFindings(findingsFromPaintReadings([...paint.entries()].map(([panel, microns]) => ({ panel, microns }))));
   const paintList = [...paint.entries()].map(([panel, microns]) => { const st = paintStats.get(panel); return st && st.points > 1 ? { panel, microns, ...st } : { panel, microns }; });
@@ -288,6 +298,7 @@ export async function runInspection(opts: {
   await mapPool(findings, 4, async (f) => {
     f.conflict = detectConflict(f, paintList) || f.conflict;
     if (f.verified && f.verifierNote?.startsWith("Deterministic")) return;
+    if (photoPaintOnly(f, measuredPanels)) return; // a photo sign of paint work is never confirmed (applyPhotoPaintRule below)
     if (Date.now() - t0 > 250_000) { f.verified = false; f.verifierNote = "not verified: time budget reached"; step("verifier", f.id, false, f.verifierNote, 0); return; }
     let crop: Buffer | undefined;
     const ev = f.evidence.find((e) => e.type === "frame" && e.box);
@@ -337,6 +348,10 @@ export async function runInspection(opts: {
   const ownerRule = applyOwnerOnlyRule(findings, typedPanels, measuredPanels);
   for (const f of ownerRule.ownerOnly) step("conflict_check", f.id, true, `${f.panel}/${f.kind}: owner-typed reading only → unconfirmed`, 0);
   if (ownerRule.handoffReason && !handoffReason) handoffReason = ownerRule.handoffReason;
+  // paint work seen on photos (even with the owner's number on that panel) stays a sign until an inspector measures it
+  const photoRule = applyPhotoPaintRule(findings, measuredPanels);
+  for (const f of photoRule.signs) step("conflict_check", f.id, true, `${f.panel}/${f.kind}: photo sign of paint work, not measured → unconfirmed`, 0);
+  if (photoRule.handoffReason && !handoffReason) handoffReason = photoRule.handoffReason;
 
   const verified = findings.filter((f) => f.verified);
   let verdict = decideVerdict(verified);
@@ -347,7 +362,7 @@ export async function runInspection(opts: {
     verdict = { ...verdict, reasons_en: reasons.reasons_en, reasons_ru: reasons.reasons_ru };
   } catch { /* deterministic reasons stand */ }
   // the buyer must see why it is not a clean BUY: the unconfirmed typed reading leads the reasons
-  verdict = withOwnerReasons(verdict, ownerRule, verified.length > 0);
+  verdict = withOwnerReasons(verdict, { reasons_en: [...ownerRule.reasons_en, ...photoRule.reasons_en], reasons_ru: [...ownerRule.reasons_ru, ...photoRule.reasons_ru] }, verified.length > 0);
   if (handoffReason) verdict = { ...verdict, handoff: true };
 
   // listing must show the whole car: Spark's view label is not enough (a tail-light close-up came back as "rear_left").

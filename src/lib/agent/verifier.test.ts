@@ -3,8 +3,9 @@
 // @purpose: Verifier/verdict unit tests: handoff at 0.5, critical->WALK_AWAY, conflict detection
 // @created: 2026-10-29
 // @updated: 2026-11-03 claude-code — owner-typed reading alone is not proof
+// @updated: 2026-11-03 claude-code — photo signs of paint work alone (or with a typed number) are not proof
 import { describe, expect, it } from "vitest";
-import { applyOwnerOnlyRule, decideVerdict, detectConflict, ownerReadingOnly, shouldHandoff, withOwnerReasons } from "./verifier";
+import { applyOwnerOnlyRule, applyPhotoPaintRule, decideVerdict, detectConflict, ownerReadingOnly, photoPaintOnly, shouldHandoff, withOwnerReasons } from "./verifier";
 import type { Finding } from "@/lib/schema";
 
 const f = (over: Partial<Finding>): Finding => ({
@@ -69,5 +70,34 @@ describe("ownerReadingOnly", () => {
     expect(v.reasons_en.join(" ")).not.toContain("No adverse");
     expect(v.handoff).toBe(true);
     expect(withOwnerReasons(decideVerdict([]), applyOwnerOnlyRule([], typed, new Set()), false).reasons_en).toEqual([]);
+  });
+});
+
+describe("photoPaintOnly / applyPhotoPaintRule", () => {
+  const sign = f({ id: "photo-03-paintsign-1", panel: "front_left_fender", kind: "repaint", evidence: [{ type: "frame", mediaId: "photo-03.jpg" }] });
+  it("a repaint seen on a photo only → photo-only", () => {
+    expect(photoPaintOnly(sign, new Set())).toBe(true);
+  });
+  it("photo + the owner's typed number is still not a measurement", () => {
+    expect(photoPaintOnly({ ...sign, evidence: [...sign.evidence, { type: "gauge", mediaId: "gauge", gaugeMicrons: 240 }] }, new Set())).toBe(true);
+  });
+  it("inspector voice or a measured panel makes it a real source", () => {
+    expect(photoPaintOnly({ ...sign, evidence: [...sign.evidence, { type: "transcript", mediaId: "v.mp4", quote: "крыло 240" }] }, new Set())).toBe(false);
+    expect(photoPaintOnly(sign, new Set(["front_left_fender"]))).toBe(false);
+  });
+  it("a scratch on a photo is not a paint claim", () => {
+    expect(photoPaintOnly({ ...sign, kind: "scratch" }, new Set())).toBe(false);
+  });
+  it("applyPhotoPaintRule unconfirms, hands off and explains; BUY stays BUY", () => {
+    const a = { ...sign }, b = { ...sign, id: "photo-05-paintsign-1", panel: "trunk" as const }, s = f({ id: "s", kind: "scratch", evidence: [{ type: "frame", mediaId: "p" }] });
+    const rule = applyPhotoPaintRule([a, b, s], new Set());
+    expect(rule.signs.map((x) => x.id)).toEqual(["photo-03-paintsign-1", "photo-05-paintsign-1"]);
+    expect(a.verified).toBe(false);
+    expect(s.verified).toBe(true);
+    expect(rule.handoffReason).toContain("front_left_fender, trunk");
+    expect(rule.reasons_en[0]).toContain("not confirmed");
+    const v = withOwnerReasons(decideVerdict([]), rule, false);
+    expect(v.decision).toBe("BUY");
+    expect(v.handoff).toBe(true);
   });
 });

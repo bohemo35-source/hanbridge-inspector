@@ -4,22 +4,47 @@
 //           kept in this instance's /tmp only (not stored in Blob), then the same agent run streamed as SSE.
 //           Only the report JSON and the plate-hidden listing photo are published.
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code — optional walk-around video: uploaded by the browser straight to Vercel Blob (/api/blob-upload), fetched here by URL, audio kept (≤180 s) for the agent, the Blob file deleted after the run
 import { randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { revalidateTag } from "next/cache";
+import { del } from "@vercel/blob";
 import sharp from "sharp";
 import { registerCar, type CarInfo } from "@/lib/agent/catalog";
 import { registerLocalCar } from "@/lib/agent/media";
 import { runInspection } from "@/lib/agent/orchestrator";
 import { PANEL_IDS } from "@/lib/domain/panels";
 import { checkLimit, clientIp } from "@/lib/runtime/rateLimit";
+import { ffmpegBin } from "@/lib/agent/tools/ffbin";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const json = (status: number, error: string) => new Response(JSON.stringify({ error }), { status, headers: { "Content-Type": "application/json" } });
 const BODY = new Set(["sedan", "suv", "hatchback"]);
+const VIDEO_MAX_BYTES = 150 * 1024 * 1024;
+/** our own store only (host from the read-write token), files the browser put under uploads/ */
+function ownUploadUrl(raw: string): URL | null {
+  const store = process.env.BLOB_READ_WRITE_TOKEN?.match(/^vercel_blob_rw_([A-Za-z0-9]+)_/)?.[1];
+  try {
+    const u = new URL(raw);
+    return store && u.protocol === "https:" && u.hostname === `${store.toLowerCase()}.public.blob.vercel-storage.com` && u.pathname.startsWith("/uploads/") ? u : null;
+  } catch { return null; }
+}
+/** download the visitor's video and keep only its sound (≤180 s, mono AAC): the agent transcribes the voice, frames are not used */
+async function fetchVideoAudio(u: URL, dir: string): Promise<boolean> {
+  const res = await fetch(u);
+  if (!res.ok || !res.body) return false;
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length > VIDEO_MAX_BYTES) return false;
+  const src = path.join(dir, "upload-src"); await writeFile(src, buf);
+  await mkdir(path.join(dir, "video"), { recursive: true });
+  await promisify(execFile)(await ffmpegBin(), ["-hide_banner", "-loglevel", "error", "-y", "-i", src, "-t", "180", "-vn", "-ac", "1", "-ar", "16000", "-c:a", "aac", "-b:a", "64k", path.join(dir, "video", "owner_video.mp4")], { timeout: 60_000 });
+  return true;
+}
 const clean = (v: FormDataEntryValue | null, max = 40) => String(v ?? "").replace(/[^\p{L}\p{N} .\-/]/gu, "").trim().slice(0, max);
 
 export async function POST(req: Request) {
@@ -49,6 +74,9 @@ export async function POST(req: Request) {
     } catch { /* not an image: skip */ }
   }
   if (saved < 3) return json(400, "at least 3 readable photos are needed");
+  const videoField = String(form.get("videoUrl") ?? "");
+  const videoUrl = videoField ? ownUploadUrl(videoField) : null;
+  if (videoField && !videoUrl) return json(400, "video must be uploaded through this page");
 
   const initialPaint = PANEL_IDS.map((panel) => ({ panel, microns: Number(form.get(`paint_${panel}`)) }))
     .filter((r) => Number.isFinite(r.microns) && r.microns >= 20 && r.microns <= 3000);
@@ -63,8 +91,13 @@ export async function POST(req: Request) {
         if (!open) return;
         try { controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)); } catch { open = false; }
       };
-      send("car", { carId, make, model, year, photos: saved, paintReadings: initialPaint.length });
+      let video = false;
       try {
+        if (videoUrl) {
+          try { video = await fetchVideoAudio(videoUrl, dir); } catch { video = false; }
+          del(videoUrl.toString()).catch(() => undefined); // not kept: the sound is in this instance's /tmp only
+        }
+        send("car", { carId, make, model, year, photos: saved, paintReadings: initialPaint.length, video });
         const { report, ms } = await runInspection({ carId, onStep: (s) => send("step", s), initialPaint });
         try { revalidateTag("reports"); } catch { /* outside a Next request */ }
         send("done", { reportId: report.id, verdict: report.verdict, findings: report.findings.length, verified: report.findings.filter((f) => f.verified).length, ms, url: `/r/${report.id}` });

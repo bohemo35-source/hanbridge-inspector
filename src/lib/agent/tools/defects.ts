@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: findDefects tool: crop main car (SAM) -> Spark vision defects -> Findings in original coords
 // @created: 2026-10-28
+// @updated: 2026-11-03 claude-code — paintSigns (uploads): visual signs of repaint are reported as photo-only «repaint» findings that never confirm themselves
 import sharp from "sharp";
 import { z } from "zod";
 import { PANEL_VALUES, type Panel } from "@/lib/domain/panels";
@@ -56,6 +57,13 @@ Only report defects actually visible in the image (scratch, dent, rust, broken/m
 Example:
 {"view":"rear","panels_visible":["trunk","rear_bumper"],"defects":[{"panel":"trunk","kind":"scratch","severity":"low","box":{"x1":100,"y1":120,"x2":260,"y2":140},"description_en":"Light scratch on the trunk lid.","description_ru":"Лёгкая царапина на крышке багажника.","confidence":0.7}]}`;
 
+/** Upload mode: the visitor's photos are all we have, so the model also looks for VISUAL SIGNS of paint work.
+ *  They are reported as kind "repaint" and stay photo-only claims (see photoPaintOnly in verifier.ts): never confirmed without a gauge. */
+export const PAINT_SIGNS_SPEC = DEFECTS_SPEC.replace(
+  "Do NOT report repaint, putty/filler or panel replacement from a photo — paint thickness cannot be seen.",
+  "Paint thickness cannot be seen on a photo, but SIGNS of paint work can. Compare every panel with its neighbours and report kind \"repaint\" (one per panel, box on the sign) when you see: a different shade or tone than the adjacent panel (e.g. fender vs door, trunk lid vs rear fenders), different gloss or reflection sharpness, a different texture (orange peel / smoother or rougher than neighbours), paint dust or overspray on rubber seals, trim, glass edges, badges or lamps, masking-tape edges, runs or dust nibs, or uneven / different panel gaps that suggest the part was removed. Say in the description which sign you see and against which neighbour; severity low or medium; confidence at most 0.6. Never report putty/filler or panel_replaced from a photo. Do not guess: lighting and reflections alone are not a sign.",
+);
+
 export interface FindDefectsResult {
   view: DefectView;
   panels_visible: Panel[];
@@ -77,6 +85,8 @@ export async function findDefects(opts: {
   carId: string;
   photoId: string;
   image: Buffer;
+  /** uploads: also report visual signs of repaint (photo-only, never self-confirming) */
+  paintSigns?: boolean;
 }): Promise<FindDefectsResult> {
   const original = await orientedSize(opts.image);
 
@@ -130,7 +140,7 @@ export async function findDefects(opts: {
         ],
       },
     ],
-    DEFECTS_SPEC,
+    opts.paintSigns ? PAINT_SIGNS_SPEC : DEFECTS_SPEC,
   );
 
   // 4) defect boxes: crop-sent coords -> crop-original coords -> original photo coords
@@ -144,18 +154,23 @@ export async function findDefects(opts: {
   });
 
   // paint thickness (repaint / filler) and panel replacement are not provable from a photo — gauge, voice or inspector text only
+  // upload mode keeps photo signs of repaint, marked as such; they go to «Not confirmed» (photoPaintOnly)
   const VISUAL_KINDS = new Set(["scratch", "dent", "rust", "mechanical", "other"]);
-  const findings: Finding[] = draft.defects.filter((d) => VISUAL_KINDS.has(d.kind)).map((d, i) => ({
-    id: `${opts.photoId}-defect-${i + 1}`,
-    panel: d.panel,
-    kind: d.kind,
-    severity: d.severity,
-    description_en: d.description_en,
-    description_ru: d.description_ru,
-    confidence: d.confidence,
-    evidence: [{ type: "frame", mediaId: opts.photoId, box: toOriginal(d.box), panel: d.panel }],
-    verified: false,
-  }));
+  const keep = (k: string) => VISUAL_KINDS.has(k) || (opts.paintSigns === true && k === "repaint");
+  const findings: Finding[] = draft.defects.filter((d) => keep(d.kind)).map((d, i) => {
+    const sign = d.kind === "repaint";
+    return {
+      id: `${opts.photoId}-${sign ? "paintsign" : "defect"}-${i + 1}`,
+      panel: d.panel,
+      kind: d.kind,
+      severity: sign && (d.severity === "high" || d.severity === "critical") ? "medium" : d.severity,
+      description_en: sign ? `${d.description_en.replace(/\.$/, "")} — photo sign only, needs a paint-gauge reading.` : d.description_en,
+      description_ru: sign ? `${d.description_ru.replace(/\.$/, "")} — признак по фото, нужен замер толщиномером.` : d.description_ru,
+      confidence: sign ? Math.min(0.6, d.confidence) : d.confidence,
+      evidence: [{ type: "frame" as const, mediaId: opts.photoId, box: toOriginal(d.box), panel: d.panel }],
+      verified: false,
+    };
+  });
 
   return { view: draft.view, panels_visible: draft.panels_visible, findings, cropBox, width: original.w, height: original.h };
 }

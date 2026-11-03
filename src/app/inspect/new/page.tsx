@@ -3,9 +3,11 @@
 // @purpose: /inspect/new — "check your own car": visitor adds 3–10 photos (+ optional paint-gauge numbers), the same agent runs live.
 //           Photos are resized in the browser (≤1280 px) and sent in one request; they are not stored — only the report and a plate-hidden listing photo are.
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code — optional video (straight to Vercel Blob from the browser, deleted after the run); gauge hint: photo signs of repaint need gauge numbers
 "use client";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import { upload } from "@vercel/blob/client";
 
 type Step = { i?: number; tool: string; why?: string; ms?: number; ok?: boolean; outputSummary?: string };
 const MODEL_OF: Record<string, string[]> = {
@@ -22,11 +24,17 @@ const T = {
   en: { title: "Check your own car", sub: "Add 3–10 walk-around photos (whole car from 4 corners works best). Optional: paint-gauge readings. The same agent inspects it live in about 1–2 minutes.",
     make: "Make", model: "Model", year: "Year", body: "Body", photos: "Photos (3–10)", paint: "Paint gauge, µm (optional)", go: "Inspect", busy: "Agent is working…",
     privacy: "Photos are processed for this inspection only and are not stored. The report and one listing photo with the plate hidden are published at a public link. Do not upload photos of people or documents.",
-    open: "Open report", need: "Fill make, model, year and add 3–10 photos.", prep: "Preparing photos…", back: "Demo cars" },
+    open: "Open report", need: "Fill make, model, year and add 3–10 photos.", prep: "Preparing photos…", back: "Demo cars",
+    video: "Video with your voice (optional, ≤150 MB)", videoNote: "Say the gauge readings aloud while filming (e.g. «hood 110, left fender 240») — the agent transcribes them. The video goes to temporary storage and is deleted right after the inspection; only its sound (first 3 min) is used.",
+    upVideo: "Uploading video", videoBig: "Video must be under 150 MB.",
+    gaugeHint: "Photos can show signs of repaint (shade, gloss, overspray, gaps) but not paint thickness. Such signs go to «Not confirmed» and a manager checks them — add gauge numbers to confirm." },
   ru: { title: "Проверить свою машину", sub: "Добавьте 3–10 фото обхода (лучше всего машина целиком с 4 углов). Можно указать замеры толщиномера. Тот же агент осмотрит машину вживую за 1–2 минуты.",
     make: "Марка", model: "Модель", year: "Год", body: "Кузов", photos: "Фото (3–10)", paint: "Толщиномер, мкм (необязательно)", go: "Осмотреть", busy: "Агент работает…",
     privacy: "Фото используются только для этого осмотра и не сохраняются. По публичной ссылке публикуются отчёт и одно фото для объявления со скрытым номером. Не загружайте фото людей и документов.",
-    open: "Открыть отчёт", need: "Заполните марку, модель, год и добавьте 3–10 фото.", prep: "Готовлю фото…", back: "Демо-машины" },
+    open: "Открыть отчёт", need: "Заполните марку, модель, год и добавьте 3–10 фото.", prep: "Готовлю фото…", back: "Демо-машины",
+    video: "Видео с голосом (необязательно, до 150 МБ)", videoNote: "Во время съёмки называйте замеры вслух («капот 110, левое крыло 240») — агент их расшифрует. Видео попадает во временное хранилище и удаляется сразу после осмотра; используется только звук (первые 3 мин).",
+    upVideo: "Загружаю видео", videoBig: "Видео должно быть меньше 150 МБ.",
+    gaugeHint: "По фото видны признаки окраса (оттенок, блеск, напыл, зазоры), но не толщина краски. Такие признаки идут в «Не подтверждено», их проверит менеджер — добавьте замеры толщиномера, чтобы подтвердить." },
 };
 
 async function shrink(file: File): Promise<Blob> {
@@ -41,6 +49,7 @@ function NewInspection() {
   const lang = useSearchParams().get("lang") === "ru" ? "ru" : "en";
   const t = T[lang]; const q = lang === "ru" ? "?lang=ru" : "";
   const [files, setFiles] = useState<File[]>([]);
+  const [video, setVideo] = useState<File | null>(null);
   const [steps, setSteps] = useState<Step[]>([]);
   const [status, setStatus] = useState(""); const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -52,11 +61,22 @@ function NewInspection() {
     e.preventDefault(); setError(""); setDone(null); setSteps([]);
     const fd0 = new FormData(e.currentTarget);
     if (!fd0.get("make") || !fd0.get("model") || !fd0.get("year") || files.length < 3 || files.length > 10) { setError(t.need); return; }
+    if (video && video.size > 150 * 1024 * 1024) { setError(t.videoBig); return; }
     setBusy(true); setStatus(t.prep);
     try {
       const fd = new FormData();
-      for (const [k, v] of fd0.entries()) if (k !== "photos" && String(v).trim()) fd.append(k, v);
+      for (const [k, v] of fd0.entries()) if (k !== "photos" && k !== "video" && String(v).trim()) fd.append(k, v);
       for (const [i, f] of files.entries()) fd.append("photos", await shrink(f), `photo-${i + 1}.jpg`);
+      // the video goes from the browser straight to Vercel Blob (a function body is capped at 4.5 MB); the run gets its URL
+      if (video) {
+        setStatus(`${t.upVideo}…`);
+        const ext = (video.name.match(/\.(mp4|mov|m4v|webm|3gp)$/i)?.[1] ?? "mp4").toLowerCase();
+        const b = await upload(`uploads/video-${Date.now().toString(36)}.${ext}`, video, {
+          access: "public", handleUploadUrl: "/api/blob-upload", multipart: video.size > 20 * 1024 * 1024,
+          onUploadProgress: (p) => setStatus(`${t.upVideo} ${Math.round(p.percentage)}%`),
+        });
+        fd.append("videoUrl", b.url);
+      }
       setStatus(t.busy);
       const res = await fetch("/api/upload-run", { method: "POST", body: fd });
       if (!res.ok || !res.body) { setError((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`); setBusy(false); return; }
@@ -92,6 +112,9 @@ function NewInspection() {
         </div>
         <label>{t.photos}<input type="file" accept="image/*" multiple onChange={(e) => setFiles([...(e.target.files ?? [])].slice(0, 10))} style={{ ...input, padding: 8 }} /></label>
         {files.length > 0 && <p style={{ margin: 0, color: "#8b94a1", fontSize: 13 }}>{files.length} / 10</p>}
+        <label>{t.video}<input name="video" type="file" accept="video/*" onChange={(e) => setVideo(e.target.files?.[0] ?? null)} style={{ ...input, padding: 8 }} /></label>
+        <p style={{ margin: "-6px 0 0", color: "#8b94a1", fontSize: 12 }}>{t.videoNote}</p>
+        <p style={{ margin: 0, color: "#c9cfd6", fontSize: 13, borderLeft: "2px solid #c9a46a", paddingLeft: 10 }}>{t.gaugeHint}</p>
         <details><summary style={{ cursor: "pointer", color: "#c9a46a" }}>{t.paint}</summary>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8, marginTop: 8 }}>
             {PANELS.map(([id, en, ru]) => <label key={id} style={{ fontSize: 13 }}>{lang === "ru" ? ru : en}<input name={`paint_${id}`} type="number" min={20} max={3000} style={input} /></label>)}
