@@ -94,7 +94,10 @@ export async function POST(req: Request) {
       let video = false;
       try {
         if (videoUrl) {
-          try { video = await fetchVideoAudio(videoUrl, dir); } catch { video = false; }
+          const ts = Date.now(); let why = "download failed";
+          try { video = await fetchVideoAudio(videoUrl, dir); } catch (e) { video = false; why = e instanceof Error ? e.message.slice(0, 160) : "audio extraction failed"; }
+          // the visitor sees whether the video reached the agent (it is not part of the saved trace)
+          send("step", { tool: "upload_video", ok: video, ms: Date.now() - ts, outputSummary: video ? "video received: sound (≤180 s) handed to the agent, file deleted from storage" : `video not used: ${why}` });
           del(videoUrl.toString()).catch(() => undefined); // not kept: the sound is in this instance's /tmp only
         }
         send("car", { carId, make, model, year, photos: saved, paintReadings: initialPaint.length, video });
