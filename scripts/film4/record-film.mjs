@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: record the film from the site to mp4 with its sound: CDP screencast of a visible Chrome (no background throttling) after pressing Play; the page logs when narration/drums start and stop, the same mix (voice 0.8, drums as in the player, fades) is rebuilt with ffmpeg and muxed; outputs a 1080p and a small 720p file
 // @created: 2026-11-03
+// @updated: 2026-11-03 claude-code — window content = emulated CSS size (1600×900 @1.2 → 1920×1080), every frame must be W×H (a mismatched window cropped the right edge)
 // @updated: 2026-11-03 claude-code — drums level 0.58 (DRUMS env), as in the player
 // usage: node scripts/film4/record-film.mjs <url> <outBase> [W=1920] [H=1080]   → <outBase>-1080p.mp4, <outBase>-720p.mp4
 import { createRequire } from "node:module";
@@ -16,8 +17,13 @@ const DRUMS = Number(process.env.DRUMS ?? 0.58); // keep in step with Film4.tsx 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const port = 9342, profile = path.join(os.tmpdir(), "hb-record-film");
 fs.rmSync(profile, { recursive: true, force: true });
+// The screencast follows the real window's shape: with a 1600×936 window and a 1920×1080 emulation it switched mid-run to
+// 1847×1080 frames and cut the right edge of the page. Now the window content is made exactly CSS W/DPR × H/DPR (16:9),
+// the page is emulated at that CSS size with DPR = 1.2, so frames are W×H physical pixels; every frame is checked.
+// (Headless Chrome crashes on the film's video, so a visible window it is.)
+const DPR = Number(process.env.DPR ?? 1.2), CW = Math.round(+W / DPR), CH = Math.round(+H / DPR);
 const proc = spawn("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", [
-  `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, "--window-size=1600,987", "--no-first-run", "--no-default-browser-check", "--hide-scrollbars",
+  `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`, `--window-size=${CW},${CH + 100}`, "--no-first-run", "--no-default-browser-check", "--hide-scrollbars",
   "--autoplay-policy=no-user-gesture-required", "--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding",
   "--disable-background-timer-throttling", "--disable-features=CalculateNativeWinOcclusion,Translate", "about:blank",
 ], { stdio: "ignore", env: { ...process.env, AGENT_ID: "claude-code", AGENT_PROJECT: "hanbridge-inspector" } });
@@ -40,14 +46,24 @@ await ctx.addInitScript(() => {
 const page = await ctx.newPage();
 for (const p of ctx.pages()) if (p !== page) await p.close().catch(() => {});
 const cdp = await ctx.newCDPSession(page);
-await cdp.send("Emulation.setDeviceMetricsOverride", { width: +W, height: +H, deviceScaleFactor: 1, mobile: false });
+// window content exactly CW×CH (outer size minus the browser's own toolbar), then the same CSS size emulated
+{
+  const { windowId } = await cdp.send("Browser.getWindowForTarget");
+  const ui = await page.evaluate(() => ({ dw: outerWidth - innerWidth, dh: outerHeight - innerHeight }));
+  await cdp.send("Browser.setWindowBounds", { windowId, bounds: { width: CW + ui.dw, height: CH + ui.dh, windowState: "normal" } });
+  await sleep(500);
+  console.log("window content", JSON.stringify(await page.evaluate(() => [innerWidth, innerHeight])), "target", CW, CH);
+}
+await cdp.send("Emulation.setDeviceMetricsOverride", { width: CW, height: CH, deviceScaleFactor: DPR, mobile: false });
 await page.goto(url, { waitUntil: "networkidle", timeout: 120000 });
 await page.evaluate(() => window.scrollTo(0, 0));
 await sleep(4000);
 
 const dir = path.join(os.tmpdir(), "hb-record-film-frames"); fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
 const frames = [];
+const sizes = new Map(); // every frame must be exactly W×H, or the recording is refused
 cdp.on("Page.screencastFrame", (f) => {
+  const key = `${f.metadata.deviceWidth}x${f.metadata.deviceHeight}`; sizes.set(key, (sizes.get(key) ?? 0) + 1);
   const file = path.join(dir, `${String(frames.length).padStart(5, "0")}.jpg`);
   fs.writeFileSync(file, Buffer.from(f.data, "base64"));
   frames.push({ file, t: f.metadata.timestamp });
@@ -59,7 +75,7 @@ const btn = page.getByRole("button", { name: /play the film|смотреть ф�
 const box = await btn.boundingBox();
 await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
 await page.mouse.down(); await page.mouse.up();
-await page.mouse.move(+W - 2, +H - 2); // park the pointer (no hover states in frame)
+await page.mouse.move(CW - 2, CH - 2); // park the pointer (no hover states in frame)
 console.log("play pressed");
 // wait for the narration to end (the film stops itself), then keep the end card for a moment
 for (let i = 0; i < +(process.env.MAX_SEC ?? 400); i++) {
@@ -74,6 +90,11 @@ await sleep(400);
 const aud = await page.evaluate(() => window.__aud);
 await cb.close().catch(() => {}); proc.kill("SIGTERM");
 
+// the JPEG itself, not only the metadata, must be W×H (the 1847×1080 frames had correct metadata)
+const jpegSize = (file) => { const b = fs.readFileSync(file); for (let i = 2; i < b.length - 9;) { if (b[i] !== 0xff) { i++; continue; } const m = b[i + 1]; if (m === 0xc0 || m === 0xc2) return `${b.readUInt16BE(i + 7)}x${b.readUInt16BE(i + 5)}`; i += 2 + b.readUInt16BE(i + 2); } return "?"; };
+const bad = frames.filter((_, i) => i % 5 === 0).filter((f) => jpegSize(f.file) !== `${W}x${H}`).length;
+console.log("frame sizes (metadata)", JSON.stringify(Object.fromEntries(sizes)), "sampled JPEGs not", `${W}x${H}:`, bad);
+if (bad > frames.length / 5 * 0.005) { console.error("REFUSED: frames of a different size — the recording would be cropped"); process.exit(2); }
 // frames arrive unevenly: concat with real durations → 30 fps CFR
 const t0 = frames[0].t, span = frames.at(-1).t - t0;
 const list = frames.map((f, i) => `file '${f.file}'\nduration ${Math.max(0.001, (frames[i + 1]?.t ?? f.t + 1 / 30) - f.t).toFixed(4)}`).join("\n") + `\nfile '${frames.at(-1).file}'\n`;
