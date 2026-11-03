@@ -6,11 +6,13 @@
 // @updated: 2026-11-03 claude-code — «before» tiles re-picked with Arthur's dm/ shots: night booking, «when does it ship», «when will it go», a wall of photos
 // @updated: 2026-11-03 claude-code — «How it was before»: real buyer chats (names/plates blurred) above «Who does what»
 // @updated: 2026-11-03 claude-code — «How the agent worked — up to 16 steps»: the real step log of the hero car's report + a muted loop from the jury video
+// @updated: 2026-11-04 claude-code — the agent-steps loop plays only while on screen (ViewLoop): off screen it kept decoding and seeking every 7.6 s under the film
 // @updated: 2026-11-02 claude-code — first screen: 3D bridge on the right (desktop) / under the buttons (mobile); text and buttons stay in the flow above it
 import Link from "next/link";
 import type { Report } from "@/lib/schema";
 import { CARS, carMedia } from "@/lib/agent/catalog";
 import BridgeHero from "@/components/bridge-hero/BridgeHero";
+import ViewLoop from "./ViewLoop";
 import { TOOL_MODEL } from "@/lib/agent/toolModels";
 
 type Lang = "en" | "ru";
@@ -169,7 +171,7 @@ export default function Hero({ reports, lang }: { reports: Report[]; lang: Lang 
             <h2 className="mb-2 mt-12 font-mono text-[11px] uppercase tracking-[.3em] text-sodium">{t.steps}</h2>
             <p className="mb-4 max-w-3xl text-[14px] text-bone-2">{t.stepsSub} {evidence.trace.length} · {evidence.verdict.decision.replace("_", " ")}</p>
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-              <video src="/landing/agent-steps.mp4" poster="/landing/agent-steps.jpg" muted autoPlay loop playsInline preload="metadata" aria-label={t.steps}
+              <ViewLoop src="/landing/agent-steps.mp4" poster="/landing/agent-steps.jpg" label={t.steps}
                 className="w-full self-start rounded-[6px] border border-bone/10 bg-ink-2" />
               <ol className="max-h-[440px] overflow-y-auto rounded-[6px] border border-bone/10 bg-ink-2 px-4 py-3">
                 {evidence.trace.map((s, i) => (

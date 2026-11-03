@@ -47,7 +47,7 @@ DENY = re.compile(r"[name]|[name]|[name]|Артур|Artur\b|Arthur Lim|arthurlim
 MUSE = re.compile(r"Ran \d* ?commands?|^\W*(Edited|Explored|Read|Ran|Added|Updated|Wrote) |muse[- ]wonder|muse tz-|esc to interrupt|Worked for|context left|\bmuse\b", re.I)
 CHAT = re.compile(r"Ответить|это ИИ|может ошибаться|Opus \d|Sonnet \d|Показать все|Claude Code|bypass permissions|⏺|✻|Summary kickoff|claude\.ai|WhatsApp|Telegram|Gmail|Входящие|"
                   r"Поделиться|этой сессии|Рабочий стол \d|^\W*(Claude|Google Chrome|Finder|Safari)\W*$", re.I)  # last: window labels in Mission Control
-MIN_FRAMES = 25  # fewer Muse Code frames than this (~5 s of real movement) → the ТЗ is left out and named on the last card
+MIN_FRAMES = 25  # fewer distinct Muse Code frames than this → the ТЗ is left out and named on the last card (its 12 s would be a slideshow of >0.5 s stills)
 # rows that mark a sidebar list even when no name in it was read; the whole list column around them is blurred
 SIDEBAR = re.compile(r"Показать все|Недавние|Избранное|Рабочий стол|Chrome Apps|huggingface|Open Design|СЕЙФЫ|Watchtower|Audit & Setup")
 # the desktop "Изображения" stack shows a photo of a person as its icon: the icon above the label is blurred
@@ -206,6 +206,9 @@ if phase == "verify":
     run("ffmpeg", "-v", "error", "-i", out, "-vf", "fps=10", "-q:v", "2", os.path.join(vd, "%05d.jpg"))
     lines = text_lines(ocr(sorted(os.path.join(vd, n) for n in os.listdir(vd))))
     b = [l for l in lines if DENY.search(l.split("\t")[-1])]; bad += b
-    print(f"mp4: {len(os.listdir(vd))} frames, {len(lines)} text lines, {len(b)} with names; SECRET-pattern lines in frames (reviewed at scan): {sec}")
+    # chat windows in the mp4 too — except on the title cards, whose own text names Claude Code
+    cards = {l.split("\t")[0] for l in lines if re.search(r"NOT IN THIS VIDEO|BUILT DURING THE HACKATHON|MIN SESSION", l)}
+    ch = [l for l in lines if l.split("\t")[0] not in cards and CHAT.search(l.split("\t")[-1])]; bad += ch
+    print(f"mp4: {len(os.listdir(vd))} frames ({len(cards)} title cards), {len(lines)} text lines, {len(b)} with names, {len(ch)} with chat UI; SECRET-pattern lines in frames (reviewed at scan): {sec}")
     open(os.path.join(WORK, "verify-hits.txt"), "w").write("\n".join(bad))
     sys.exit(f"FAIL: {len(bad)} lines with names — verify-hits.txt" if bad else 0)

@@ -5,6 +5,7 @@
 // @created: 2026-11-03
 // @updated: 2026-11-03 claude-code — blackMs / posterMs (phones); BROWSER=webkit = iPhone 14 in WebKit, MBPS throttles mp4 responses, noFrameMs; the clip layer is the video's parent since 03.11
 // @updated: 2026-11-03 claude-code — frozenMs: a visible clip standing still in Play mode
+// @updated: 2026-11-04 claude-code — seekBy: seeks per video file (a looping video elsewhere on the page seeks on every loop)
 // usage: [BROWSER=webkit] [MBPS=8] node scripts/film4/stutter-scenes.mjs <url> <play|scroll> <out.json> [scrollSeconds=150]
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -42,7 +43,7 @@ if (mbps) await ctx.route(/\.(mp4|mp3)(\?|$)/, async (route) => {
   await route.fulfill({ response: resp, body });
 });
 await ctx.addInitScript(() => {
-  const S = (window.__ss = { scenes: {}, order: [] });
+  const S = (window.__ss = { scenes: {}, order: [], seekBy: {} });
   const scene = () => document.querySelector('[data-testid="film4"]')?.dataset.scene ?? "?";
   const sc = (id) => (S.scenes[id] ??= { ms: 0, raf: 0, long50: 0, long100: 0, maxRaf: 0, frozenMs: 0, blackMs: 0, posterMs: 0, noFrameMs: 0, vframes: 0, freezes: 0, maxFreeze: 0, firstFrameMs: null, seeks: 0, seekMs: 0, maxSeek: 0, waiting: 0, enteredAt: 0, clip: null });
   let cur = null, pp = 0;
@@ -67,7 +68,7 @@ await ctx.addInitScript(() => {
   requestAnimationFrame(raf);
   const hook = (v) => {
     if (v.__ss) return; v.__ss = 1; let last = 0, seekT = 0, lastPlaying = false;
-    v.addEventListener("seeking", () => { seekT = performance.now(); });
+    v.addEventListener("seeking", () => { seekT = performance.now(); const f = (v.currentSrc || "").split("/").slice(-2).join("/"); S.seekBy[f] = (S.seekBy[f] ?? 0) + 1; });
     v.addEventListener("seeked", () => { if (!seekT) return; const d = performance.now() - seekT, s = sc(scene()); s.seeks++; s.seekMs += d; s.maxSeek = Math.max(s.maxSeek, d); seekT = 0; });
     v.addEventListener("waiting", () => { sc(scene()).waiting++; });
     const f = (now) => {
@@ -116,6 +117,6 @@ const r = await page.evaluate(() => window.__ss);
 await closeAll();
 const rows = r.order.map((id) => { const s = r.scenes[id]; return { id, clip: s.clip, sec: +(s.ms / 1000).toFixed(1), frozenMs: Math.round(s.frozenMs), blackMs: Math.round(s.blackMs), posterMs: Math.round(s.posterMs), noFrameMs: Math.round(s.noFrameMs), fps: s.ms ? +(s.raf / (s.ms / 1000)).toFixed(0) : 0, long50: s.long50, long100: s.long100, maxRaf: Math.round(s.maxRaf), vframes: s.vframes, freezes: s.freezes, maxFreeze: Math.round(s.maxFreeze), firstFrameMs: s.firstFrameMs, seeks: s.seeks, avgSeek: s.seeks ? Math.round(s.seekMs / s.seeks) : 0, maxSeek: Math.round(s.maxSeek), waiting: s.waiting, gaps: s.gaps ?? [] }; });
 const tot = rows.reduce((a, x) => ({ long50: a.long50 + x.long50, long100: a.long100 + x.long100, freezes: a.freezes + x.freezes, waiting: a.waiting + x.waiting, frozenMs: a.frozenMs + x.frozenMs, blackMs: a.blackMs + x.blackMs, posterMs: a.posterMs + x.posterMs, noFrameMs: a.noFrameMs + x.noFrameMs, seeks: a.seeks + x.seeks, maxSeek: Math.max(a.maxSeek, x.maxSeek) }), { long50: 0, long100: 0, freezes: 0, waiting: 0, frozenMs: 0, blackMs: 0, posterMs: 0, noFrameMs: 0, seeks: 0, maxSeek: 0 });
-fs.writeFileSync(out, JSON.stringify({ url, mode, wallSec: (Date.now() - t0) / 1000, startMs: r.startMs ?? null, totals: tot, scenes: rows }, null, 1));
-console.log(mode, url, "totals", JSON.stringify(tot));
+fs.writeFileSync(out, JSON.stringify({ url, mode, wallSec: (Date.now() - t0) / 1000, startMs: r.startMs ?? null, totals: tot, seekBy: r.seekBy, scenes: rows }, null, 1));
+console.log(mode, url, "totals", JSON.stringify(tot)); console.log("seeks by file", JSON.stringify(r.seekBy));
 for (const x of rows) console.log(`${x.id.padEnd(10)} ${String(x.clip ?? "-").padEnd(13)} ${String(x.sec).padStart(5)}s frozen=${String(x.frozenMs).padStart(5)}ms noFrame=${String(x.noFrameMs).padStart(5)}ms black=${String(x.blackMs).padStart(5)}ms fps=${String(x.fps).padStart(3)} long50=${x.long50} long100=${x.long100} maxRaf=${x.maxRaf} vfr=${x.vframes} freezes=${x.freezes} maxFreeze=${x.maxFreeze} first=${x.firstFrameMs} seeks=${x.seeks} avgSeek=${x.avgSeek} maxSeek=${x.maxSeek} waiting=${x.waiting}`);
