@@ -458,7 +458,7 @@ const panel = "absolute right-4 z-[6] w-[min(340px,calc(100vw-32px))] border bor
 /** portrait: the card spans the screen width (16 px gutters), centred, up to 400 px */
 const centre = { left: 16, right: 16, width: "auto", maxWidth: 400, marginInline: "auto" } as const;
 /** portrait: px a scene's card takes under its line — measured on the rendered cards at 390 px (scripts/film4/portrait-shots.mjs) */
-const CARD = { receiptHead: 50, row: 32, toast: 94, toastNote: 120, chip: 42 };
+const CARD = { receiptHead: 66, row: 32, toast: 94, toastNote: 120, chip: 42 };
 const cardRoom = (x: Scene) =>
   x.receipt ? CARD.receiptHead + CARD.row * (x.receipt === "busan" ? RECEIPT_BUSAN : RECEIPT_CUSTOMS).length
     : x.toast ? (x.toast.by === "zero" && SHOW_VAT_NOTE ? CARD.toastNote : CARD.toast)
