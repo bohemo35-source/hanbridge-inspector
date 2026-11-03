@@ -2,8 +2,9 @@
 // @project: hanbridge-inspector
 // @purpose: Watch mode: a stuck voice never freezes the picture, a resync happens once and not in a loop, small drift is left alone
 // @created: 2026-11-04
+// @updated: 2026-11-04 claude-code — followY never moves the picture back
 import { describe, expect, it } from "vitest";
-import { newVoiceClock, voiceDecision } from "../src/components/film4/voiceFollow";
+import { followY, newVoiceClock, voiceDecision } from "../src/components/film4/voiceFollow";
 
 const frames = (c: ReturnType<typeof newVoiceClock>, from: number, to: number, voice: (now: number) => { time: number; paused: boolean; readyState: number }, want: (now: number) => number | null) => {
   const out: { now: number; follow: boolean; seekTo: number | null }[] = [];
@@ -45,5 +46,14 @@ describe("voiceDecision", () => {
     const c = newVoiceClock();
     const r = frames(c, 0, 1000, (n) => ({ time: n / 1000, paused: false, readyState: 4 }), (n) => n / 1000 + 0.8);
     expect(r.every((x) => x.seekTo === null)).toBe(true);
+  });
+});
+
+describe("followY", () => {
+  it("goes forward with the voice and never back to a voice behind the picture", () => {
+    expect(followY(100, 140)).toBe(140);
+    expect(followY(100, 60)).toBe(100);
+    let y = 0; for (const v of [10, 30, 20, 25, 50]) y = followY(y, v);
+    expect(y).toBe(50);
   });
 });

@@ -15,7 +15,7 @@ import type { GarageData } from "@/lib/garage/data";
 import InsertView from "./Inserts";
 import { ACTS, RECEIPT_BUSAN, RECEIPT_CUSTOMS, SCENES, UI, type Lang, type Line, type Scene } from "./story";
 import { TW, clipProgress, clipSpan } from "./clipTime";
-import { newVoiceClock, voiceDecision } from "./voiceFollow";
+import { followY, newVoiceClock, voiceDecision } from "./voiceFollow";
 
 const GarageScene = dynamic(() => import("@/components/garage-3d/GarageScene"), { ssr: false });
 const GarageStudio = dynamic(() => import("@/components/garage-studio/GarageStudio"), { ssr: false });
@@ -45,6 +45,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
   const markReady = useCallback((id: string) => setReady((r) => (r.has(id) ? r : new Set(r).add(id))), []);
   const unmarkReady = useCallback((id: string) => setReady((r) => { if (!r.has(id)) return r; const n = new Set(r); n.delete(id); return n; }), []);
   const autoRef = useRef(false);
+  const autoGen = useRef(0); // each Play / Stop starts a new run: a Play that resumes after its await only goes on if no Stop or Play came meanwhile
   /** watch mode: seconds a scene lasts (clips then play natively instead of being scrubbed); null while scrolling */
   const playSec = useRef<((i: number) => number) | null>(null);
 
@@ -108,16 +109,16 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     requestAnimationFrame(f);
   };
   const stopAuto = useCallback(() => {
-    autoRef.current = false; setAuto(false); playSec.current = null;
+    autoRef.current = false; autoGen.current++; setAuto(false); playSec.current = null;
     narr.current?.pause(); fade(music.current, 0, 700, () => music.current?.pause());
   }, []);
   const startAuto = useCallback(async () => {
     const el = wrap.current; if (!el) return;
-    autoRef.current = true; setAuto(true);
+    autoRef.current = true; setAuto(true); const gen = ++autoGen.current;
     const top0 = el.getBoundingClientRect().top + window.scrollY;
     if (window.scrollY < top0 || window.scrollY > top0 + (TOTAL_VH - 1) * window.innerHeight / 100) window.scrollTo(0, top0);
     if (timing.current === undefined) timing.current = await fetch(`/film3/audio/narration-${lang}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    if (!autoRef.current) return; // stopped (wheel, Stop) while the timing was loading: no music without a picture
+    if (!autoRef.current || gen !== autoGen.current) return; // stopped (wheel, Stop) or Play pressed again while the timing was loading: one loop, no music without a picture
     const tm = timing.current;
     if (!music.current) { music.current = new Audio("/film3/audio/drums.mp3"); music.current.loop = true; music.current.volume = 0; }
     // levels (EBU R128): voice −17.4 LUFS, drums −20.8 LUFS (one loop) → at 0.8 / 0.58 the voice sits 6.0 dB over the drums (measured on a 170 s drums loop; 6.2 from the one-loop figure)
@@ -134,13 +135,13 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
       narr.current.play().catch(() => {});
     }
     let y = window.scrollY, prev = performance.now();
-    // The picture never waits for the voice (a phone stood 2.5 s on the title; a voice stuck after a seek froze the picture for minutes):
-    // it follows the voice only while the voice's clock really advances, otherwise it keeps the scene's pace; when the voice moves again
-    // and is more than 1 s off, the voice is brought to the picture.
+    // A stuck voice never holds the picture (a phone stood 2.5 s on the title; a voice stuck after a seek froze the picture for minutes):
+    // the picture follows the voice only while the voice's clock really advances, otherwise it keeps the scene's pace; when the voice moves
+    // again and is more than 1 s off, the voice is brought to the picture (a voice slightly behind is waited for, see followY).
     const voiceAt = (yy: number) => { const { i, t } = sceneAt(yy); const w = tm?.scenes[SCENES[i].id]; return w ? w[0] + t * (w[1] - w[0]) : null; };
     const clock = newVoiceClock(); // see voiceFollow.ts (tested)
     const step = (now: number) => {
-      if (!autoRef.current) return;
+      if (!autoRef.current || gen !== autoGen.current) return;
       const dt = Math.min(64, now - prev); prev = now;
       const vh = vhNow();
       const a = narr.current;
@@ -153,8 +154,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
         if (j < 0) j = time >= tm.duration - 0.05 ? SCENES.length - 1 : sceneAt(y).i;
         const w = tm.scenes[SCENES[j].id];
         const k = w ? cl((time - w[0]) / Math.max(0.01, w[1] - w[0])) : 0;
-        // never backwards: after a stall the picture waits for the voice to catch up instead of jumping back
-        y = Math.max(y, top0 + (starts[j] + k * SCENES[j].vh) * vh);
+        y = followY(y, top0 + (starts[j] + k * SCENES[j].vh) * vh); // never backwards
       } else {
         // the scene's own pace (the voice window when there is narration, so picture and voice stay in step)
         const { i } = sceneAt(y); const sc = SCENES[i];
