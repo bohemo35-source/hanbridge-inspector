@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Demo-car catalog (docs/DEMO_CARS.md) + media inventory: local demo-data/<carId> in dev, Vercel Blob (blob-manifest.json) on Vercel
 // @created: 2026-10-29
+// @updated: 2026-11-03 claude-code — uploads: the visitor's video is also read as a gauge video
 // @updated: 2026-11-01 claude: media listing/reading goes through ./media (Blob on Vercel)
 import path from "node:path";
 import { ensureMediaFile, hasMedia, listMedia } from "./media";
@@ -34,7 +35,8 @@ export function carMedia(carId: string): CarMedia {
     carId,
     photos: listMedia(carId, "photos", [".jpg", ".jpeg", ".png"]),
     videos,
-    gaugeVideo: videos.includes("paint_gauge.mp4") ? "paint_gauge.mp4" : null,
+    // a visitor's upload: their one video may show the gauge screen (owner decision 03.11: a readable screen that matches the voice confirms)
+    gaugeVideo: videos.includes("paint_gauge.mp4") ? "paint_gauge.mp4" : carId.startsWith("u-") ? videos[0] ?? null : null,
     diagnosticPdfs: sheets.filter((f) => f.toLowerCase().endsWith(".pdf")),
     sheets,
     hasInspectorReport: hasMedia(carId, "root", "inspector_report_ru.txt"),

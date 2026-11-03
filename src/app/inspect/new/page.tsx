@@ -3,6 +3,7 @@
 // @purpose: /inspect/new — "check your own car": visitor adds 3–10 photos (+ optional paint-gauge numbers), the same agent runs live.
 //           Photos are resized in the browser (≤1280 px) and sent in one request; they are not stored — only the report and a plate-hidden listing photo are.
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code — video note: the gauge screen must be in the frame (owner decision: a readable matching screen confirms)
 // @updated: 2026-11-03 claude-code — optional video (straight to Vercel Blob from the browser, deleted after the run); gauge hint: photo signs of repaint need gauge numbers
 "use client";
 import { useSearchParams } from "next/navigation";
@@ -25,14 +26,14 @@ const T = {
     make: "Make", model: "Model", year: "Year", body: "Body", photos: "Photos (3–10)", paint: "Paint gauge, µm (optional)", go: "Inspect", busy: "Agent is working…",
     privacy: "Photos are processed for this inspection only and are not stored. The report and one listing photo with the plate hidden are published at a public link. Do not upload photos of people or documents.",
     open: "Open report", need: "Fill make, model, year and add 3–10 photos.", prep: "Preparing photos…", back: "Demo cars",
-    video: "Video with your voice (optional, ≤150 MB)", videoNote: "Say the gauge readings aloud while filming (e.g. «hood 110, left fender 240») — the agent transcribes them. The video goes to temporary storage and is deleted right after the inspection; only its sound (first 3 min) is used.",
+    video: "Video with your voice (optional, ≤150 MB)", videoNote: "Keep the gauge screen in the frame and say each reading aloud («hood 110, left fender 240»): a number counts as confirmed only where the screen shows the same. The first 3 min are used; the video goes to temporary storage and is deleted right after the inspection.",
     upVideo: "Uploading video", videoBig: "Video must be under 150 MB.",
     gaugeHint: "Photos can show signs of repaint (shade, gloss, overspray, gaps) but not paint thickness. Such signs go to «Not confirmed» and a manager checks them — add gauge numbers to confirm." },
   ru: { title: "Проверить свою машину", sub: "Добавьте 3–10 фото обхода (лучше всего машина целиком с 4 углов). Можно указать замеры толщиномера. Тот же агент осмотрит машину вживую за 1–2 минуты.",
     make: "Марка", model: "Модель", year: "Год", body: "Кузов", photos: "Фото (3–10)", paint: "Толщиномер, мкм (необязательно)", go: "Осмотреть", busy: "Агент работает…",
     privacy: "Фото используются только для этого осмотра и не сохраняются. По публичной ссылке публикуются отчёт и одно фото для объявления со скрытым номером. Не загружайте фото людей и документов.",
     open: "Открыть отчёт", need: "Заполните марку, модель, год и добавьте 3–10 фото.", prep: "Готовлю фото…", back: "Демо-машины",
-    video: "Видео с голосом (необязательно, до 150 МБ)", videoNote: "Во время съёмки называйте замеры вслух («капот 110, левое крыло 240») — агент их расшифрует. Видео попадает во временное хранилище и удаляется сразу после осмотра; используется только звук (первые 3 мин).",
+    video: "Видео с голосом (необязательно, до 150 МБ)", videoNote: "Держите экран толщиномера в кадре и называйте замеры вслух («капот 110, левое крыло 240»): цифра подтверждается, только если экран показывает то же самое. Используются первые 3 мин; видео попадает во временное хранилище и удаляется сразу после осмотра.",
     upVideo: "Загружаю видео", videoBig: "Видео должно быть меньше 150 МБ.",
     gaugeHint: "По фото видны признаки окраса (оттенок, блеск, напыл, зазоры), но не толщина краски. Такие признаки идут в «Не подтверждено», их проверит менеджер — добавьте замеры толщиномера, чтобы подтвердить." },
 };

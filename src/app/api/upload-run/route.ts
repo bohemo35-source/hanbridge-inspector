@@ -4,6 +4,7 @@
 //           kept in this instance's /tmp only (not stored in Blob), then the same agent run streamed as SSE.
 //           Only the report JSON and the plate-hidden listing photo are published.
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code — the picture is kept too (720p 10 fps): the gauge screen confirms the voice
 // @updated: 2026-11-03 claude-code — time budgets from the start of the request; video size checked before reading it
 // @updated: 2026-11-03 claude-code — the uploaded video is deleted on every refusal too; the delete result is shown in the upload_video step
 // @updated: 2026-11-03 claude-code — optional walk-around video: uploaded by the browser straight to Vercel Blob (/api/blob-upload), fetched here by URL, audio kept (≤180 s) for the agent, the Blob file deleted after the run
@@ -36,7 +37,7 @@ function ownUploadUrl(raw: string): URL | null {
     return store && u.protocol === "https:" && u.hostname === `${store.toLowerCase()}.public.blob.vercel-storage.com` && u.pathname.startsWith("/uploads/") ? u : null;
   } catch { return null; }
 }
-/** download the visitor's video and keep only its sound (≤180 s, mono AAC): the agent transcribes the voice, frames are not used */
+/** download the visitor's video: ≤180 s, 720p 10 fps + mono sound — the agent transcribes the voice and reads the gauge screen in the frames */
 async function fetchVideoAudio(u: URL, dir: string): Promise<boolean> {
   const res = await fetch(u);
   if (!res.ok || !res.body) return false;
@@ -45,7 +46,7 @@ async function fetchVideoAudio(u: URL, dir: string): Promise<boolean> {
   if (buf.length > VIDEO_MAX_BYTES) return false;
   const src = path.join(dir, "upload-src"); await writeFile(src, buf);
   await mkdir(path.join(dir, "video"), { recursive: true });
-  await promisify(execFile)(await ffmpegBin(), ["-hide_banner", "-loglevel", "error", "-y", "-i", src, "-t", "180", "-vn", "-ac", "1", "-ar", "16000", "-c:a", "aac", "-b:a", "64k", path.join(dir, "video", "owner_video.mp4")], { timeout: 60_000 });
+  await promisify(execFile)(await ffmpegBin(), ["-hide_banner", "-loglevel", "error", "-y", "-i", src, "-t", "180", "-vf", "scale=-2:'min(720,ih)',fps=10", "-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-ac", "1", "-ar", "16000", "-c:a", "aac", "-b:a", "64k", path.join(dir, "video", "owner_video.mp4")], { timeout: 90_000 });
   return true;
 }
 const clean = (v: FormDataEntryValue | null, max = 40) => String(v ?? "").replace(/[^\p{L}\p{N} .\-/]/gu, "").trim().slice(0, max);
@@ -106,7 +107,7 @@ export async function POST(req: Request) {
           const gone = await del(videoUrl.toString()).then(() => "file deleted from storage", (e: unknown) => `delete failed: ${e instanceof Error ? e.message.slice(0, 80) : "error"}`);
           if (gone.startsWith("delete failed")) console.error(JSON.stringify({ route: "upload-run", carId, blobDelete: gone }));
           // the visitor sees whether the video reached the agent (it is not part of the saved trace)
-          send("step", { tool: "upload_video", ok: video, ms: Date.now() - ts, outputSummary: `${video ? "video received: sound (≤180 s) handed to the agent" : `video not used: ${why}`}; ${gone}` });
+          send("step", { tool: "upload_video", ok: video, ms: Date.now() - ts, outputSummary: `${video ? "video received: ≤180 s (voice + gauge screen) handed to the agent" : `video not used: ${why}`}; ${gone}` });
         }
         send("car", { carId, make, model, year, photos: saved, paintReadings: initialPaint.length, video });
         const { report, ms } = await runInspection({ carId, onStep: (s) => send("step", s), initialPaint, startedAt });

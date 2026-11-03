@@ -3,6 +3,7 @@
 // @purpose: Independent verifier: open-weight muse-spark-open-1026 (Baseten), fallback muse-spark-1.3; deterministic verdict + handoff rules
 // @created: 2026-10-29
 // @updated: 2026-11-03 claude-code — ownerReadingOnly / applyOwnerOnlyRule / withOwnerReasons: a reading typed by the visitor is a claim, not proof
+// @updated: 2026-11-03 claude-code — confirmedByScreen / applyUploadVoiceRule: on an upload only a readable gauge screen that matches the voice confirms paint work
 // @updated: 2026-11-03 claude-code — photoPaintOnly / applyPhotoPaintRule: paint work seen on photos (+ typed numbers) is never confirmed without an inspector measurement
 import { z } from "zod";
 import { classifyPaint } from "@/lib/domain/paint";
@@ -71,6 +72,27 @@ export function applyPhotoPaintRule(findings: Finding[], measuredPanels: Readonl
     handoffReason: `photo signs of paint work not measured (${panels.join(", ")}) — a manager checks it`,
     reasons_en: [`Photos show signs of paint work on: ${panels.map(name).join(", ")} — not confirmed; add paint-gauge readings or a manager checks it.`],
     reasons_ru: [`На фото признаки окраса: ${panels.map(name).join(", ")} — не подтверждено; добавьте замеры толщиномера или это проверит менеджер.`],
+  };
+}
+
+/** Pure: panels where the gauge screen read from the visitor's video agrees with the voice (same class: factory / repaint / filler). */
+export function confirmedByScreen(voice: Readonly<Record<string, number>>, screen: Readonly<Record<string, number>>): string[] {
+  return Object.keys(voice).filter((p) => screen[p] !== undefined && classifyPaint(voice[p]) === classifyPaint(screen[p]));
+}
+
+/** Pure (mutates): on a visitor's upload, paint work on a panel no readable gauge screen confirmed (voice, photos or typed numbers only) → unconfirmed. Owner decision 03.11. */
+export function applyUploadVoiceRule(findings: Finding[], measuredPanels: ReadonlySet<string>) {
+  const claims = findings.filter((f) => f.verified && PAINT_KINDS.has(f.kind) && !measuredPanels.has(f.panel));
+  for (const f of claims) {
+    f.verified = false;
+    f.verifierNote = `${f.verifierNote ?? ""} · the visitor's video says so, but no readable gauge screen with matching digits → unconfirmed`.replace(/^ · /, "");
+  }
+  if (!claims.length) return { claims, reasons_en: [] as string[], reasons_ru: [] as string[] };
+  const panels = [...new Set(claims.map((f) => f.panel.replace(/_/g, " ")))].join(", ");
+  return {
+    claims,
+    reasons_en: [`Paint work named in the owner's video (${panels}) — the gauge screen is not readable or does not match, so it is not confirmed; a manager checks it.`],
+    reasons_ru: [`Окрас со слов в видео владельца (${panels}) — экран толщиномера не читается или не совпадает, поэтому не подтверждено; проверит менеджер.`],
   };
 }
 

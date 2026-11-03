@@ -3,9 +3,10 @@
 // @purpose: Verifier/verdict unit tests: handoff at 0.5, critical->WALK_AWAY, conflict detection
 // @created: 2026-10-29
 // @updated: 2026-11-03 claude-code — owner-typed reading alone is not proof
+// @updated: 2026-11-03 claude-code — uploads: only a readable gauge screen matching the voice confirms (owner decision 03.11)
 // @updated: 2026-11-03 claude-code — photo signs of paint work alone (or with a typed number) are not proof
 import { describe, expect, it } from "vitest";
-import { applyOwnerOnlyRule, applyPhotoPaintRule, decideVerdict, detectConflict, ownerReadingOnly, photoPaintOnly, shouldHandoff, withOwnerReasons } from "./verifier";
+import { applyOwnerOnlyRule, applyPhotoPaintRule, applyUploadVoiceRule, confirmedByScreen, decideVerdict, detectConflict, ownerReadingOnly, photoPaintOnly, shouldHandoff, withOwnerReasons } from "./verifier";
 import type { Finding } from "@/lib/schema";
 
 const f = (over: Partial<Finding>): Finding => ({
@@ -99,5 +100,25 @@ describe("photoPaintOnly / applyPhotoPaintRule", () => {
     const v = withOwnerReasons(decideVerdict([]), rule, false);
     expect(v.decision).toBe("BUY");
     expect(v.handoff).toBe(true);
+  });
+});
+
+describe("uploads: voice vs gauge screen (owner decision 03.11)", () => {
+  it("confirmedByScreen: same paint class on voice and screen confirms; different class or no screen does not", () => {
+    expect(confirmedByScreen({ front_left_fender: 240, trunk: 181, hood: 110 }, { front_left_fender: 236, trunk: 120 })).toEqual(["front_left_fender"]);
+    expect(confirmedByScreen({ hood: 110 }, {})).toEqual([]);
+    expect(confirmedByScreen({}, { hood: 300 })).toEqual([]);
+  });
+  it("applyUploadVoiceRule: voice-only paint work → unconfirmed + reason; a screen-confirmed panel and visible damage stay", () => {
+    const voice = f({ id: "v-trunk", panel: "trunk", kind: "panel_replaced", evidence: [{ type: "transcript", mediaId: "owner_video.mp4", quote: "замена" }] });
+    const screen = f({ id: "v-fender", panel: "front_left_fender", kind: "repaint", evidence: [{ type: "transcript", mediaId: "owner_video.mp4", quote: "крыло 240" }, { type: "gauge", mediaId: "owner_video.mp4", gaugeMicrons: 236 }] });
+    const dent = f({ id: "d", panel: "rear_bumper", kind: "dent", evidence: [{ type: "frame", mediaId: "p1" }] });
+    const rule = applyUploadVoiceRule([voice, screen, dent], new Set(["front_left_fender"]));
+    expect(rule.claims.map((x) => x.id)).toEqual(["v-trunk"]);
+    expect(voice.verified).toBe(false);
+    expect(screen.verified).toBe(true);
+    expect(dent.verified).toBe(true);
+    expect(rule.reasons_en[0]).toContain("trunk");
+    expect(applyUploadVoiceRule([], new Set()).reasons_en).toEqual([]);
   });
 });

@@ -4,6 +4,7 @@
 //           -> per-panel measurements with second-level evidence. Never invents microns: when the digits are not
 //           readable, only the gauge display colour band is used, and the finding stays low-confidence/unverified.
 // @created: 2026-10-28
+// @updated: 2026-11-03 claude-code — `parallel` option: frame batches read concurrently (a visitor's video must fit the 300 s route)
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -234,7 +235,7 @@ export interface ReadGaugeVideoResult {
   stats: { frames: number; gaugeFrames: number; digitsRead: number; sparkCalls: number; samCalls: number; ms: number };
 }
 
-export async function readGaugeVideo(opts: { video: string; mediaId?: string; maxFrames?: number; batch?: number; reread?: number }): Promise<ReadGaugeVideoResult> {
+export async function readGaugeVideo(opts: { video: string; mediaId?: string; maxFrames?: number; batch?: number; reread?: number; parallel?: number }): Promise<ReadGaugeVideoResult> {
   const t0 = Date.now();
   const mediaId = opts.mediaId ?? path.basename(opts.video);
   const raw = await extractFrames(opts.video, opts.maxFrames ?? 60);
@@ -242,7 +243,8 @@ export async function readGaugeVideo(opts: { video: string; mediaId?: string; ma
   const frames: GaugeFrame[] = [];
   let sparkCalls = 0;
   let samCalls = 0;
-  for (let s = 0; s < raw.length; s += batch) {
+  const starts: number[] = []; for (let s = 0; s < raw.length; s += batch) starts.push(s);
+  const readBatch = async (s: number) => {
     const chunk = raw.slice(s, s + batch);
     const parts: ChatPart[] = [
       { type: "text", text: `Frames ${s}..${s + chunk.length - 1} of a used-car paint-gauge inspection video, in time order.` },
@@ -250,11 +252,13 @@ export async function readGaugeVideo(opts: { video: string; mediaId?: string; ma
     ];
     sparkCalls++;
     const draft = await sparkJson(FramesDraftSchema, [{ role: "user", content: parts }], FRAMES_SPEC, { maxTokens: 4000 });
-    for (const d of draft.frames) {
-      const src = chunk[d.i];
-      if (!src) continue;
-      frames.push({ t: src.t, gaugeVisible: d.gaugeVisible, microns: d.microns, displayColor: d.displayColor, panel: d.panel, panelConfidence: d.panelConfidence });
-    }
+    return draft.frames.flatMap((d) => { const src = chunk[d.i]; return src ? [{ t: src.t, gaugeVisible: d.gaugeVisible, microns: d.microns, displayColor: d.displayColor, panel: d.panel, panelConfidence: d.panelConfidence }] : []; });
+  };
+  // batches in order (default one at a time, as before); with `parallel` several at once, results kept in time order
+  const par = Math.max(1, opts.parallel ?? 1);
+  for (let k = 0; k < starts.length; k += par) {
+    const got = await Promise.all(starts.slice(k, k + par).map(readBatch));
+    for (const g of got) frames.push(...g);
   }
   // second pass: try to read digits on a few gauge frames (cost-capped)
   const candidates = frames.filter((f) => f.gaugeVisible && f.microns === null && f.panel && f.panel !== "unknown").slice(0, opts.reread ?? 8);

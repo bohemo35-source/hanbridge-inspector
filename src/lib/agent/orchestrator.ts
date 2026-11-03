@@ -3,6 +3,7 @@
 // @purpose: Agent orchestrator: Spark tool-calling loop (max 16 steps) -> cross-source merge -> open-weight verifier -> deterministic verdict -> report
 // @created: 2026-10-29
 // @updated: 2026-11-03 claude-code — a finding backed only by the owner's typed gauge reading goes to Unconfirmed and the report is handed to a manager
+// @updated: 2026-11-03 claude-code — uploads: the visitor's voice is a claim; a panel is measured only when the gauge screen in their video is read and matches it
 // @updated: 2026-11-03 claude-code — startedAt: time budgets count from the start of the request
 // @updated: 2026-11-03 claude-code — uploads with a video are always handed to a manager
 // @updated: 2026-11-03 claude-code — uploads: every photo (≤10) goes through find_defects with paint signs; photo-only paint claims → Not confirmed + manager
@@ -26,7 +27,7 @@ import { indexPhotos, pickDefectPhotos, pickListingCandidates, type PhotoIndex }
 import { glimmerConfigured } from "@/lib/meta/glimmer";
 import { readDiagnosticReport } from "./tools/diagnostic";
 import { readInspectorReport } from "./tools/inspector";
-import { applyOwnerOnlyRule, applyPhotoPaintRule, decideVerdict, detectConflict, photoPaintOnly, verifyFinding, withOwnerReasons } from "./verifier";
+import { applyOwnerOnlyRule, applyPhotoPaintRule, applyUploadVoiceRule, confirmedByScreen, decideVerdict, detectConflict, photoPaintOnly, verifyFinding, withOwnerReasons } from "./verifier";
 
 /** Vercel kills the run route at 300 s (maxDuration): past this point optional work is skipped instead of risking the whole report. */
 const RUN_SOFT_DEADLINE_MS = 235_000;
@@ -60,7 +61,7 @@ export const AGENT_TOOLS: ToolDef[] = [
   fn("segment_image", "SAM 3.1: segment car/license plate/wheels in one photo", { photoId: { type: "string" } }, ["photoId"]),
   fn("find_defects", "Find visible defects in one photo (SAM crop + Spark vision)", { photoId: { type: "string" } }, ["photoId"]),
   fn("transcribe_note", "Transcribe inspector voice from ONE video and extract per-panel readings", { videoId: { type: "string" } }, ["videoId"]),
-  fn("read_gauge_video", "Read paint-gauge video (MINI paint_gauge.mp4 only)", {}),
+  fn("read_gauge_video", "Read the paint-gauge screen in a video (paint_gauge.mp4, or the visitor's own video)", {}),
   fn("read_diagnostic_report", "Read LAUNCH OBD PDF from sheets/", { file: { type: "string" } }, ["file"]),
   fn("read_inspector_report", "Read inspector_report_ru.txt claims per panel", {}),
   fn("analyze_paint_readings", "Deterministic findings from collected paint readings", {}),
@@ -143,6 +144,8 @@ export async function runInspection(opts: {
   const measuredPanels = new Set<string>(), typedPanels = new Set((opts.initialPaint ?? []).map((r) => r.panel));
   const addPaint = (rec: Record<string, number>, measured = true) => { for (const [p, v] of Object.entries(rec)) { paint.set(p, Math.max(paint.get(p) ?? 0, v)); if (measured) measuredPanels.add(p); } };
   const paintStats = new Map<string, { min: number; max: number; points: number }>();
+  // uploads: what the visitor says vs what the gauge screen in their video shows (owner decision 03.11)
+  const voicePaint: Record<string, number> = {}, screenPaint: Record<string, number> = {};
   const addStats = (rec: Record<string, { min: number; max: number; points: number }>) => {
     for (const [p, s] of Object.entries(rec)) { const e = paintStats.get(p); paintStats.set(p, e ? { min: Math.min(e.min, s.min), max: Math.max(e.max, s.max), points: e.points + s.points } : s); }
   };
@@ -171,12 +174,14 @@ export async function runInspection(opts: {
         const videoId = String(args.videoId ?? media.videos[0] ?? "");
         if (!videoId) { step(name, key, true, "source absent: no videos for this car", Date.now() - ts); return "source absent: no videos"; }
         const r = await transcribeNote({ video: await ensureVideoPath(opts.carId, videoId), mediaId: videoId });
-        addFindings(r.findings); addPaint(r.paint); addStats(r.paintStats); contextOverrides.push(...r.conflicts);
+        addFindings(r.findings); addPaint(r.paint, !isUpload); addStats(r.paintStats); contextOverrides.push(...r.conflicts);
+        if (isUpload) Object.assign(voicePaint, r.paint);
         out = `chunks=${r.chunks.length} readings=${r.readings.length} findings=${r.findings.length} conflicts=${r.conflicts.map((c) => c.panel).join(",") || "none"} paint=${JSON.stringify(r.paint)}`;
       } else if (name === "read_gauge_video") {
         if (!media.gaugeVideo) { step(name, key, true, "source absent: no paint_gauge.mp4 for this car", Date.now() - ts); return "source absent: no paint_gauge.mp4"; }
-        const r = await readGaugeVideo({ video: await ensureVideoPath(opts.carId, media.gaugeVideo), mediaId: media.gaugeVideo });
-        addFindings(r.findings); addPaint(r.paint);
+        const r = await readGaugeVideo({ video: await ensureVideoPath(opts.carId, media.gaugeVideo), mediaId: media.gaugeVideo, ...(isUpload ? { maxFrames: 48, parallel: 4, reread: 8 } : {}) });
+        addFindings(r.findings); addPaint(r.paint, !isUpload);
+        if (isUpload) Object.assign(screenPaint, r.paint);
         out = `frames=${r.stats.frames} measurements=${r.measurements.length} findings=${r.findings.length} paint=${JSON.stringify(r.paint)}`;
       } else if (name === "read_diagnostic_report") {
         const file = String(args.file ?? media.diagnosticPdfs[0] ?? "");
@@ -248,7 +253,7 @@ export async function runInspection(opts: {
   };
   const messages: ChatMessage[] = [
     { role: "system", content: "You are the Hanbridge inspection agent. Every claim needs evidence: no evidence, no finding (tools enforce this). Cross-check independent sources: voice vs gauge-screen colour vs photos vs inspector text. Agreement of two sources raises confidence; contradiction -> conflict. Call tools, then finalize_report. Budget: find_defects on at most 3 suggested photos, transcribe_note on at most ONE video (prefer paint_gauge.mp4 when present), read_gauge_video only when gaugeVideo is present, read_diagnostic_report only when a PDF is listed. Always call analyze_paint_readings after voice/gauge, estimate_landed_cost once, and make_listing_photo once. When sources disagree about a panel (voice numbers vs gauge-screen colour vs inspector text vs photos), or a finding rests on a single source, call recheck_panel(panel, reason) for that panel (at most 2 times) BEFORE finalize_report, and say in reason which sources disagree. If a source is absent the tool says so — do not invent it." },
-    ...(isUpload ? [{ role: "system" as const, content: "This car was uploaded by its owner: the photos are the main source. Override the photo budget: call find_defects on EVERY photoId in suggestedPhotoIds, all of them in your first step (parallel tool calls). The tool also reports visual signs of paint work (shade/gloss/texture differences between neighbouring panels, overspray on seals, uneven gaps); such signs are not proof of repaint — they stay unconfirmed unless a gauge reading confirms them." }] : []),
+    ...(isUpload ? [{ role: "system" as const, content: "This car was uploaded by its owner: the photos are the main source. Override the photo budget: call find_defects on EVERY photoId in suggestedPhotoIds, all of them in your first step (parallel tool calls). When a video is listed, call transcribe_note AND read_gauge_video on it in the same step: the owner's spoken numbers count only where the gauge screen in the video shows the same. The tool also reports visual signs of paint work (shade/gloss/texture differences between neighbouring panels, overspray on seals, uneven gaps); such signs are not proof of repaint — they stay unconfirmed unless a gauge reading confirms them." }] : []),
     { role: "user", content: `Inspect this car and finalize a report. Available media:\n${JSON.stringify(inventory, null, 2)}` },
   ];
 
@@ -281,7 +286,15 @@ export async function runInspection(opts: {
   // uploads: every photo is looked at, even when the model skipped some (rule, not a model choice)
   if (isUpload) {
     const unseen = suggested.filter((p) => !photoViews.has(p));
-    if (unseen.length && Date.now() - t0 < 150_000) await mapPool(unseen, 4, async (p) => { await execute("find_defects", { photoId: p }); });
+    const gaugeLeft = media.gaugeVideo && !called.has("read_gauge_video:{}") && Date.now() - t0 < 150_000;
+    await Promise.all([
+      unseen.length && Date.now() - t0 < 150_000 ? mapPool(unseen, 4, async (p) => { await execute("find_defects", { photoId: p }); }) : undefined,
+      gaugeLeft ? execute("read_gauge_video", {}) : undefined,
+    ]);
+    // a panel counts as measured only when the screen read from the video agrees with what the visitor said
+    for (const p of confirmedByScreen(voicePaint, screenPaint)) measuredPanels.add(p);
+    if (Object.keys(voicePaint).length || Object.keys(screenPaint).length)
+      step("conflict_check", "voice vs gauge screen", true, `voice=${JSON.stringify(voicePaint)} screen=${JSON.stringify(screenPaint)} confirmed=${confirmedByScreen(voicePaint, screenPaint).join(",") || "none"}`, 0, "Owner's video: spoken numbers count only where the gauge screen shows the same");
   }
 
   // deterministic paint findings win/merge
@@ -355,6 +368,9 @@ export async function runInspection(opts: {
   const photoRule = applyPhotoPaintRule(findings, measuredPanels);
   for (const f of photoRule.signs) step("conflict_check", f.id, true, `${f.panel}/${f.kind}: photo sign of paint work, not measured → unconfirmed`, 0);
   if (photoRule.handoffReason && !handoffReason) handoffReason = photoRule.handoffReason;
+  // uploads: paint work said in the visitor's video but not on a readable, matching gauge screen stays a claim
+  const voiceRule = isUpload ? applyUploadVoiceRule(findings, measuredPanels) : { claims: [], reasons_en: [] as string[], reasons_ru: [] as string[] };
+  for (const f of voiceRule.claims) step("conflict_check", f.id, true, `${f.panel}/${f.kind}: owner's video only, gauge screen not readable / not matching → unconfirmed`, 0);
   // a visitor's own video: the voice is the owner's, not our inspector's — until the owner decides otherwise a manager always checks it
   if (isUpload && media.videos.length && !handoffReason) handoffReason = "the visitor's own video (spoken gauge readings) — a manager checks it";
 
@@ -367,7 +383,7 @@ export async function runInspection(opts: {
     verdict = { ...verdict, reasons_en: reasons.reasons_en, reasons_ru: reasons.reasons_ru };
   } catch { /* deterministic reasons stand */ }
   // the buyer must see why it is not a clean BUY: the unconfirmed typed reading leads the reasons
-  verdict = withOwnerReasons(verdict, { reasons_en: [...ownerRule.reasons_en, ...photoRule.reasons_en], reasons_ru: [...ownerRule.reasons_ru, ...photoRule.reasons_ru] }, verified.length > 0);
+  verdict = withOwnerReasons(verdict, { reasons_en: [...ownerRule.reasons_en, ...photoRule.reasons_en, ...voiceRule.reasons_en], reasons_ru: [...ownerRule.reasons_ru, ...photoRule.reasons_ru, ...voiceRule.reasons_ru] }, verified.length > 0);
   if (handoffReason) verdict = { ...verdict, handoff: true };
 
   // listing must show the whole car: Spark's view label is not enough (a tail-light close-up came back as "rear_left").
