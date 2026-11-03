@@ -5,6 +5,7 @@
 #           originals untouched, output → <out>/chat-1..8.jpg
 # @created: 2026-11-03
 # @updated: 2026-11-03 claude-code — bottom strip of the bolt shots blurred
+# @updated: 2026-11-03 claude-code — Arthur's own name («Artur Lim») blurred too, everywhere
 # @updated: 2026-11-03 claude-code — dm/ desktop shots (18.09.49 «когда она поедет?», 18.07.52 photo wall): names, plates, avatar; the photo wall pixelated whole (neighbour plates)
 # @updated: 2026-11-03 claude-code — also the two «from bolt» shots (IMG_4020/4021: «Когда отправка?», «Не отправилось»): names, company, avatars, people's names in file names
 # usage: python3 scripts/video/blur_pain.py <dir with PHOTO-*.jpg> <out dir>   (a «from bolt» subfolder, when present, gives bolt-4020.jpg / bolt-4021.jpg)
@@ -50,7 +51,8 @@ BOLT = {
                      (85, 898, 130, 52), (162, 966, 418, 54), (162, 1070, 418, 54), (136, 1146, 50, 46)],  # forwarded from, two more names, reaction avatar
     "IMG_4021.PNG": [(190, 98, 272, 66), (508, 92, 80, 80),
                      (42, 420, 245, 34), (40, 556, 60, 56), (98, 558, 245, 34), (94, 832, 245, 34), (322, 1062, 245, 34),  # «[name]» x4, document photo
-                     (332, 758, 50, 46), (352, 1160, 50, 46)],              # reaction avatars
+                     (332, 758, 50, 46), (352, 1160, 50, 46),               # reaction avatars
+                     (40, 290, 190, 58)],                                    # «Artur Lim · Видео» quote (name + thumbnail)
 }
 # the bottom strip (input bar, a phone number and a passport edge peeking in) is blurred too, though every use crops it off
 for boxes in BOLT.values(): boxes.append((0, 1160, 603, 151))
@@ -65,8 +67,9 @@ DM = {
                      (254, 118, 112, 26),                                                                     # «[name]» (plate digits + surname)
                      (356, 558, 76, 24), (544, 540, 70, 24),                                                  # plates on the two videos
                      (236, 676, 52, 24),                                                                      # «[name]»
-                     (44, 920, 195, 40)]),                                                                    # «[name]»
-    "18.07.52": dict(out="dm-0752.jpg", crop=(0, 0, 672, 1123), boxes=[(10, 6, 44, 44), (50, 8, 175, 34)],
+                     (44, 920, 195, 40),                                                                      # «[name]»
+                     (46, 184, 76, 22)]),                                                                     # «Artur Lim» quote
+    "18.07.52": dict(out="dm-0752.jpg", crop=(0, 0, 672, 1123), boxes=[(10, 6, 44, 44), (50, 8, 175, 34), (78, 1024, 155, 40)],  # + «В ответ Artur Lim»
                      pixelate=[(288, 98, 384, 920, 14)]),                                                     # the whole photo wall
 }
 dm = os.path.join(src, "dm")
