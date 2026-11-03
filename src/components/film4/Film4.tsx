@@ -3,7 +3,7 @@
 // @purpose: Film v4 player ("trailer"): scroll-scrubbed clips with letterbox, grain, grade and Ken Burns; act cards; transitions (dissolve / light wipe / zoom-through / dip); word-by-word trailer lines; ledger toasts; watch mode; then the garage proof
 // @created: 2026-11-02
 // @updated: 2026-11-03 claude-code
-// @updated: 2026-11-03 claude-code — portrait: the whole 16:9 frame in a band over the scene's pre-blurred picture (film3/b/); phones: pre-blurred insert backgrounds; watch mode starts without waiting for the voice; coming clips woken in watch mode
+// @updated: 2026-11-03 claude-code — portrait: the whole 16:9 frame in a band over the scene's pre-blurred picture (film3/b/); phones: pre-blurred insert backgrounds; watch mode starts without waiting for the voice and follows it only while its clock advances (a stuck voice froze the picture), timing prefetched; big lines under the band in portrait; coming clips woken in watch mode
 // @updated: 2026-11-03 claude-code — phones: `hb-lite` (no SVG glow / blur / backdrop blur in inserts and maps), first poster high priority
 // @updated: 2026-11-03 claude-code — phones: light clips (film3/m/), poster image always under the clip, the clip shows once it has a frame, decoder woken once
 // @updated: 2026-11-03 claude-code — clip time spans the transition tail too: the incoming clip moves while it fades in (was parked on frame 0)
@@ -132,21 +132,26 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
       narr.current.play().catch(() => {});
     }
     let y = window.scrollY, prev = performance.now();
-    // the picture does not wait for the voice to buffer (a phone stood 2.5 s on the title): scene pace until the voice plays,
-    // then the voice jumps to where the picture is and leads again
-    let voiceOn = false;
-    narr.current?.addEventListener("playing", () => {
-      if (voiceOn || !narr.current || !tm) return; voiceOn = true;
-      const { i, t } = sceneAt(y); const w = tm.scenes[SCENES[i].id];
-      if (w) narr.current.currentTime = w[0] + t * (w[1] - w[0]);
-    }, { once: true });
-    if (narr.current && !narr.current.paused && narr.current.readyState >= 3) voiceOn = true;
+    // The picture never waits for the voice (a phone stood 2.5 s on the title; a voice stuck after a seek froze the picture for minutes):
+    // it follows the voice only while the voice's clock really advances, otherwise it keeps the scene's pace; when the voice moves again
+    // and is more than 1 s off, the voice is brought to the picture.
+    const voiceAt = (yy: number) => { const { i, t } = sceneAt(yy); const w = tm?.scenes[SCENES[i].id]; return w ? w[0] + t * (w[1] - w[0]) : null; };
+    let lastT = -1, lastMove = 0, following = false;
     const step = (now: number) => {
       if (!autoRef.current) return;
       const dt = Math.min(64, now - prev); prev = now;
       const vh = vhNow();
       const a = narr.current;
-      if (tm && a && voiceOn && !a.paused) {
+      if (tm && a && !a.paused) {
+        if (a.currentTime !== lastT) { lastT = a.currentTime; lastMove = now; }
+        const moving = now - lastMove < 600 && a.readyState >= 3;
+        if (moving && !following) {
+          following = true;
+          const want = voiceAt(y);
+          if (want !== null && Math.abs(want - a.currentTime) > 1) { a.currentTime = want; lastT = want; } // resync once, only when it matters
+        } else if (!moving) following = false;
+      } else following = false;
+      if (tm && a && following) {
         // follow the voice: find the scene whose window holds the audio time
         const time = a.currentTime;
         let j = SCENES.findIndex((sc) => { const w = tm.scenes[sc.id]; return w && time >= w[0] && time < w[1]; });
@@ -156,8 +161,9 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
         y = top0 + (starts[j] + k * SCENES[j].vh) * vh;
         if (a.ended) { stopAuto(); return; }
       } else {
+        // the scene's own pace (the voice window when there is narration, so picture and voice stay in step)
         const { i } = sceneAt(y); const sc = SCENES[i];
-        y += (sc.vh * vh) / (sc.sec * 1000) * dt;
+        y += (sc.vh * vh) / (Math.max(0.5, playSec.current?.(i) ?? sc.sec) * 1000) * dt;
       }
       if ((y - top0) / vh >= TOTAL_VH - 0.5) { stopAuto(); return; }
       window.scrollTo(0, y);
@@ -165,6 +171,10 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     };
     requestAnimationFrame(step);
   }, [stopAuto, lang]);
+  useEffect(() => { // the voice timing is small: fetch it ahead so Play starts without waiting
+    if (timing.current !== undefined) return;
+    fetch(`/film3/audio/narration-${lang}.json`).then((r) => (r.ok ? r.json() : null)).then((j) => { if (timing.current === undefined) timing.current = j; }).catch(() => undefined);
+  }, [lang]);
   useEffect(() => () => { music.current?.pause(); narr.current?.pause(); }, []);
   useEffect(() => () => { autoRef.current = false; }, []); // unmount stops the autoscroll loop
   useEffect(() => {
@@ -299,7 +309,8 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
           {s.receipt && <Receipt lines={s.receipt === "busan" ? RECEIPT_BUSAN : RECEIPT_CUSTOMS} lang={lang} k={seg(pos.t, 0.06, 0.18) * outK} top={lb + 6} />}
 
           {/* trailer lines */}
-          {s.lines && <Lines s={s} t={pos.t} out={outK} lang={lang} bottom={lb + (narrow ? 12 : 6)} big={!!s.big} />}
+          {/* portrait: big lines too sit under the picture band, not over it */}
+          {s.lines && <Lines s={s} t={pos.t} out={outK} lang={lang} bottom={lb + (narrow ? 12 : 6)} big={!!s.big && !narrow} />}
 
           {/* progress rail: four acts, inside the bottom letterbox */}
           <div className="absolute inset-x-0 bottom-0 z-[6] flex items-end px-4 sm:px-10" style={{ height: lb ? `${lb}vh` : 40, paddingBottom: lb ? "2.2vh" : 12 }}>
