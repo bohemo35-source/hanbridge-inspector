@@ -4,6 +4,7 @@
 # @purpose: ~46 s cut for X (16:9, burned-in captions, drums bed): pain → agent → NEGOTIATE → 3D garage → film → Muse Code timelapse → end card with the link.
 #           Pieces come from the jury cut (cursor already removed), the site film recording, the ТЗ-11 timelapse and the blurred client chats.
 # @created: 2026-11-03
+# @updated: 2026-11-03 claude-code — «Когда отправка?» chat (from bolt, blurred) first in the collage
 # usage: python3 scripts/video/x_cut.py <META-HACKATON dir>   → recordings/x/hanbridge-x.mp4
 import os, subprocess, sys
 from PIL import Image, ImageDraw, ImageFont
@@ -43,8 +44,9 @@ parts = []
 # 1) pain, 3 s: three blurred chats over ink
 pain = os.path.join(out, "pain.png")
 im = Image.new("RGB", (1920, 1080), INK)
-for k, n in enumerate((2, 5, 8)):
-    c = Image.open(R("recordings", "pain", f"chat-{n}.jpg")).convert("RGB").crop((0, 180, 736, 1420)); c.thumbnail((520, 880))
+for k, n in enumerate(("bolt-4021", "chat-5", "chat-8")):
+    c = Image.open(R("recordings", "pain", f"{n}.jpg")).convert("RGB")
+    c = c.crop((0, round(c.height * 0.1125), c.width, round(c.height * 0.8875))); c.thumbnail((520, 880))  # status and input bars cropped
     im.paste(c, (230 + k * 520, 190))
 im.save(pain)
 cp = os.path.join(out, "cap-pain.png"); caption(cp, "BEFORE", "Buying a car in Korea: hundreds of photos in a chat")

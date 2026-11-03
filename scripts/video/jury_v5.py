@@ -4,6 +4,7 @@
 # @purpose: Jury cut v5 = 9.5 s «pain» intro (real buyer chats, blurred; Arthur's ElevenLabs line) + jury cut v4 (voice, no music) minus three silent waits
 #           (C-home tail, D2a wait, F2 GPU wait) so the film stays ≤ 3:00; music is mixed afterwards by video-build/voice-build/mix_music.sh as before
 # @created: 2026-11-03
+# @updated: 2026-11-03 claude-code — «Когда отправка?» chat (from bolt, blurred) first in the collage
 # usage: python3 scripts/video/jury_v5.py <META-HACKATON dir> <voice line mp3>   → recordings/jury-cut-voiced-el-v5.mp4
 import os, re, subprocess, sys
 from PIL import Image, ImageDraw, ImageFont
@@ -25,8 +26,9 @@ def lufs(path):
 # 1) intro picture: three blurred chats + a quiet kicker; slow push-in
 bg = os.path.join(work, "intro.png")
 im = Image.new("RGB", (1920, 1080), INK); d = ImageDraw.Draw(im)
-for k, n in enumerate((1, 5, 8)):
-    c = Image.open(R("recordings", "pain", f"chat-{n}.jpg")).convert("RGB").crop((0, 180, 736, 1420)); c.thumbnail((500, 840))
+for k, n in enumerate(("bolt-4021", "chat-5", "chat-8")):
+    c = Image.open(R("recordings", "pain", f"{n}.jpg")).convert("RGB")
+    c = c.crop((0, round(c.height * 0.1125), c.width, round(c.height * 0.8875))); c.thumbnail((500, 840))  # status and input bars cropped
     im.paste(c, (235 + k * 500 + k * 25, 150))
 f = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 24)
 t = "BEFORE HANBRIDGE · REAL CHATS WITH OUR BUYERS · NAMES AND PLATES HIDDEN"
