@@ -4,6 +4,7 @@
 # @purpose: Client-chat screenshots for the "before" story: blur names, avatar, licence plates and car thumbnails in quotes (boxes found by eye, 736x1600 phone shots);
 #           originals untouched, output → <out>/chat-1..8.jpg
 # @created: 2026-11-03
+# @updated: 2026-11-03 claude-code — dm/ desktop shots (18.09.49 «когда она поедет?», 18.07.52 photo wall): names, plates, avatar; the photo wall pixelated whole (neighbour plates)
 # @updated: 2026-11-03 claude-code — also the two «from bolt» shots (IMG_4020/4021: «Когда отправка?», «Не отправилось»): names, company, avatars, people's names in file names
 # usage: python3 scripts/video/blur_pain.py <dir with PHOTO-*.jpg> <out dir>   (a «from bolt» subfolder, when present, gives bolt-4020.jpg / bolt-4021.jpg)
 import glob, os, sys
@@ -23,13 +24,18 @@ BOXES = {
     6: [(236, 386, 108, 34), (646, 364, 64, 36)],             # plates «327주 6672»
     7: [(420, 398, 165, 48)],                                  # «Номер машины: 336저 1133»
 }
-def blur(src_file, boxes, dst, k=1):
+def blur(src_file, boxes, dst, k=1, pixelate=(), crop=None):
     im = Image.open(src_file).convert("RGB")
+    for (x, y, w, h, f) in pixelate:  # coarse mosaic over a whole area: shapes stay, small text (plates) does not
+        x, y, w, h = x * k, y * k, w * k, h * k
+        reg = im.crop((x, y, x + w, y + h))
+        im.paste(reg.resize((max(1, w // f), max(1, h // f)), Image.BILINEAR).resize((w, h), Image.BILINEAR), (x, y))
     for (x, y, w, h) in boxes:
         x, y, w, h = x * k, y * k, w * k, h * k
         reg = im.crop((x, y, x + w, y + h))
         reg = reg.resize((max(1, w // 10), max(1, h // 10)), Image.BILINEAR).resize((w, h), Image.NEAREST).filter(ImageFilter.GaussianBlur(4 * k))
         im.paste(reg, (x, y))
+    if crop: im = im.crop(tuple(v * k for v in crop))
     im.save(dst, quality=90)
     print(os.path.basename(src_file), "→", os.path.basename(dst), len(boxes), "boxes")
 
@@ -49,3 +55,19 @@ bolt = os.path.join(src, "from bolt")
 for name, boxes in BOLT.items():
     if os.path.exists(os.path.join(bolt, name)):
         blur(os.path.join(bolt, name), boxes, os.path.join(out, f"bolt-{name[4:8]}.jpg"), k=2)
+
+# dm/: desktop Telegram shots, boxes found on a half-size view (k = 2); left strip of the window cropped
+DM = {
+    "18.09.49": dict(out="dm-0949.jpg", crop=(28, 0, 685, 1022), boxes=[(22, 12, 44, 44), (64, 14, 175, 34),   # avatar, chat name
+                     (254, 118, 112, 26),                                                                     # «[name]» (plate digits + surname)
+                     (356, 558, 76, 24), (544, 540, 70, 24),                                                  # plates on the two videos
+                     (236, 676, 52, 24),                                                                      # «[name]»
+                     (44, 920, 195, 40)]),                                                                    # «[name]»
+    "18.07.52": dict(out="dm-0752.jpg", crop=(0, 0, 672, 1123), boxes=[(10, 6, 44, 44), (50, 8, 175, 34)],
+                     pixelate=[(288, 98, 384, 920, 14)]),                                                     # the whole photo wall
+}
+dm = os.path.join(src, "dm")
+if os.path.isdir(dm):
+    for tag, o in DM.items():
+        f = next((os.path.join(dm, n) for n in os.listdir(dm) if tag in n), None)
+        if f: blur(f, o["boxes"], os.path.join(out, o["out"]), k=2, pixelate=o.get("pixelate", ()), crop=o["crop"])

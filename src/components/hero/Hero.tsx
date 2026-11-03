@@ -3,6 +3,7 @@
 // @purpose: Tool-first landing hero: one-line pitch, Meta models on view, demo cars with real agent reports (instant) + live agent run
 // @created: 2026-11-01
 // @updated: 2026-11-02 claude-code — film v4 type and palette (display serif, mono labels, sodium accent)
+// @updated: 2026-11-03 claude-code — «before» tiles re-picked with Arthur's dm/ shots: night booking, «when does it ship», «when will it go», a wall of photos
 // @updated: 2026-11-03 claude-code — «How it was before»: real buyer chats (names/plates blurred) above «Who does what»
 // @updated: 2026-11-03 claude-code — «How the agent worked — up to 16 steps»: the real step log of the hero car's report + a muted loop from the jury video
 // @updated: 2026-11-02 claude-code — first screen: 3D bridge on the right (desktop) / under the buttons (mobile); text and buttons stay in the flow above it
@@ -27,7 +28,7 @@ const T = {
     verified: "verified",
     before: "How it was before",
     beforeSub: "Real chats with our buyers (names and plates hidden). Every car meant dozens of messages, forwarded photo albums and a plain-text report nobody could check.",
-    beforeCap: ["«When does it ship?» — every day", "Prices and rates, message by message", "Photo albums forwarded, car after car", "The inspection report as plain text"],
+    beforeCap: ["«Booking?» — at 11:36 PM", "«When does it ship?» «Booked?»", "«When will it go?» — and voice notes", "One car, a wall of photos"],
     models: "Who does what",
     steps: "How the agent worked — up to 16 steps",
     stepsSub: "A real run on the Kia Sportage. Muse Spark plans up to 16 tool steps; then every finding goes to an independent verifier. Log entries of this run:",
@@ -49,7 +50,7 @@ const T = {
     verified: "подтверждено",
     before: "Как было до",
     beforeSub: "Настоящие переписки с нашими покупателями (имена и номера скрыты). На каждую машину — десятки сообщений, пересланные альбомы фото и текстовый отчёт, который никак не проверить.",
-    beforeCap: ["«Когда отправка?» — каждый день", "Цены и курс — сообщение за сообщением", "Альбомы фото пересылкой, машина за машиной", "Отчёт осмотра простым текстом"],
+    beforeCap: ["«Бронирую?» — в 23:36", "«Когда отправка?» «Забронировали?»", "«Когда она поедет?» — и голосовые", "Одна машина — стена фото"],
     models: "Кто что делает",
     steps: "Как работал агент — до 16 шагов",
     stepsSub: "Настоящий прогон по Kia Sportage. Muse Spark планирует до 16 шагов с инструментами, затем каждая находка идёт на независимую проверку. Записей в журнале этого прогона:",
@@ -144,7 +145,7 @@ export default function Hero({ reports, lang }: { reports: Report[]; lang: Lang 
         <h2 className="mb-2 mt-12 font-mono text-[11px] uppercase tracking-[.3em] text-sodium">{t.before}</h2>
         <p className="mb-4 max-w-3xl text-[14px] text-bone-2">{t.beforeSub}</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {["ship", 2, 5, 8].map((n, k) => (
+          {["night", "ship", "go", "wall"].map((n, k) => (
             <figure key={n} className="overflow-hidden rounded-[6px] border border-bone/10 bg-ink-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/landing/before-${n}.jpg`} alt={t.beforeCap[k]} loading="lazy" className="aspect-[368/620] w-full object-cover object-top opacity-90" />

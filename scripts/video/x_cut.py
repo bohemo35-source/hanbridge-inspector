@@ -4,7 +4,7 @@
 # @purpose: ~46 s cut for X (16:9, burned-in captions, drums bed): pain → agent → NEGOTIATE → 3D garage → film → Muse Code timelapse → end card with the link.
 #           Pieces come from the jury cut (cursor already removed), the site film recording, the ТЗ-11 timelapse and the blurred client chats.
 # @created: 2026-11-03
-# @updated: 2026-11-03 claude-code — «Когда отправка?» chat (from bolt, blurred) first in the collage
+# @updated: 2026-11-03 claude-code — collage of 4: night booking, «Когда отправка?», «когда она поедет?», a wall of photos (Arthur's dm/ shots)
 # usage: python3 scripts/video/x_cut.py <META-HACKATON dir>   → recordings/x/hanbridge-x.mp4
 import os, subprocess, sys
 from PIL import Image, ImageDraw, ImageFont
@@ -44,10 +44,14 @@ parts = []
 # 1) pain, 3 s: three blurred chats over ink
 pain = os.path.join(out, "pain.png")
 im = Image.new("RGB", (1920, 1080), INK)
-for k, n in enumerate(("bolt-4021", "chat-5", "chat-8")):
+# night booking, «when does it ship?», «when will it go?» + voice notes, a wall of photos (phone shots: status/input bars cropped)
+shots = ("chat-1", "bolt-4021", "dm-0949", "dm-0752")
+cw = (1920 - 2 * 90 - (len(shots) - 1) * 24) // len(shots)
+for k, n in enumerate(shots):
     c = Image.open(R("recordings", "pain", f"{n}.jpg")).convert("RGB")
-    c = c.crop((0, round(c.height * 0.1125), c.width, round(c.height * 0.8875))); c.thumbnail((520, 880))  # status and input bars cropped
-    im.paste(c, (230 + k * 520, 190))
+    if not n.startswith("dm-"): c = c.crop((0, round(c.height * 0.1125), c.width, round(c.height * 0.8875)))
+    c.thumbnail((cw, 840 if 190 == 150 else 860))
+    im.paste(c, (90 + k * (cw + 24), 190))
 im.save(pain)
 cp = os.path.join(out, "cap-pain.png"); caption(cp, "BEFORE", "Buying a car in Korea: hundreds of photos in a chat")
 p = os.path.join(out, "00-pain.mp4"); parts.append(p)
