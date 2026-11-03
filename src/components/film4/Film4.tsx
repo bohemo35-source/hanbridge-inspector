@@ -3,6 +3,7 @@
 // @purpose: Film v4 player ("trailer"): scroll-scrubbed clips with letterbox, grain, grade and Ken Burns; act cards; transitions (dissolve / light wipe / zoom-through / dip); word-by-word trailer lines; ledger toasts; watch mode; then the garage proof
 // @created: 2026-11-02
 // @updated: 2026-11-03 claude-code
+// @updated: 2026-11-03 claude-code — clip time spans the transition tail too: the incoming clip moves while it fades in (was parked on frame 0)
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -52,15 +53,21 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
       const t = (yy - starts[i]) / SCENES[i].vh;
       setPos((p) => (p.i === i && Math.abs(p.t - t) < 0.0015 ? p : { i, t }));
       const sec = playSec.current;
+      // a clip's time runs over the previous scene's transition tail (TW) plus its own scene: the incoming clip is already
+      // moving while it fades in and carries on without a jump (it used to wait on frame 0 for the whole transition)
+      const len = (k: number) => (sec ? Math.max(0.5, sec(k)) : SCENES[k].vh);
+      const lead = (k: number) => (k > 0 ? TW * len(k - 1) : 0);
+      const into = seg(t, 1 - TW, 1); // linear time through the transition into scene i+1
       vids.current.forEach((v, k) => {
         if (!v || !v.duration) return;
-        if (k !== i && k !== i + 1) { if (!v.paused) v.pause(); return; }
-        // incoming clip already moves during the transition (it starts at 0 when its scene starts)
-        const local = k === i ? t : 0;
+        const inc = k === i + 1 && into > 0;
+        if (k !== i && !inc) { if (!v.paused) v.pause(); return; }
+        const span = lead(k) + len(k);
+        const local = k === i ? (lead(k) + t * len(k)) / span : (into * lead(k)) / span;
         const target = Math.min(v.duration - 0.05, local * v.duration);
-        if (sec && k === i) {
+        if (sec) {
           // watch mode: native playback at the pace of the scene; seek only on real drift
-          const rate = cl(v.duration / Math.max(0.5, sec(i)), 0.25, 4);
+          const rate = cl(v.duration / span, 0.25, 4);
           if (Math.abs(v.playbackRate - rate) > 0.02) v.playbackRate = rate;
           if (Math.abs(v.currentTime - target) > 0.35) v.currentTime = target;
           if (v.paused && target < v.duration - 0.1) v.play().catch(() => {});
@@ -100,8 +107,9 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     if (timing.current === undefined) timing.current = await fetch(`/film3/audio/narration-${lang}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     const tm = timing.current;
     if (!music.current) { music.current = new Audio("/film3/audio/drums.mp3"); music.current.loop = true; music.current.volume = 0; }
-    // levels measured (EBU R128): voice −17.4 LUFS, drums −20.8 LUFS → at 0.8 / 0.35 the voice sits ~10.5 dB over the drums
-    music.current.play().then(() => fade(music.current, tm ? 0.35 : 0.45, 1500)).catch(() => {});
+    // levels measured (EBU R128): voice −17.4 LUFS, drums −20.8 LUFS → at 0.8 / 0.55 the voice sits ~6.7 dB over the drums
+    // (first mix 1.0 / 0.22 = 16.6 dB, then 0.8 / 0.35 = 10.5 dB — the owner could not hear the drums)
+    music.current.play().then(() => fade(music.current, tm ? 0.55 : 0.6, 1500)).catch(() => {});
     playSec.current = (i) => { const w = tm?.scenes[SCENES[i].id]; return w ? w[1] - w[0] : SCENES[i].sec; };
     // where the voice should be for the current scroll position
     const vhNow = () => window.innerHeight / 100;
