@@ -3,11 +3,23 @@
 // @purpose: POST /api/blob-upload — token endpoint for the browser's direct upload to Vercel Blob (@vercel/blob/client):
 //           the "check your own car" video skips the 4.5 MB function body limit. Only video/*, ≤150 MB, under uploads/; the run deletes it afterwards.
 // @created: 2026-11-03
+// @updated: 2026-11-03 claude-code — sweep: videos left under uploads/ for over 30 min (page closed before Inspect) are deleted when a new token is asked for
+import { del, list } from "@vercel/blob";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { checkLimit, clientIp } from "@/lib/runtime/rateLimit";
 export const runtime = "nodejs";
 
 const VIDEO_MAX_BYTES = 150 * 1024 * 1024;
+const ABANDONED_MS = 30 * 60_000;
+
+/** best effort: a run deletes its own video; this catches the ones whose inspection was never sent */
+async function sweepAbandoned() {
+  try {
+    const { blobs } = await list({ prefix: "uploads/", limit: 100 });
+    const old = blobs.filter((b) => Date.now() - new Date(b.uploadedAt).getTime() > ABANDONED_MS).map((b) => b.url);
+    if (old.length) await del(old);
+  } catch { /* never blocks an upload */ }
+}
 
 export async function POST(req: Request) {
   if (process.env.RUN_DISABLED === "1") return Response.json({ error: "live runs are paused" }, { status: 503 });
@@ -17,6 +29,7 @@ export async function POST(req: Request) {
   if (body.type === "blob.generate-client-token") {
     const limited = checkLimit("blob-upload", clientIp(req), Number(process.env.UPLOAD_PER_IP_HOUR ?? 2) * 2, Number(process.env.UPLOAD_DAILY_CAP ?? 15) * 2);
     if (limited) return Response.json({ error: limited }, { status: 429 });
+    await sweepAbandoned();
   }
   try {
     const res = await handleUpload({

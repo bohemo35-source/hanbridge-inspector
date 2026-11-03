@@ -3,6 +3,7 @@
 // @purpose: Agent orchestrator: Spark tool-calling loop (max 16 steps) -> cross-source merge -> open-weight verifier -> deterministic verdict -> report
 // @created: 2026-10-29
 // @updated: 2026-11-03 claude-code — a finding backed only by the owner's typed gauge reading goes to Unconfirmed and the report is handed to a manager
+// @updated: 2026-11-03 claude-code — startedAt: time budgets count from the start of the request
 // @updated: 2026-11-03 claude-code — uploads with a video are always handed to a manager
 // @updated: 2026-11-03 claude-code — uploads: every photo (≤10) goes through find_defects with paint signs; photo-only paint claims → Not confirmed + manager
 import { readFile } from "node:fs/promises";
@@ -76,8 +77,9 @@ export interface RunResult { report: Report; ms: number; }
 export async function runInspection(opts: {
   carId: string; reportId?: string; onStep?: (s: AgentStep) => void; maxSteps?: number;
   /** paint-gauge readings typed by the visitor (uploaded car) */ initialPaint?: Array<{ panel: string; microns: number }>;
+  /** when the request started (the upload route downloads the video first): every time budget counts from here, Vercel stops the route at 300 s */ startedAt?: number;
 }): Promise<RunResult> {
-  const t0 = Date.now();
+  const t0 = opts.startedAt ?? Date.now();
   const car = getCar(opts.carId);
   if (!car) throw new Error(`unknown carId: ${opts.carId}`);
   const media: CarMedia = carMedia(opts.carId);

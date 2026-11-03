@@ -64,6 +64,12 @@ export const PAINT_SIGNS_SPEC = DEFECTS_SPEC.replace(
   "Paint thickness cannot be seen on a photo, but SIGNS of paint work can. Compare every panel with its neighbours and report kind \"repaint\" (one per panel, box on the sign) when you see: a different shade or tone than the adjacent panel (e.g. fender vs door, trunk lid vs rear fenders), different gloss or reflection sharpness, a different texture (orange peel / smoother or rougher than neighbours), paint dust or overspray on rubber seals, trim, glass edges, badges or lamps, masking-tape edges, runs or dust nibs, or uneven / different panel gaps that suggest the part was removed. Say in the description which sign you see and against which neighbour; severity low or medium; confidence at most 0.6. Never report putty/filler or panel_replaced from a photo. Do not guess: lighting and reflections alone are not a sign.",
 );
 
+const VISUAL_KINDS = new Set(["scratch", "dent", "rust", "mechanical", "other"]);
+/** Pure: which kinds a photo may report. Catalog cars: visible damage only. Uploads (paintSigns): also "repaint" as a photo sign; never putty or replacement. */
+export function keepPhotoKind(kind: string, paintSigns: boolean): boolean {
+  return VISUAL_KINDS.has(kind) || (paintSigns && kind === "repaint");
+}
+
 export interface FindDefectsResult {
   view: DefectView;
   panels_visible: Panel[];
@@ -155,9 +161,7 @@ export async function findDefects(opts: {
 
   // paint thickness (repaint / filler) and panel replacement are not provable from a photo — gauge, voice or inspector text only
   // upload mode keeps photo signs of repaint, marked as such; they go to «Not confirmed» (photoPaintOnly)
-  const VISUAL_KINDS = new Set(["scratch", "dent", "rust", "mechanical", "other"]);
-  const keep = (k: string) => VISUAL_KINDS.has(k) || (opts.paintSigns === true && k === "repaint");
-  const findings: Finding[] = draft.defects.filter((d) => keep(d.kind)).map((d, i) => {
+  const findings: Finding[] = draft.defects.filter((d) => keepPhotoKind(d.kind, opts.paintSigns === true)).map((d, i) => {
     const sign = d.kind === "repaint";
     return {
       id: `${opts.photoId}-${sign ? "paintsign" : "defect"}-${i + 1}`,

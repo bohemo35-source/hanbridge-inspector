@@ -4,6 +4,7 @@
 //           kept in this instance's /tmp only (not stored in Blob), then the same agent run streamed as SSE.
 //           Only the report JSON and the plate-hidden listing photo are published.
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code — time budgets from the start of the request; video size checked before reading it
 // @updated: 2026-11-03 claude-code — the uploaded video is deleted on every refusal too; the delete result is shown in the upload_video step
 // @updated: 2026-11-03 claude-code — optional walk-around video: uploaded by the browser straight to Vercel Blob (/api/blob-upload), fetched here by URL, audio kept (≤180 s) for the agent, the Blob file deleted after the run
 import { randomBytes } from "node:crypto";
@@ -39,6 +40,7 @@ function ownUploadUrl(raw: string): URL | null {
 async function fetchVideoAudio(u: URL, dir: string): Promise<boolean> {
   const res = await fetch(u);
   if (!res.ok || !res.body) return false;
+  if (Number(res.headers.get("content-length") ?? 0) > VIDEO_MAX_BYTES) { await res.body.cancel(); return false; }
   const buf = Buffer.from(await res.arrayBuffer());
   if (buf.length > VIDEO_MAX_BYTES) return false;
   const src = path.join(dir, "upload-src"); await writeFile(src, buf);
@@ -49,6 +51,7 @@ async function fetchVideoAudio(u: URL, dir: string): Promise<boolean> {
 const clean = (v: FormDataEntryValue | null, max = 40) => String(v ?? "").replace(/[^\p{L}\p{N} .\-/]/gu, "").trim().slice(0, max);
 
 export async function POST(req: Request) {
+  const startedAt = Date.now();
   if (process.env.RUN_DISABLED === "1") return json(503, "live runs are paused");
   let form: FormData;
   try { form = await req.formData(); } catch { return json(400, "expected multipart form data"); }
@@ -106,7 +109,7 @@ export async function POST(req: Request) {
           send("step", { tool: "upload_video", ok: video, ms: Date.now() - ts, outputSummary: `${video ? "video received: sound (≤180 s) handed to the agent" : `video not used: ${why}`}; ${gone}` });
         }
         send("car", { carId, make, model, year, photos: saved, paintReadings: initialPaint.length, video });
-        const { report, ms } = await runInspection({ carId, onStep: (s) => send("step", s), initialPaint });
+        const { report, ms } = await runInspection({ carId, onStep: (s) => send("step", s), initialPaint, startedAt });
         try { revalidateTag("reports"); } catch { /* outside a Next request */ }
         send("done", { reportId: report.id, verdict: report.verdict, findings: report.findings.length, verified: report.findings.filter((f) => f.verified).length, ms, url: `/r/${report.id}` });
       } catch (e) {
