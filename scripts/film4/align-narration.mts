@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Film v4 narration: split the ElevenLabs file into phrases by silence, transcribe each (Meta Muse Voice Transcribe), match phrases to scene lines in order, add silence for scenes without lines (maps, cards, end), write public/film3/audio/narration-<lang>.mp3 + .json (scene id → [start, end] s) for the watch mode
 // @created: 2026-11-03
+// @updated: 2026-11-03 claude-code
 // usage: NODE_USE_ENV_PROXY=1 node --env-file=.env.local --import tsx scripts/film4/align-narration.mts <in.mp3> <en|ru>
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, mkdtempSync } from "node:fs";
@@ -15,8 +16,8 @@ const dir = mkdtempSync(path.join(tmpdir(), "nar-"));
 const sh = (cmd: string) => execFileSync("sh", ["-c", cmd]).toString();
 const dur = Number(sh(`ffprobe -v error -show_entries format=duration -of csv=p=0 "${inp}"`));
 
-// 1) phrases = speech between pauses ≥ 0.35 s
-const log = sh(`ffmpeg -hide_banner -i "${inp}" -af silencedetect=noise=-38dB:d=0.35 -f null - 2>&1`);
+// 1) phrases = speech between pauses ≥ 0.2 s (ElevenLabs leaves only ~0.3–0.4 s between lines, a longer threshold merges lines of different scenes)
+const log = sh(`ffmpeg -hide_banner -i "${inp}" -af silencedetect=noise=-38dB:d=0.2 -f null - 2>&1`);
 const ss = [...log.matchAll(/silence_start: ([\d.]+)/g)].map((m) => +m[1]), se = [...log.matchAll(/silence_end: ([\d.]+)/g)].map((m) => +m[1]);
 const phrases: { s: number; e: number; text: string }[] = []; let cur = 0;
 for (let i = 0; i < ss.length; i++) { if (ss[i] - cur > 0.2) phrases.push({ s: cur, e: ss[i], text: "" }); cur = se[i] ?? dur; }

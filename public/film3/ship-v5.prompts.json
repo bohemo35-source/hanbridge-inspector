@@ -1,0 +1,32 @@
+{
+ "edit": {
+  "model": "muse-image-1.0",
+  "prompt": "Keep exactly this same frame: the same black-hulled car carrier ship with the white superstructure and warm deck lights, the same size, position, camera angle, water, wake, fog and colour grade. Change only the stern: the big stern loading ramp is raised and closed flat against the transom, the stern opening is shut, no lit opening, no ramp touching the water. Photorealistic cinematic film still, 16:9, no text, no logos.",
+  "sources": {
+   "sea-v5": "film-v3/work/v3frames/s6-1.png",
+   "vlad-v5": "film-v3/work/v3frames/s7-1.png"
+  },
+  "picked": {
+   "sea-v5": "sea-edit0.png",
+   "vlad-v5": "bay-edit0.png"
+  }
+ },
+ "animate": {
+  "sea-v5": {
+   "model": "wan-2.2-i2v (Modal)",
+   "frame": "sea-edit0.png",
+   "seed": 7,
+   "prompt": "The car carrier ship sails steadily forward across the open sea, its white wake trailing behind and foam rolling on the swell; the drone camera slowly follows from above and behind. The stern ramp stays raised and closed the whole time. Calm realistic motion, no new ships, no text."
+  },
+  "vlad-v5": {
+   "model": "wan-2.2-i2v (Modal)",
+   "frame": "bay-edit0.png",
+   "seed": 7,
+   "prompt": "The car carrier ship glides slowly forward into the misty bay toward the cable-stayed bridge, gentle ripples spread from the hull, morning fog drifts over the water; the drone camera slowly pushes in. The stern ramp stays raised and closed the whole time. Calm realistic motion, no new ships, no text."
+  }
+ },
+ "post": {
+  "sea-v5": "scripts/film4/patch-stern.py: Wan lowered the stern ramp from ~0.5 s; ship tracked by phase correlation, closed stern of frame 0 pasted back (feathered)",
+  "both": "16 fps → 30 fps, libx264 crf 22"
+ }
+}

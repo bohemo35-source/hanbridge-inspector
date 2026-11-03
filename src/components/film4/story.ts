@@ -94,13 +94,13 @@ export const SCENES: Scene[] = [
     { en: "In Korea, you pay one invoice.", ru: "В Корее вы оплачиваете один инвойс." },
     { en: "The car, the platform fee, freight at the carrier's public tariff.", ru: "Авто, комиссия площадки и фрахт по открытому тарифу перевозчика." },
     { en: "No extra or hidden payments.", ru: "Без дополнительных и скрытых платежей." }] },
-  { id: "sea", clip: "sea-v4", /* Muse Image still (closed stern ramp), push-in; the Wan clip s6-1 sailed with the ramp open */ vh: 120, sec: 6, act: 2, in: "zoom", insured: true, lines: [
+  { id: "sea", clip: "sea-v5", /* same ship as Busan: s6-1 first frame with the stern ramp closed by Muse Image, animated by Wan 2.2; Wan reopened the ramp, so the closed stern of frame 0 is tracked and pasted back (scripts/film4/gen-ship.mjs, patch-stern.py) */ vh: 120, sec: 6, act: 2, in: "zoom", insured: true, lines: [
     { en: "A few days at sea.", ru: "Несколько дней в море." },
     { en: "You see where she is — in your portal and in Telegram.", ru: "Где авто сейчас — видно в кабинете и в Telegram." }] },
-  { id: "fan", insert: "mapFan", bg: "sea-v4", vh: 130, sec: 7, act: 2, insured: true, lines: [
+  { id: "fan", insert: "mapFan", bg: "sea-v5", vh: 130, sec: 7, act: 2, insured: true, lines: [
     { en: "From Vladivostok, the roads split —", ru: "Из Владивостока дороги расходятся —" },
     { en: "Moscow, Minsk, Prague, Almaty, Tashkent.", ru: "в Москву, Минск, Прагу, Алматы, Ташкент." }] },
-  { id: "bay", clip: "vlad-v4", /* Muse Image still: arrival under the bridge, stern ramp closed */ vh: 95, sec: 5, act: 2, in: "wipe", insured: true, big: true, lines: [
+  { id: "bay", clip: "vlad-v5", /* same ship as Busan: s7-1 first frame with the stern ramp closed by Muse Image, animated by Wan 2.2 (scripts/film4/gen-ship.mjs) */ vh: 95, sec: 5, act: 2, in: "wipe", insured: true, big: true, lines: [
     { en: "Landfall. Vladivostok.", ru: "Берег. Владивосток." }] },
   { id: "ramp", clip: "s7-2", vh: 120, sec: 6, act: 2, insured: true, posM: "70% 50%", chips: [{ en: "Matched to inspection", ru: "Сверено с осмотром" }, { en: "Bonded yard · 7–10 days", ru: "СВХ · 7–10 дней" }], lines: [
     { en: "Checked against the inspection — exactly as she left.", ru: "Сверяем с отчётом осмотра — ровно такое, каким уехало." },
