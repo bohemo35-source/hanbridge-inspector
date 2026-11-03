@@ -3,6 +3,7 @@
 // @purpose: Film v4 player ("trailer"): scroll-scrubbed clips with letterbox, grain, grade and Ken Burns; act cards; transitions (dissolve / light wipe / zoom-through / dip); word-by-word trailer lines; ledger toasts; watch mode; then the garage proof
 // @created: 2026-11-02
 // @updated: 2026-11-03 claude-code
+// @updated: 2026-11-03 claude-code — phones: light clips (film3/m/), poster image always under the clip, the clip shows once it has a frame, decoder woken once
 // @updated: 2026-11-03 claude-code — clip time spans the transition tail too: the incoming clip moves while it fades in (was parked on frame 0)
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -33,6 +34,12 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
   const [pos, setPos] = useState({ i: 0, t: 0 });
   const [auto, setAuto] = useState(false);
   const [narrow, setNarrow] = useState(false);
+  /** phones and narrow windows get the light clips (film3/m/: 540p, ~1 MB); null until mounted, so no clip starts loading twice */
+  const [mob, setMob] = useState<boolean | null>(null);
+  /** clips that have a decoded frame: until then the poster image shows (phones used to see black scenes) */
+  const [ready, setReady] = useState<ReadonlySet<string>>(() => new Set());
+  const markReady = useCallback((id: string) => setReady((r) => (r.has(id) ? r : new Set(r).add(id))), []);
+  const unmarkReady = useCallback((id: string) => setReady((r) => { if (!r.has(id)) return r; const n = new Set(r); n.delete(id); return n; }), []);
   const autoRef = useRef(false);
   /** watch mode: seconds a scene lasts (clips then play natively instead of being scrubbed); null while scrolling */
   const playSec = useRef<((i: number) => number) | null>(null);
@@ -75,6 +82,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     };
     const on = () => { if (!raf) raf = requestAnimationFrame(tick); };
     const rs = () => { setNarrow(window.innerWidth < window.innerHeight); on(); };
+    setMob(window.innerWidth < 900 || window.innerWidth < window.innerHeight || window.matchMedia?.("(pointer: coarse)").matches);
     rs();
     window.addEventListener("scroll", on, { passive: true });
     window.addEventListener("resize", rs);
@@ -191,10 +199,22 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
                 );
               }
               return (
-                <video key={x.id} ref={(v) => { vids.current[k] = v; }} muted playsInline preload={near(k) ? "auto" : "none"}
-                  poster={`/film3/${x.clip}.jpg`} src={near(k) ? `/film3/${x.clip}.mp4` : undefined}
-                  className="absolute inset-0 h-full w-full object-cover will-change-transform"
-                  style={{ ...st.style, objectPosition: narrow ? x.posM ?? "50% 50%" : "50% 50%", zIndex: st.z, visibility: cur || inc ? "visible" : "hidden" }} />
+                // the poster image is always under the clip; the clip shows once it has a frame (iOS does not paint a never-played video)
+                <div key={x.id} className="absolute inset-0 will-change-transform" data-clip={x.clip}
+                  style={{ ...st.style, zIndex: st.z, visibility: cur || inc ? "visible" : "hidden" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/film3/${x.clip}.jpg`} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover"
+                    style={{ objectPosition: narrow ? x.posM ?? "50% 50%" : "50% 50%" }} />
+                  <video ref={(v) => { vids.current[k] = v; }} muted playsInline preload={near(k) ? "auto" : "none"}
+                    src={near(k) && mob !== null ? `/film3/${mob ? "m/" : ""}${x.clip}.mp4` : undefined}
+                    onLoadStart={() => unmarkReady(x.id)} onLoadedData={() => markReady(x.id)} onSeeked={() => markReady(x.id)} onPlaying={() => markReady(x.id)}
+                    onLoadedMetadata={(e) => {
+                      // phones: play once muted to wake the decoder, so scroll seeks paint frames (the tick pauses it again outside watch mode)
+                      const v = e.currentTarget; if (mob && !playSec.current) v.play().then(() => { if (!playSec.current) v.pause(); }).catch(() => {});
+                    }}
+                    className="absolute inset-0 h-full w-full object-cover"
+                    style={{ objectPosition: narrow ? x.posM ?? "50% 50%" : "50% 50%", opacity: ready.has(x.id) ? 1 : 0 }} />
+                </div>
               );
             })}
             {/* light wipe edge: the bridge's golden line sweeping across */}
