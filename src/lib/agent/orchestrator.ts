@@ -3,6 +3,7 @@
 // @purpose: Agent orchestrator: Spark tool-calling loop (max 16 steps) -> cross-source merge -> open-weight verifier -> deterministic verdict -> report
 // @created: 2026-10-29
 // @updated: 2026-11-03 claude-code — a finding backed only by the owner's typed gauge reading goes to Unconfirmed and the report is handed to a manager
+// @updated: 2026-11-03 claude-code — uploads with a video are always handed to a manager
 // @updated: 2026-11-03 claude-code — uploads: every photo (≤10) goes through find_defects with paint signs; photo-only paint claims → Not confirmed + manager
 import { readFile } from "node:fs/promises";
 import sharp from "sharp";
@@ -352,6 +353,8 @@ export async function runInspection(opts: {
   const photoRule = applyPhotoPaintRule(findings, measuredPanels);
   for (const f of photoRule.signs) step("conflict_check", f.id, true, `${f.panel}/${f.kind}: photo sign of paint work, not measured → unconfirmed`, 0);
   if (photoRule.handoffReason && !handoffReason) handoffReason = photoRule.handoffReason;
+  // a visitor's own video: the voice is the owner's, not our inspector's — until the owner decides otherwise a manager always checks it
+  if (isUpload && media.videos.length && !handoffReason) handoffReason = "the visitor's own video (spoken gauge readings) — a manager checks it";
 
   const verified = findings.filter((f) => f.verified);
   let verdict = decideVerdict(verified);

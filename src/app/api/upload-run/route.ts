@@ -4,6 +4,7 @@
 //           kept in this instance's /tmp only (not stored in Blob), then the same agent run streamed as SSE.
 //           Only the report JSON and the plate-hidden listing photo are published.
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code — the uploaded video is deleted on every refusal too; the delete result is shown in the upload_video step
 // @updated: 2026-11-03 claude-code — optional walk-around video: uploaded by the browser straight to Vercel Blob (/api/blob-upload), fetched here by URL, audio kept (≤180 s) for the agent, the Blob file deleted after the run
 import { randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -49,19 +50,24 @@ const clean = (v: FormDataEntryValue | null, max = 40) => String(v ?? "").replac
 
 export async function POST(req: Request) {
   if (process.env.RUN_DISABLED === "1") return json(503, "live runs are paused");
-  const limited = checkLimit("upload", clientIp(req), Number(process.env.UPLOAD_PER_IP_HOUR ?? 2), Number(process.env.UPLOAD_DAILY_CAP ?? 15));
-  if (limited) return json(429, limited);
-
   let form: FormData;
   try { form = await req.formData(); } catch { return json(400, "expected multipart form data"); }
+  // the browser has already put the video into Blob: any refusal below must delete it, or it stays in the store for good
+  const videoField = String(form.get("videoUrl") ?? "");
+  const videoUrl = videoField ? ownUploadUrl(videoField) : null;
+  const refuse = async (status: number, error: string) => { if (videoUrl) await del(videoUrl.toString()).catch(() => undefined); return json(status, error); };
+  if (videoField && !videoUrl) return json(400, "video must be uploaded through this page");
+  const limited = checkLimit("upload", clientIp(req), Number(process.env.UPLOAD_PER_IP_HOUR ?? 2), Number(process.env.UPLOAD_DAILY_CAP ?? 15));
+  if (limited) return refuse(429, limited);
+
   const make = clean(form.get("make")); const model = clean(form.get("model"));
   const year = Number(form.get("year")); const bodyType = String(form.get("bodyType") ?? "sedan");
-  if (!make || !model) return json(400, "make and model are required");
-  if (!Number.isInteger(year) || year < 1990 || year > 2027) return json(400, "year must be 1990–2027");
-  if (!BODY.has(bodyType)) return json(400, "bodyType must be sedan, suv or hatchback");
+  if (!make || !model) return refuse(400, "make and model are required");
+  if (!Number.isInteger(year) || year < 1990 || year > 2027) return refuse(400, "year must be 1990–2027");
+  if (!BODY.has(bodyType)) return refuse(400, "bodyType must be sedan, suv or hatchback");
   const files = form.getAll("photos").filter((f): f is File => typeof f !== "string");
-  if (files.length < 3 || files.length > 10) return json(400, "send 3 to 10 photos");
-  if (files.some((f) => f.size > 3_000_000)) return json(400, "each photo must be under 3 MB");
+  if (files.length < 3 || files.length > 10) return refuse(400, "send 3 to 10 photos");
+  if (files.some((f) => f.size > 3_000_000)) return refuse(400, "each photo must be under 3 MB");
 
   const carId = `u-${randomBytes(5).toString("hex")}`;
   const dir = path.join(tmpdir(), "hanbridge-uploads", carId);
@@ -73,10 +79,7 @@ export async function POST(req: Request) {
       await writeFile(path.join(dir, "photos", `photo-${String(i + 1).padStart(2, "0")}.jpg`), jpg); saved++;
     } catch { /* not an image: skip */ }
   }
-  if (saved < 3) return json(400, "at least 3 readable photos are needed");
-  const videoField = String(form.get("videoUrl") ?? "");
-  const videoUrl = videoField ? ownUploadUrl(videoField) : null;
-  if (videoField && !videoUrl) return json(400, "video must be uploaded through this page");
+  if (saved < 3) return refuse(400, "at least 3 readable photos are needed");
 
   const initialPaint = PANEL_IDS.map((panel) => ({ panel, microns: Number(form.get(`paint_${panel}`)) }))
     .filter((r) => Number.isFinite(r.microns) && r.microns >= 20 && r.microns <= 3000);
@@ -96,9 +99,11 @@ export async function POST(req: Request) {
         if (videoUrl) {
           const ts = Date.now(); let why = "download failed";
           try { video = await fetchVideoAudio(videoUrl, dir); } catch (e) { video = false; why = e instanceof Error ? e.message.slice(0, 160) : "audio extraction failed"; }
+          // not kept: the sound is in this instance's /tmp only; the result of the delete is shown, not assumed
+          const gone = await del(videoUrl.toString()).then(() => "file deleted from storage", (e: unknown) => `delete failed: ${e instanceof Error ? e.message.slice(0, 80) : "error"}`);
+          if (gone.startsWith("delete failed")) console.error(JSON.stringify({ route: "upload-run", carId, blobDelete: gone }));
           // the visitor sees whether the video reached the agent (it is not part of the saved trace)
-          send("step", { tool: "upload_video", ok: video, ms: Date.now() - ts, outputSummary: video ? "video received: sound (≤180 s) handed to the agent, file deleted from storage" : `video not used: ${why}` });
-          del(videoUrl.toString()).catch(() => undefined); // not kept: the sound is in this instance's /tmp only
+          send("step", { tool: "upload_video", ok: video, ms: Date.now() - ts, outputSummary: `${video ? "video received: sound (≤180 s) handed to the agent" : `video not used: ${why}`}; ${gone}` });
         }
         send("car", { carId, make, model, year, photos: saved, paintReadings: initialPaint.length, video });
         const { report, ms } = await runInspection({ carId, onStep: (s) => send("step", s), initialPaint });
