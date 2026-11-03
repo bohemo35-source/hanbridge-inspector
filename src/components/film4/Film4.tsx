@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: Film v4 player ("trailer"): scroll-scrubbed clips with letterbox, grain, grade and Ken Burns; act cards; transitions (dissolve / light wipe / zoom-through / dip); word-by-word trailer lines; ledger toasts; watch mode; then the garage proof
 // @created: 2026-11-02
+// @updated: 2026-11-03 claude-code
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -33,6 +34,8 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
   const [auto, setAuto] = useState(false);
   const [narrow, setNarrow] = useState(false);
   const autoRef = useRef(false);
+  /** watch mode: seconds a scene lasts (clips then play natively instead of being scrubbed); null while scrolling */
+  const playSec = useRef<((i: number) => number) | null>(null);
 
   /* capture scripts read the timeline from here */
   useEffect(() => { if (location.search.includes("capture")) (window as unknown as { __film4: unknown }).__film4 = { ids: SCENES.map((x) => x.id), starts, vhs: SCENES.map((x) => x.vh) }; }, []);
@@ -48,11 +51,22 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
       let i = SCENES.length - 1; while (i > 0 && starts[i] > yy) i--;
       const t = (yy - starts[i]) / SCENES[i].vh;
       setPos((p) => (p.i === i && Math.abs(p.t - t) < 0.0015 ? p : { i, t }));
-      [i, i + 1].forEach((k) => {
-        const v = vids.current[k]; if (!v || !v.duration) return;
+      const sec = playSec.current;
+      vids.current.forEach((v, k) => {
+        if (!v || !v.duration) return;
+        if (k !== i && k !== i + 1) { if (!v.paused) v.pause(); return; }
         // incoming clip already moves during the transition (it starts at 0 when its scene starts)
         const local = k === i ? t : 0;
         const target = Math.min(v.duration - 0.05, local * v.duration);
+        if (sec && k === i) {
+          // watch mode: native playback at the pace of the scene; seek only on real drift
+          const rate = cl(v.duration / Math.max(0.5, sec(i)), 0.25, 4);
+          if (Math.abs(v.playbackRate - rate) > 0.02) v.playbackRate = rate;
+          if (Math.abs(v.currentTime - target) > 0.35) v.currentTime = target;
+          if (v.paused && target < v.duration - 0.1) v.play().catch(() => {});
+          return;
+        }
+        if (!v.paused) v.pause();
         if (Math.abs(v.currentTime - target) > 0.03) v.currentTime = target;
       });
     };
@@ -75,7 +89,7 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     requestAnimationFrame(f);
   };
   const stopAuto = useCallback(() => {
-    autoRef.current = false; setAuto(false);
+    autoRef.current = false; setAuto(false); playSec.current = null;
     narr.current?.pause(); fade(music.current, 0, 700, () => music.current?.pause());
   }, []);
   const startAuto = useCallback(async () => {
@@ -86,12 +100,14 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     if (timing.current === undefined) timing.current = await fetch(`/film3/audio/narration-${lang}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     const tm = timing.current;
     if (!music.current) { music.current = new Audio("/film3/audio/drums.mp3"); music.current.loop = true; music.current.volume = 0; }
-    music.current.play().then(() => fade(music.current, tm ? 0.22 : 0.45, 1500)).catch(() => {});
+    // levels measured (EBU R128): voice −17.4 LUFS, drums −20.8 LUFS → at 0.8 / 0.35 the voice sits ~10.5 dB over the drums
+    music.current.play().then(() => fade(music.current, tm ? 0.35 : 0.45, 1500)).catch(() => {});
+    playSec.current = (i) => { const w = tm?.scenes[SCENES[i].id]; return w ? w[1] - w[0] : SCENES[i].sec; };
     // where the voice should be for the current scroll position
     const vhNow = () => window.innerHeight / 100;
     const sceneAt = (yy: number) => { const local = (yy - top0) / vhNow(); let i = SCENES.length - 1; while (i > 0 && starts[i] > local) i--; return { i, t: cl((local - starts[i]) / SCENES[i].vh) }; };
     if (tm) {
-      if (!narr.current || narr.current.dataset.lang !== lang) { narr.current?.pause(); narr.current = new Audio(tm.file); narr.current.dataset.lang = lang; }
+      if (!narr.current || narr.current.dataset.lang !== lang) { narr.current?.pause(); narr.current = new Audio(tm.file); narr.current.dataset.lang = lang; narr.current.volume = 0.8; }
       const { i, t } = sceneAt(window.scrollY); const w = tm.scenes[SCENES[i].id];
       if (w) narr.current.currentTime = w[0] + t * (w[1] - w[0]);
       narr.current.play().catch(() => {});
@@ -134,7 +150,8 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
 
   const s = SCENES[pos.i];
   // only neighbours keep a decoder: ~30 open videos crash mobile Safari and headless Chrome
-  const near = (k: number) => k >= pos.i - 1 && k <= pos.i + 3;
+  // clips are all-intra (every frame a keyframe), so a scrub seek decodes one frame; the next two are preloaded
+  const near = (k: number) => k >= pos.i - 1 && k <= pos.i + 2;
   const next = SCENES[pos.i + 1] as Scene | undefined;
   const e = next ? ease(seg(pos.t, 1 - TW, 1)) : 0; // transition progress into the next scene
   const outK = 1 - e;
