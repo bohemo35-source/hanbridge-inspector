@@ -40,7 +40,7 @@ await ctx.addInitScript(() => {
   };
   requestAnimationFrame(raf);
   const hook = (v) => {
-    if (v.__ss) return; v.__ss = 1; let last = 0, seekT = 0;
+    if (v.__ss) return; v.__ss = 1; let last = 0, seekT = 0, lastPlaying = false;
     v.addEventListener("seeking", () => { seekT = performance.now(); });
     v.addEventListener("seeked", () => { if (!seekT) return; const d = performance.now() - seekT, s = sc(scene()); s.seeks++; s.seekMs += d; s.maxSeek = Math.max(s.maxSeek, d); seekT = 0; });
     v.addEventListener("waiting", () => { sc(scene()).waiting++; });
@@ -51,9 +51,10 @@ await ctx.addInitScript(() => {
       if (v.style.visibility !== "hidden" && Number(v.style.zIndex || 0) >= 1) {
         s.clip ??= clip; s.vframes++;
         if (s.firstFrameMs === null && s.enteredAt) s.firstFrameMs = Math.round(now - s.enteredAt);
-        if (last && !v.paused && now - last > 100) { s.freezes++; s.maxFreeze = Math.max(s.maxFreeze, now - last); }
+        // a freeze: the clip was playing at the previous frame and still is, yet no frame for >100 ms (pauses and preload waits are not freezes)
+        if (last && lastPlaying && !v.paused && now - last > 100) { s.freezes++; s.maxFreeze = Math.max(s.maxFreeze, now - last); (s.gaps ??= []).push(Math.round(now - last)); }
       }
-      last = now; v.requestVideoFrameCallback(f);
+      last = now; lastPlaying = !v.paused; v.requestVideoFrameCallback(f);
     };
     v.requestVideoFrameCallback(f);
   };
@@ -80,7 +81,7 @@ if (mode === "scroll") {
 }
 const r = await page.evaluate(() => window.__ss);
 await cb.close().catch(() => {}); proc.kill("SIGTERM");
-const rows = r.order.map((id) => { const s = r.scenes[id]; return { id, clip: s.clip, sec: +(s.ms / 1000).toFixed(1), frozenMs: Math.round(s.frozenMs), fps: s.ms ? +(s.raf / (s.ms / 1000)).toFixed(0) : 0, long50: s.long50, long100: s.long100, maxRaf: Math.round(s.maxRaf), vframes: s.vframes, freezes: s.freezes, maxFreeze: Math.round(s.maxFreeze), firstFrameMs: s.firstFrameMs, seeks: s.seeks, avgSeek: s.seeks ? Math.round(s.seekMs / s.seeks) : 0, maxSeek: Math.round(s.maxSeek), waiting: s.waiting }; });
+const rows = r.order.map((id) => { const s = r.scenes[id]; return { id, clip: s.clip, sec: +(s.ms / 1000).toFixed(1), frozenMs: Math.round(s.frozenMs), fps: s.ms ? +(s.raf / (s.ms / 1000)).toFixed(0) : 0, long50: s.long50, long100: s.long100, maxRaf: Math.round(s.maxRaf), vframes: s.vframes, freezes: s.freezes, maxFreeze: Math.round(s.maxFreeze), firstFrameMs: s.firstFrameMs, seeks: s.seeks, avgSeek: s.seeks ? Math.round(s.seekMs / s.seeks) : 0, maxSeek: Math.round(s.maxSeek), waiting: s.waiting, gaps: s.gaps ?? [] }; });
 const tot = rows.reduce((a, x) => ({ long50: a.long50 + x.long50, long100: a.long100 + x.long100, freezes: a.freezes + x.freezes, waiting: a.waiting + x.waiting, frozenMs: a.frozenMs + x.frozenMs, seeks: a.seeks + x.seeks, maxSeek: Math.max(a.maxSeek, x.maxSeek) }), { long50: 0, long100: 0, freezes: 0, waiting: 0, frozenMs: 0, seeks: 0, maxSeek: 0 });
 fs.writeFileSync(out, JSON.stringify({ url, mode, wallSec: (Date.now() - t0) / 1000, totals: tot, scenes: rows }, null, 1));
 console.log(mode, url, "totals", JSON.stringify(tot));
