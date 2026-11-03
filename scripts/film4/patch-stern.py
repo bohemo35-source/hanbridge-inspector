@@ -2,7 +2,7 @@
 # @project: hanbridge-inspector
 # @purpose: Wan opened the stern ramp in the sea clip; track the ship (phase correlation on the superstructure) and paste the closed stern from frame 0 over the ramp area, feathered
 # @created: 2026-11-03
-# usage: python3 patch_stern.py <in.mp4> <out.mp4>
+# usage: python3 scripts/film4/patch-stern.py <in.mp4> <out.mp4>
 import sys, subprocess, numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 src, dst = sys.argv[1:3]; W, H = 1280, 720

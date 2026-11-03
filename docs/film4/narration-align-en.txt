@@ -1,0 +1,74 @@
+# @agent: claude-code · @project: hanbridge-inspector · @purpose: журнал align-narration.mts для narration-en (фраза ASR Muse Voice Transcribe → сцена), из eleven-voice/film1-en.mp3, порог паузы 0.2 с · @created: 2026-11-03
+b        Somewhere in Korea..
+b        There is a car meant for you.,
+c        8,000 kilometers away.
+d        The photo can't open the hood.
+d        A seller's word can't measure the paint..
+e        So we built a bridge you can check..
+act2     proof the for payment..
+req      You name the car.
+req      budget wishes wishes timing.
+pick     A manager finds it..
+pick     option by option..
+pick     At the real price, every buyer in Korea sees..
+lift     Then our expert looks underneath.
+gauge    every panel.
+gauge    measured.
+gauge    filmed.
+gauge    On the record.!
+report   An AI agent on Meta Models reads it all.
+report   and every finding points to its proof.:
+fork     Some things off?
+fork     We keep searching..
+fork     You decide.
+keys     It passes.
+keys     We buy it at the listed price..
+keys     From this minute minute, she is insured.,
+act3     Korea.
+act3     The sea.,
+act3     the border.
+hwy      deregistered.
+hwy      Export papers ready.
+hwy      course?
+hwy      Busan.
+busan    In Korea, you pay one invoice.
+busan    The car.
+busan    the platform fee.
+busan    Freight at the carrier's public tariff.
+busan    No extra or hidden payments.
+sea      A few days at sea,..
+sea      You see where she is..
+sea      in your portal and in Telegram.
+fan      From Vladivostok the roads split..
+fan      Moscow.
+fan      Minsk.
+fan      Prague.
+fan      Almaty.
+fan      Tashkent.
+bay      landfall.
+bay      Vladivostok.
+ramp     checked against the inspection..
+ramp     Exactly as she left..
+ramp     Then the bonded yard.
+ramp     usually 7 to 10 days.
+orbit    Customs..
+orbit    By the letter of the law.
+orbit    every payment and receipt in your name..
+gate     Duty,
+gate     recycling fee.,
+gate     Processing.
+gate     You pay them yourself..
+gate     in your bank app..
+act4     The last thousands thousands of kilometers..
+vload    car carrier or rail.
+vload    your choice.
+hills    You pick the carrier and pay them directly.
+taiga    Tracked online.
+sunset   insured every kilometer..
+street   And one morning,.
+hand     The keys are in your hand..
+house    Don't finds her home.
+house    No commission..
+house    No hidden payments..
+house    Just proof.
+total 168.5 s
