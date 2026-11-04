@@ -91,7 +91,7 @@ Hackathon credits:
 | Modal | $100 grant + $30 free credit (Oct) + $30 (Nov) | all credits used | GPUs for Muse Glimmer (H100) and for animating the film scenes with Wan 2.2 (H200) |
 | Baseten | $100 | — | Muse Spark Open, the independent verifier (the usage sits in the hackathon workspace, not visible to us) |
 
-Modal compute 29 Oct – 4 Nov: $160.87 (Wan $139.06, Glimmer $21.81), covered by credits ($100 grant + $30 free credit Oct + $30 Nov); billed so far $0.70.
+Modal compute 29 Oct – 4 Nov: $160.87 (Wan $139.06, Glimmer $21.81); credits applied $160.00 ($100 grant + $30 free credit Oct + $30 Nov); billed to us so far $0.70.
 
 Paid by us:
 - Meta subscription (Arthur's): Muse Wonder sessions in Muse Code ran on it first and switched to the API credit above when the limit ran out.
