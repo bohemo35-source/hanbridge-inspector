@@ -5,6 +5,7 @@
 #           with the real session clock; black and idle stretches dropped; every frame that goes into the video is OCR'd (macOS Vision) and
 #           scanned for keys, tokens, e-mails and phone numbers before anything is built — a hit stops the build until it is blurred (BLUR below)
 # @created: 2026-11-04
+# @updated: 2026-11-04 claude-code — third-party names moved out of git into deny-names.local.txt (TZ-FINAL-0411)
 # @updated: 2026-11-04 claude-code — Arthur: only Muse Code at work — frames with the Claude app / Claude Code / a chat in view are cut whole
 #           (not blurred), frames without Muse Code's terminal too; a TZ with too little Muse Code left goes to the "not recorded" card
 # @updated: 2026-11-04 claude-code — review: names of people and of other projects (Claude app chat list, Finder, 1Password, the account footer)
@@ -40,8 +41,11 @@ SECRET = re.compile(r"(sk-[A-Za-z0-9]{8,}|vercel_blob_rw_\w+|ghp_\w{10,}|xox[abp
                     r"(API_KEY|TOKEN|SECRET|PASSWORD|BASETEN|GLIMMER|META_API|BLOB_READ)\w*\s*[=:]\s*\S{6,}|[\w.+-]+@[\w-]+\.[\w.]{2,}|\+?\d[\d\s()-]{9,}\d)", re.I)
 
 # personal data seen in TZ-01/02 (the Claude app's chat list, Finder, 1Password, the account footer, the shell prompt): people's names and other projects
-DENY = re.compile(r"[name]|[name]|[name]|Артур|Artur\b|Arthur Lim|arthurlim@|\bЛим\b|[name]|Export Company|OpenClaw|HERMES|\.hermes|\bШтаб|Таможня /|калькулятор|"
-                  r"manus\.|Лидогенерац|[name]|[name]|1Pass|WhatsApp|Сотрудник", re.I)
+# other people's names / private folder names are not in git: one regex alternative per line in deny-names.local.txt (next to this script, gitignored)
+_LOCAL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "deny-names.local.txt")
+_NAMES = [l.strip() for l in open(_LOCAL, encoding="utf-8") if l.strip() and not l.startswith("#")] if os.path.exists(_LOCAL) else []
+DENY = re.compile("|".join(_NAMES + [r"Артур|Artur\b|Arthur Lim|arthurlim@|\bЛим\b|Export Company|OpenClaw|HERMES|\.hermes|\bШтаб|Таможня /|калькулятор|"
+                  r"manus\.|Лидогенерац|1Pass|WhatsApp|Сотрудник"]), re.I)
 # Arthur (04.11): the video shows Muse Code coding, not our chats. A frame stays only if Muse Code's terminal is in it (MUSE) and nothing of a chat
 # is (CHAT: the Claude app, Claude Code, messengers, mail); everything else is cut whole
 MUSE = re.compile(r"Ran \d* ?commands?|^\W*(Edited|Explored|Read|Ran|Added|Updated|Wrote) |muse[- ]wonder|muse tz-|esc to interrupt|Worked for|context left|\bmuse\b", re.I)

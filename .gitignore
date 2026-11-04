@@ -44,3 +44,5 @@ data/reports/
 __pycache__/
 .claude/
 node_modules
+# private local lists (names), never in git
+*.local.txt
