@@ -8,8 +8,9 @@
 // @updated: 2026-11-03 claude-code — «How the agent worked — up to 16 steps»: the real step log of the hero car's report + a muted loop from the jury video
 // @updated: 2026-11-04 claude-code — the agent-steps loop plays only while on screen (ViewLoop): off screen it kept decoding and seeking every 7.6 s under the film
 // @updated: 2026-11-02 claude-code — first screen: 3D bridge on the right (desktop) / under the buttons (mobile); text and buttons stay in the flow above it
-// @updated: 2026-11-04 claude-code — «300 photos in a chat» (was 40)
+// @updated: 2026-11-04 claude-code — photo count in the pitch aligned with the YouTube description and the X post
 // @updated: 2026-11-04 claude-code — 100 photos + a few videos (real per-inspection numbers)
+// @updated: 2026-11-04 claude-code — «Who does what»: Muse Wonder first (wrote the product core inside Muse Code)
 import Link from "next/link";
 import type { Report } from "@/lib/schema";
 import { CARS, carMedia } from "@/lib/agent/catalog";
@@ -67,6 +68,7 @@ const T = {
 } as const;
 
 const MODELS: { name: string; role_en: string; role_ru: string }[] = [
+  { name: "Muse Wonder", role_en: "wrote the product core (inside Muse Code, Meta's coding agent)", role_ru: "написал ядро продукта (внутри Muse Code, кодинг-агента Meta)" },
   { name: "Muse Spark", role_en: "plans the inspection, calls tools, writes the verdict", role_ru: "ведёт осмотр, вызывает инструменты, пишет вердикт" },
   { name: "SAM 3.1", role_en: "segments the car, panels and plates", role_ru: "выделяет авто, панели и номера" },
   { name: "Muse Voice Transcribe", role_en: "turns the inspector's voice into findings", role_ru: "превращает голос инспектора в находки" },

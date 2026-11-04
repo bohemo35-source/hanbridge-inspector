@@ -31,7 +31,7 @@ export interface PanelVisual {
   /** spread of all measured points on the panel (several zones), when more than one */
   range?: { min: number; max: number; points: number };
   findings: Finding[];
-  /** short label for the 3D tag, e.g. "238 мкм" or "? 128 мкм" */
+  /** short label for the 3D tag (Russian UI unit), e.g. "238 мкм" or "? 128 мкм" */
   tag?: string;
 }
 

@@ -1,33 +1,33 @@
-# ТЗ-07 — Шлифовка 3D-карты кузова (визуал для видео)
+# TZ-07 — Polishing the 3D body map (visuals for the video)
 
-Сначала прочитай AGENTS.md и `docs/tz/06_3d_damage_map.md`. Выполни задание целиком, без промежуточных вопросов; если что-то не получается за 2 попытки — запиши в отчёт и иди дальше. Ветка `tz-07` от `tz-06` (или от `main`, если tz-06 уже влит) → PR. Не пушить в main, не деплоить в прод без «делай» от Артура.
+First read AGENTS.md and `docs/tz/06_3d_damage_map.md`. Complete the task in full, without intermediate questions; if something does not work after 2 attempts — record it in the report and move on. Branch `tz-07` from `tz-06` (or from `main` if tz-06 is already merged) → PR. Do not push to main, and do not deploy to prod without Arthur's "go".
 
-## Цель
-3D-карта из ТЗ-06 работает, но выглядит схематично. Сделать её кадром, который не стыдно показать крупно в видео (1:55–2:25 по сценарию): более живая форма кузова, эффектное появление машины, понятная подсветка при наведении, подписи в разобранном виде. Логику данных не менять.
+## Goal
+The 3D map from TZ-06 works, but it looks schematic. Make it a frame that is not embarrassing to show large in the video (1:55–2:25 of the script): a livelier body shape, a dramatic car entrance, clear hover highlighting, and labels in the exploded view. Do not change the data logic.
 
-## Границы (строго)
-- Трогать только `src/components/damage-map-3d/buildCar.ts`, `bodyTemplates.ts`, `DamageMap3D.tsx` и при необходимости новый файл в той же папке. `panels.ts`, `PanelEvidence.tsx`, `InspectionMap.tsx`, схемы, `/lab/3d` — не трогать.
-- Не менять: id панелей, props компонентов, `panelVisual()`, цвета статусов, контракт `CarModel` / `CarPart`.
-- Никаких внешних 3D-моделей, текстур, HDR и ассетов: всё строится кодом. Никаких логотипов и узнаваемых решёток марок.
-- Бюджет: `trisTotal < 120 000` на шаблон, первый кадр на ноутбуке ≤ 1.5 с после загрузки страницы.
+## Boundaries (strict)
+- Touch only `src/components/damage-map-3d/buildCar.ts`, `bodyTemplates.ts`, `DamageMap3D.tsx`, and, if needed, a new file in the same folder. Do not touch `panels.ts`, `PanelEvidence.tsx`, `InspectionMap.tsx`, schemas, `/lab/3d`.
+- Do not change: panel ids, component props, `panelVisual()`, status colors, the `CarModel` / `CarPart` contract.
+- No external 3D models, textures, HDR or assets: everything is built in code. No logos and no recognizable brand grilles.
+- Budget: `trisTotal < 120 000` per template; first frame on a laptop ≤ 1.5 s after page load.
 
-## Что сделать
-1. **Форма кузова** (все три шаблона):
-   - мягче нос и корма: скруглённые углы в плане, без «топорных» торцов;
-   - расширения над колёсными арками (лёгкий выступ крыла вокруг арки, 2–3 см);
-   - продольная линия на боковине (character line) — небольшой излом сечения на высоте ~0.7 от порога до плеча;
-   - лобовое стекло и задняя стойка — плавный наклон, без «горба» на стыке greenhouse и капота;
-   - боковые зеркала (часть `trim`, не панель; разлетаются вместе с передними дверями) и тонкая тёмная решётка-щель в переднем бампере без логотипа.
-   После правок все 13 панелей остаются на своих местах — существующие тесты в `damageMap3d.test.ts` должны пройти без изменений.
-2. **Появление машины** (один раз при загрузке): сцена стартует в темноте, по полу пробегает световая полоса, ключевой свет плавно разгорается, световые полосы фар вспыхивают, камера медленно подъезжает к домашнему ракурсу — 1.5–2 с. При `prefers-reduced-motion` — сразу финальный кадр.
-3. **Наведение**: hover по панели (десктоп) — лёгкая подсветка краёв панели её цветом + подсказка у курсора «Крыло переднее правое · 238 мкм». На тач-устройствах hover не нужен.
-4. **Разобранный вид**: у каждой разлетевшейся панели — короткая подпись с названием (RU/EN по `lang`), тонкая выноска к панели; подписи не перекрывают друг друга сильнее, чем на 30 % (простая раздвижка по экрану).
-5. **Свет и пост-обработка**: мягкий bloom только для световых полос и выбранной панели (`UnrealBloomPass` из three/examples), лёгкая виньетка. Eco-режим: если средний FPS за первые 2 с < 40 — выключить bloom и Reflector (пол без отражения).
-6. **Мобильный**: pixelRatio ≤ 1.5, Reflector 512×512, подписи в разобранном виде — только у панелей с находками.
+## What to do
+1. **Body shape** (all three templates):
+   - softer nose and tail: rounded corners in plan view, no "clumsy" ends;
+   - flares over the wheel arches (a slight fender bulge around each arch, 2–3 cm);
+   - a character line on the side panel (a small section break at about 0.7 of the height from the sill to the shoulder);
+   - windshield and rear pillar — a smooth slope, no "hump" where the greenhouse meets the hood;
+   - side mirrors (part of `trim`, not a panel; they fly off together with the front doors) and a thin dark slot grille in the front bumper, without a logo.
+   After the edits all 13 panels must stay in their places — the existing tests in `damageMap3d.test.ts` must pass unchanged.
+2. **Car entrance** (once, on load): the scene starts in darkness, a light strip runs across the floor, the key light ramps up smoothly, the headlight strips flash on, and the camera slowly approaches the home angle — 1.5–2 s. With `prefers-reduced-motion` — straight to the final frame.
+3. **Hover**: hovering over a panel (desktop) — a light glow on the panel's edges in its color + a cursor hint "Front right fender · 238 µm". Touch devices do not need hover.
+4. **Exploded view**: each flying panel gets a short label with its name (RU/EN per `lang`) and a thin leader line to the panel; labels overlap each other by no more than 30% (simple spreading on screen).
+5. **Light and post-processing**: soft bloom only for the light strips and the selected panel (`UnrealBloomPass` from three/examples), a light vignette. Eco mode: if the average FPS over the first 2 s is < 40 — turn off bloom and the Reflector (floor without reflection).
+6. **Mobile**: pixelRatio ≤ 1.5, Reflector 512×512, labels in the exploded view — only for panels with findings.
 
-## Критерии готовности
-- `npx tsc --noEmit`, `npm run lint`, `npx vitest run` (все тесты ТЗ-06 без правок), `npm run build` — зелёные; сырой вывод в `docs/reports/tz-07.md`.
-- `node --check scripts/3d/capture.mjs` (если трогал — иначе просто прогнать) и новые скриншоты в `docs/reports/assets/tz07-*.png`: седан собранный, разобранный с подписями, SUV, хэтчбек, мобильный, кадр из середины анимации появления.
-- В отчёте: `trisTotal` для трёх шаблонов (из `buildCar(type).trisTotal`), FPS на ноутбуке Артура (если он откроет Preview) или честно «не мерил».
-- `git diff --stat` в отчёте — только разрешённые файлы.
-- Запись экрана для X: появление машины → клик по красной метке → «Разобрать» → «Собрать» (Артур снимает сам по Preview-ссылке).
+## Acceptance criteria
+- `npx tsc --noEmit`, `npm run lint`, `npx vitest run` (all TZ-06 tests without edits), `npm run build` — green; raw output in `docs/reports/tz-07.md`.
+- `node --check scripts/3d/capture.mjs` (if touched — otherwise just run it) and new screenshots in `docs/reports/assets/tz07-*.png`: assembled sedan, exploded with labels, SUV, hatchback, mobile, and a frame from the middle of the entrance animation.
+- In the report: `trisTotal` for the three templates (from `buildCar(type).trisTotal`), FPS on Arthur's laptop (if he opens the Preview) or honestly "not measured".
+- `git diff --stat` in the report — only the allowed files.
+- Screen recording for X: car entrance → click on the red marker → "Disassemble" → "Assemble" (Arthur records it himself from the Preview link).

@@ -2,10 +2,11 @@
 # @agent:   claude-code
 # @project: hanbridge-inspector
 # @purpose: ~46 s cut for X (16:9, burned-in captions, drums bed): pain → agent → NEGOTIATE → 3D garage → film → Muse Code timelapse → end card with the link.
-#           Pieces come from the jury cut (cursor already removed), the site film recording, the ТЗ-11 timelapse and the blurred client chats.
+#           Pieces come from the jury cut (cursor already removed), the site film recording, the TZ-11 timelapse and the blurred client chats.
 # @created: 2026-11-03
 # @updated: 2026-11-03 claude-code — dead code removed
-# @updated: 2026-11-03 claude-code — collage of 4: night booking, «Когда отправка?», «когда она поедет?», a wall of photos (Arthur's dm/ shots)
+# @updated: 2026-11-03 claude-code — collage of 4: night booking, "When does it ship?", "when will it go?", a wall of photos (Arthur's dm/ shots)
+# @updated: 2026-11-04 claude-code — pain caption: «100 photos and a few videos in a chat» (one number everywhere)
 # usage: python3 scripts/video/x_cut.py <META-HACKATON dir>   → recordings/x/hanbridge-x.mp4
 import os, subprocess, sys
 from PIL import Image, ImageDraw, ImageFont
@@ -54,7 +55,7 @@ for k, n in enumerate(shots):
     c.thumbnail((cw, 860))
     im.paste(c, (90 + k * (cw + 24), 190))
 im.save(pain)
-cp = os.path.join(out, "cap-pain.png"); caption(cp, "BEFORE", "Buying a car in Korea: hundreds of photos in a chat")
+cp = os.path.join(out, "cap-pain.png"); caption(cp, "BEFORE", "Buying a car in Korea: 100 photos and a few videos in a chat")
 p = os.path.join(out, "00-pain.mp4"); parts.append(p)
 run("ffmpeg", "-v", "error", "-y", "-loop", "1", "-t", "3", "-i", pain, "-i", cp, "-filter_complex",
     f"[0:v]fps={FPS},fade=t=in:d=0.3[b];[b][1:v]overlay=0:0,format=yuv420p",

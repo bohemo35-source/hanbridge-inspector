@@ -1,13 +1,13 @@
 <!-- @agent: claude-code · @project: hanbridge-inspector · @purpose: film stutter, per scene, before/after 8c8cf11 · @created: 2026-11-03 -->
-# Фильм: замер рывков по сценам (03.11)
+# Film: stutter measurement per scene (03.11)
 
-Прибор: `scripts/film4/stutter-scenes.mjs` — видимый Chrome (GPU), 1600×900, production `/lab/film?lang=en`. «До» — код 36a7115 (production до 8c8cf11), «после» — 8c8cf11. Play — кнопка «Play the film» до конца; скролл — колесо равномерно 120 с.
-**frozen** — сколько мс на экране был клип, стоящий на паузе (в Play): до правки входящий клип ждал на кадре 0 весь переход.
+Instrument: `scripts/film4/stutter-scenes.mjs` — visible Chrome (GPU), 1600×900, production `/lab/film?lang=en`. "Before" — code 36a7115 (production before 8c8cf11), "after" — 8c8cf11. Play — the "Play the film" button until the end; scroll — mouse wheel evenly over 120 s.
+**frozen** — how many ms a clip stood paused on screen (in Play): before the fix, the incoming clip waited on frame 0 for the entire transition.
 
-Итого Play: frozen 22650 → 1067 мс (повторный прогон «после» — 443 мс; остаток — первый клип стоит 0,4–1,1 с в сцене open до старта звука, это видно); длинных кадров >50 мс 0 → 0; waiting 0 → 1. Повторный прогон «после» с уточнённой метрикой замираний (клип играл до и после промежутка): frozen 443 мс, замираний 4 (все в busan, ровно 100 мс: клип 5 с растянут на окно озвучки ~11 с, скорость ~0,45 — медленные кадры, не сбой).
-Итого скролл: длинных кадров 3 → 3 (все в финале, загрузка гаража), max seek 13 → 9 мс.
+Play total: frozen 22650 → 1067 ms (repeat "after" run — 443 ms; the remainder — the first clip stands 0.4–1.1 s in scene open until the sound starts, this is visible); long frames >50 ms 0 → 0; waiting 0 → 1. Repeat "after" run with a refined stall metric (the clip was playing before and after the gap): frozen 443 ms, 4 stalls (all in busan, exactly 100 ms: a 5 s clip stretched over the ~11 s voice-over window, speed ~0.45 — slow frames, not a failure).
+Scroll total: long frames 3 → 3 (all in the finale, garage loading), max seek 13 → 9 ms.
 
-| сцена | клип | Play frozen, мс до → после | Play длинные кадры до → после | скролл max seek, мс до → после |
+| scene | clip | Play frozen, ms before → after | Play long frames before → after | scroll max seek, ms before → after |
 |---|---|---|---|---|
 | open | bridge-a.mp4 | 1767 → 1067 | 0 → 0 | 7 → 7 |
 | b | bridge-b.mp4 | 992 → 0 | 0 → 0 | 4 → 8 |

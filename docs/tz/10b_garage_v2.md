@@ -1,105 +1,105 @@
-# ТЗ-10b — Гараж v2: новая модель машины и живое окружение
+# TZ-10b — Garage v2: new car model and a living environment
 
-Сначала прочитай:
-- `AGENTS.md`, раздел «Экономия лимита Muse»: ты работаешь через платный API, токены считаются;
-- `docs/reports/tz-10.md` — что уже сделано и что исправлял ревьюер;
-- скриншоты `docs/reports/assets/tz10-beat*.png` — текущее состояние;
-- `public/models/ref-car-v2-preview.jpg` — превью новой модели.
+First read:
+- `AGENTS.md`, section "Muse quota saving": you work through a paid API, tokens are counted;
+- `docs/reports/tz-10.md` — what has already been done and what the reviewer fixed;
+- the screenshots `docs/reports/assets/tz10-beat*.png` — the current state;
+- `public/models/ref-car-v2-preview.jpg` — a preview of the new model.
 
-Выполни целиком, без вопросов. Что не выходит за 2 попытки — запиши в отчёт и иди дальше.
+Complete it in full, without questions. What does not work within 2 attempts — record in the report and move on.
 
-Ветка `tz-10`, коммиты по ходу работы, не пушь.
+Branch `tz-10`, commits along the way, do not push.
 
-Трогать можно только:
+You may only touch:
 - `src/components/garage-3d/*`
 - `src/app/lab/garage/*`
 - `scripts/garage/*`
-- `public/garage/*` (новые сгенерированные ассеты)
+- `public/garage/*` (new generated assets)
 - `tests/garage-*.test.ts`
-- `docs/reports/tz-10b.md` и `docs/reports/assets/tz10b-*`
+- `docs/reports/tz-10b.md` and `docs/reports/assets/tz10b-*`
 
-## Цель
-Сцена «Гараж» выглядит как кадр из рекламы автопроизводителя:
-- машина без «волн» на кузове;
-- в кузове отражается настоящий гараж;
-- пространство вокруг детальное, а не серые коробки.
+## Goal
+The "Garage" scene looks like a frame from a car manufacturer's commercial:
+- the car body has no "waves";
+- the real garage is reflected in the body;
+- the space around is detailed, not grey boxes.
 
-Биты, данные из отчёта и правила (никаких выдуманных цифр) остаются как в ТЗ-10.
+The beats, the data from the report, and the rules (no invented figures) remain as in TZ-10.
 
-## 1. Новая модель (v2, уже лежит в `public/models/`)
-v1 строилась по одному ракурсу. v2 построена по 4 согласованным ракурсам, поверхность чистая. Провенанс — в `provenance.json` → `v2`.
+## 1. New model (v2, already in `public/models/`)
+v1 was built from a single angle. v2 is built from 4 consistent angles, and the surface is clean. Provenance is in `provenance.json` → `v2`.
 
-- **`car-v2.glb`** — одна сетка с PBR-текстурами (meshopt + webp). Это **герой** для битов 0, 1 и конца бита 5: заезд, подъёмник, финальный кадр.
-- **`car-v2-parts.glb`** — 22 детали (`tripo_part_0..21`), без текстур. Используется для разборки (биты 2–4).
-- Обе модели в одной системе координат и с одинаковыми пропорциями: +X — перёд, +Y — вверх, левый борт −Z. Нормализуй обе одинаково: длина 4.4 м, колёса на полу, центр по X/Z. После этого они совпадают.
+- **`car-v2.glb`** — one mesh with PBR textures (meshopt + webp). This is the **hero** for beats 0, 1 and the end of beat 5: the drive-in, the lift, the final frame.
+- **`car-v2-parts.glb`** — 22 parts (`tripo_part_0..21`), no textures. Used for the disassembly (beats 2–4).
+- Both models are in one coordinate system with the same proportions: +X — the front, +Y — up, left side −Z. Normalize both the same way: length 4.4 m, wheels on the floor, centered on X/Z. After that they coincide.
 
-### Переход между моделями
-- В начале бита 2 (первые ~12% бита) — кроссфейд героя в детали. Затем детали разлетаются.
-- В бите 5 детали собираются, затем обратный кроссфейд в героя.
-- Цвет краски деталей = средний цвет базовой текстуры героя. Посчитай при загрузке: отрисуй текстуру в маленький canvas и усредни пиксели, исключая очень тёмные (стёкла, шины) и очень светлые. Так переход не будет заметен.
+### Transition between the models
+- At the start of beat 2 (the first ~12% of the beat) — a crossfade from the hero to the parts. Then the parts fly apart.
+- In beat 5 the parts assemble, then a reverse crossfade back to the hero.
+- The paint color of the parts = the average color of the hero's base texture. Compute it on load: draw the texture to a small canvas and average the pixels, excluding very dark ones (glass, tires) and very light ones. This way the transition is not noticeable.
 
-### Карта деталей v2 (сверена рендером ревьюера)
-| Узел | Что это | Panel id | Разборка |
+### Parts map v2 (checked by a reviewer render)
+| Node | What it is | Panel id | Disassembly |
 |---|---|---|---|
-| `tripo_part_9` | капот | `hood` | вверх + вперёд |
-| `tripo_part_16` | передний бампер | `front_bumper` | вперёд |
-| `tripo_part_21` | решётка / центр бампера | — | вместе с бампером |
-| `tripo_part_15` | передняя часть: **оба передних крыла** одной деталью | `front_left_fender` и `front_right_fender` | вперёд (меньше бампера) |
-| `tripo_part_12` | передняя левая дверь | `front_left_door` | влево (−Z), чуть вперёд |
-| `tripo_part_7` | задняя левая дверь | `rear_left_door` | влево, чуть назад |
-| `tripo_part_11` | передняя правая дверь | `front_right_door` | вправо (+Z), чуть вперёд |
-| `tripo_part_17` | задняя правая дверь | `rear_right_door` | вправо, чуть назад |
-| `tripo_part_3` | задняя часть: **оба задних крыла + дверь багажника** | `rear_left_fender`, `rear_right_fender`, `trunk` | назад |
-| `tripo_part_14` | спойлер / верх задней двери | — | вместе с `3`, чуть выше |
-| `tripo_part_13` | задний бампер | `rear_bumper` | назад (дальше `3`) |
-| `tripo_part_19`, `tripo_part_20` | накладка номера / выхлоп | — | вместе с задним бампером |
-| `tripo_part_0` | крыша со стёклами | `roof` | вверх |
-| `tripo_part_18` / `tripo_part_10` | зеркала левое / правое | — | вместе с передними дверями |
-| `tripo_part_4` / `5` / `1` / `2` | колёса: переднее левое / заднее левое / переднее правое / заднее правое | — | наружу по Z |
-| `tripo_part_6`, `tripo_part_8` | днище, пороги, передняя нижняя часть | — | вниз 0.3 м |
+| `tripo_part_9` | hood | `hood` | up + forward |
+| `tripo_part_16` | front bumper | `front_bumper` | forward |
+| `tripo_part_21` | grille / center of the bumper | — | together with the bumper |
+| `tripo_part_15` | front section: **both front fenders** as one part | `front_left_fender` and `front_right_fender` | forward (less than the bumper) |
+| `tripo_part_12` | front left door | `front_left_door` | left (−Z), slightly forward |
+| `tripo_part_7` | rear left door | `rear_left_door` | left, slightly back |
+| `tripo_part_11` | front right door | `front_right_door` | right (+Z), slightly forward |
+| `tripo_part_17` | rear right door | `rear_right_door` | right, slightly back |
+| `tripo_part_3` | rear section: **both rear fenders + tailgate** | `rear_left_fender`, `rear_right_fender`, `trunk` | back |
+| `tripo_part_14` | spoiler / top of the rear door | — | together with `3`, slightly higher |
+| `tripo_part_13` | rear bumper | `rear_bumper` | back (further than `3`) |
+| `tripo_part_19`, `tripo_part_20` | license-plate trim / exhaust | — | together with the rear bumper |
+| `tripo_part_0` | roof with glass | `roof` | up |
+| `tripo_part_18` / `tripo_part_10` | mirrors, left / right | — | together with the front doors |
+| `tripo_part_4` / `5` / `1` / `2` | wheels: front left / rear left / front right / rear right | — | outward along Z |
+| `tripo_part_6`, `tripo_part_8` | underbody, sills, front lower section | — | down 0.3 m |
 
-Одна деталь может нести несколько панелей (`15`, `3`). Переделай `PartDef.panel` в `panels: PanelId[]`. Метки замеров для таких деталей ставь раздельно: левое крыло — у левого края детали, правое — у правого, багажник — у заднего торца. Обнови тесты: все 13 panel id должны быть покрыты. Режим `?debug=parts` должен работать с v2. Старую карту v1 и файлы `hero-car*.glb` не удаляй, но в сцене не используй.
+One part may carry several panels (`15`, `3`). Change `PartDef.panel` to `panels: PanelId[]`. Place the paint-gauge labels for such parts separately: the left fender — at the left edge of the part, the right fender — at its right edge, the trunk — at the rear end. Update the tests: all 13 panel ids must be covered. The `?debug=parts` mode must work with v2. Do not delete the old v1 map and the `hero-car*.glb` files, but do not use them in the scene.
 
-## 2. Окружение
-Делаешь кодом. Растры — только от **Muse Image** (Meta), генерируешь сам. Сохраняй в `public/garage/` вместе с `prompts.json`: промпт, модель, дата, время генерации.
+## 2. Environment
+Built in code. Rasters — only from **Muse Image** (Meta), generated by you. Save them to `public/garage/` together with `prompts.json`: prompt, model, date, generation time.
 
-Генерация: `scripts/garage/generate-assets.mjs`, по образцу `scripts/journey/generate-backdrops.mjs`. Запросы к `/images/generations` — последовательно, один прогон. Каждый ассет ≤ 1 МБ (JPEG q82).
+Generation: `scripts/garage/generate-assets.mjs`, modeled on `scripts/journey/generate-backdrops.mjs`. Requests to `/images/generations` — sequential, one run. Each asset ≤ 1 MB (JPEG q82).
 
-1. **Окружение для отражений и дальнего фона: `env-garage.jpg`.** Широкая панорама (2:1, насколько даст модель) современного чистого бокса осмотра ночью: линейные LED-светильники под потолком, тёмные стены-панели, шкафы с инструментом, мягкий тёплый свет из глубины. Без людей, текста, логотипов и машин в центре.
-   - Используй как `scene.environment`: `EquirectangularReflectionMapping` → PMREM. В кузове должны появиться настоящие блики светильников.
-   - На дальний фон — сферу большого радиуса с этой текстурой, приглушённую и размытую (или с `backgroundBlurriness`), чтобы за краями бокса было пространство, а не чёрная пустота.
-2. **Пол: `floor-epoxy.jpg`.** Бесшовная текстура тёмного шлифованного бетона или эпоксидки сверху, без перспективы. Повтор, roughness 0.5–0.7. Поверх — жёлтая разметка зоны подъёмника и решётка водостока (геометрией). Reflector оставить, но сделать слабее, чтобы читалась текстура.
-3. **Стены: `wall-panel.jpg`.** Бесшовные тёмные металлические панели. На стенах:
-   - светящаяся горизонтальная полоса;
-   - 2–3 светящихся указателя без текста: значки, стрелки.
+1. **Environment for reflections and the far background: `env-garage.jpg`.** A wide panorama (2:1, as far as the model allows) of a modern, clean inspection bay at night: linear LED fixtures under the ceiling, dark wall panels, tool cabinets, soft warm light from the depths. No people, text, logos, or cars in the center.
+   - Use it as `scene.environment`: `EquirectangularReflectionMapping` → PMREM. Real light-fixture highlights must appear in the body.
+   - For the far background — a sphere of large radius with this texture, muted and blurred (or with `backgroundBlurriness`), so that beyond the edges of the bay there is space rather than black emptiness.
+2. **Floor: `floor-epoxy.jpg`.** A seamless texture of dark polished concrete or epoxy seen from above, without perspective. Repeating, roughness 0.5–0.7. On top — yellow markings for the lift zone and a drain grate (as geometry). Keep the Reflector, but make it weaker so the texture stays readable.
+3. **Walls: `wall-panel.jpg`.** Seamless dark metal panels. On the walls:
+   - a glowing horizontal strip;
+   - 2–3 glowing signs without text: icons, arrows.
 
-Геометрия:
-- **Потолок:** решётка балок и 6–8 линейных светильников с корпусом (emissive-полоса в корпусе), а не голые полосы.
-- **Вдоль задней стены:** шкафы с ящиками (фаски, ручки), стойка с шинами, верстак, компрессор, стойка с тестером OBD (экран со светящимся графиком без цифр).
-- **Подъёмник:** ножничный, как сейчас, но аккуратнее: фаски, гидроцилиндр, жёлтые торцы платформ, резиновые накладки.
-- **Атмосфера:** лёгкая объёмная дымка. Конусы оставь только еле заметными. Contact shadow под машиной (радиальная текстура). Bloom мягкий, засветок нет.
-- Всё за пределами ~10 м от машины — силуэтами в полутьме и тумане. Детализация вблизи.
+Geometry:
+- **Ceiling:** a grid of beams and 6–8 linear light fixtures with housings (an emissive strip inside the housing), not bare strips.
+- **Along the back wall:** cabinets with drawers (chamfers, handles), a tire rack, a workbench, a compressor, a stand with an OBD tester (a screen with a glowing graph without numbers).
+- **Lift:** a scissor lift, as now but neater: chamfers, a hydraulic cylinder, yellow platform ends, rubber pads.
+- **Atmosphere:** light volumetric haze. Keep the cones only barely visible. A contact shadow under the car (radial texture). Bloom soft, no blown-out highlights.
+- Everything beyond ~10 m from the car — silhouettes in dimness and fog. Detail up close.
 
-## 3. Камера и кадр
-- В битах 0, 1, 5 машина занимает 40–60% ширины кадра. Ракурсы 3/4 и низко, как в рекламе.
-- Вид сверху в бите 3 оставить: он работает. LED и конусы скрываются над потолком, это уже есть.
-- Сохранить: 60 fps на маке, eco-режим, мобильная версия без Reflector, фолбэк без WebGL.
+## 3. Camera and framing
+- In beats 0, 1 and 5 the car takes 40–60% of the frame width. Angles 3/4 and low, as in commercials.
+- Keep the top-down view in beat 3: it works. The LEDs and cones are hidden above the ceiling, which is already in place.
+- Keep: 60 fps on a Mac, eco mode, the mobile version without Reflector, the fallback without WebGL.
 
-## Тесты и проверки
-1. Зелёные:
+## Tests and checks
+1. Green:
    - `npx tsc --noEmit`;
    - `npm run lint`;
-   - `npx vitest run` (все старые + обновлённые garage-тесты);
+   - `npx vitest run` (all old tests + the updated garage tests);
    - `npm run build`;
-   - `node --check` для новых `.mjs`.
-2. `node scripts/garage/capture.mjs http://localhost:3100` на маке (GPU) снимает `docs/reports/assets/tz10b-beat0..5.png`, `tz10b-debug-parts.png`, мобильные и фолбэк. Переименуй префикс в скрипте на `tz10b`.
-3. На скриншотах:
-   - на кузове нет волн;
-   - в кузове видны блики светильников;
-   - за боксом не пустота;
-   - пол с текстурой и разметкой;
-   - в бите 3 все метки читаются, у переднего крыла и задней части — по две раздельные метки.
-4. Отчёт `docs/reports/tz-10b.md`: сырой вывод проверок, время каждого вызова Muse Image, размеры ассетов, треугольники, fps, `git diff --stat`, что не получилось.
+   - `node --check` for the new `.mjs` files.
+2. `node scripts/garage/capture.mjs http://localhost:3100` on a Mac (GPU) takes `docs/reports/assets/tz10b-beat0..5.png`, `tz10b-debug-parts.png`, the mobile and fallback shots. Rename the prefix in the script to `tz10b`.
+3. On the screenshots:
+   - no waves on the body;
+   - the light-fixture highlights are visible in the body;
+   - beyond the bay there is no emptiness;
+   - the floor has a texture and markings;
+   - in beat 3 all labels are readable; the front fender and the rear section each have two separate labels.
+4. Report `docs/reports/tz-10b.md`: raw output of the checks, the time of each Muse Image call, asset sizes, triangles, fps, `git diff --stat`, what did not work.
 
-## Запись
-После ревью Артур снимает `/lab/garage` полным скроллом. Это главный кадр для X и для видео 0:25–1:00.
+## Recording
+After review, Arthur records `/lab/garage` with a full scroll. This is the main frame for X and for the video 0:25–1:00.

@@ -1,4 +1,4 @@
-# @agent: claude-code · @project: hanbridge-inspector · @purpose: журнал align-narration.mts для narration-en (фраза ASR Muse Voice Transcribe → сцена), из eleven-voice/film1-en.mp3, порог паузы 0.2 с · @created: 2026-11-03
+# @agent: claude-code · @project: hanbridge-inspector · @purpose: log of align-narration.mts for narration-en (ASR phrase Muse Voice Transcribe → scene), from eleven-voice/film1-en.mp3, pause threshold 0.2 s · @created: 2026-11-03
 b        Somewhere in Korea..
 b        There is a car meant for you.,
 c        8,000 kilometers away.

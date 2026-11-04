@@ -160,7 +160,7 @@ export async function findDefects(opts: {
   });
 
   // paint thickness (repaint / filler) and panel replacement are not provable from a photo — gauge, voice or inspector text only
-  // upload mode keeps photo signs of repaint, marked as such; they go to «Not confirmed» (photoPaintOnly)
+  // upload mode keeps photo signs of repaint, marked as such; they go to "Not confirmed" (photoPaintOnly)
   const findings: Finding[] = draft.defects.filter((d) => keepPhotoKind(d.kind, opts.paintSigns === true)).map((d, i) => {
     const sign = d.kind === "repaint";
     return {

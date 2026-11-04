@@ -5,7 +5,7 @@
 #           (C-home tail, D2a wait, F2 GPU wait) so the film stays ≤ 3:00; music is mixed afterwards by video-build/voice-build/mix_music.sh as before
 # @created: 2026-11-03
 # @updated: 2026-11-03 claude-code — dead code removed
-# @updated: 2026-11-03 claude-code — collage of 4: night booking, «Когда отправка?», «когда она поедет?», a wall of photos (Arthur's dm/ shots)
+# @updated: 2026-11-03 claude-code — collage of 4: night booking, "When does it ship?", "when will it go?", a wall of photos (Arthur's dm/ shots)
 # usage: python3 scripts/video/jury_v5.py <META-HACKATON dir> <voice line mp3>   → recordings/jury-cut-voiced-el-v5.mp4
 import os, re, subprocess, sys
 from PIL import Image, ImageDraw, ImageFont

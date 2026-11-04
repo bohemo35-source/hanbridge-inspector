@@ -1,9 +1,9 @@
 # Third-party assets
 
 Everything else in this repository was created during the Meta Global AI Developer Hackathon (Oct 26 – Nov 4, 2026):
-- code written with Muse Code (Muse Wonder) and Claude;
+- code written with Muse Wonder (inside Muse Code) and Claude;
 - images generated with Muse Image (`muse-image-1.0`; prompts in `public/**/prompts.json`);
-- 3D car model generated with the Tripo API from a Muse Image frame (paid API credits; provenance in `public/models/provenance.json`);
+- 3D cars: the car in the garage and in the report is "Kia Sportage" by karaman.arman (CC-BY 4.0, Sketchfab — see "3D model" below for the link and what we changed). The Tripo API (paid API credits) was used for the hero car (`hero-car*.glb`, `car-v2*.glb`) and the four body templates (`body-sedan/hatchback/compact/city.glb`), all built from Muse Image frames; `body-suv.glb` reuses the hero car's Tripo multiview model. Provenance: `public/models/provenance.json`, `public/models/provenance-bodies.agent.md`;
 - client reviews are the company's own published videos.
 
 | Asset | Path | Author / source | License |
@@ -27,5 +27,5 @@ HDRI use (TZ-13): Shanghai Bund — Seoul plate; Golden Bay — port; Düsseldor
 
 Libraries are listed in `package.json` (three.js — MIT, Next.js — MIT, etc.).
 
-## 3D-модель (A/B-тест)
-- `public/models/kia-sportage.glb` — «Kia Sportage» by karaman.arman, CC-BY 4.0, https://sketchfab.com/3d-models/kia-sportage-98a84407998a4bc6b4dee912b289f15b. Изменения: поворот (перёд → +X), материалы краски/хрома/стёкол, удалены эмблемы, meshopt-сжатие. `kia-sportage-parts.glb` — та же модель, разрезанная по островам сетки на 22 детали для разборки (`scripts/kia/build-parts.mjs`).
+## 3D model (A/B test)
+- `public/models/kia-sportage.glb` — "Kia Sportage" by karaman.arman, CC-BY 4.0, https://sketchfab.com/3d-models/kia-sportage-98a84407998a4bc6b4dee912b289f15b. Changes: rotated (front → +X), paint/chrome/glass materials, badges removed, meshopt compression. `kia-sportage-parts.glb` — the same model cut by mesh islands into 22 parts for the exploded view (`scripts/kia/build-parts.mjs`).

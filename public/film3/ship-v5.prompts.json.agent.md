@@ -1,2 +1,2 @@
-<!-- @agent: claude-code · @project: hanbridge-inspector · @purpose: sidecar для ship-v5.prompts.json — происхождение клипов sea-v5/vlad-v5 (Muse Image edit + Wan 2.2 + patch-stern) · @created: 2026-11-03 -->
-`ship-v5.prompts.json` собран по логам `scripts/film4/gen-ship.mjs` (`edit-log.json`, `*-wan-s7.json` в `../film-v4-work/ship/`). Wan 2.2 на Modal (H200): bay 1555 с, sea 1597 с, по одному дублю, seed 7. Лист кадров: `docs/film4/ship-v5-sheet.jpg`.
+<!-- @agent: claude-code · @project: hanbridge-inspector · @purpose: sidecar for ship-v5.prompts.json — provenance of clips sea-v5/vlad-v5 (Muse Image edit + Wan 2.2 + patch-stern) · @created: 2026-11-03 -->
+`ship-v5.prompts.json` is assembled from the logs of `scripts/film4/gen-ship.mjs` (`edit-log.json`, `*-wan-s7.json` in `../film-v4-work/ship/`). Wan 2.2 on Modal (H200): bay 1555 s, sea 1597 s, one duplicate each, seed 7. Frame sheet: `docs/film4/ship-v5-sheet.jpg`.

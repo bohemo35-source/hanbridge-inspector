@@ -1,134 +1,134 @@
-# ТЗ-11 — Путешествие машины v2: 2:45 скролла, короткие 3D-сцены + «мосты», гараж внутри
+# TZ-11 — Vehicle journey v2: 2:45 of scroll, short 3D scenes + "bridges", the garage inside
 
-Сначала прочитай:
-- `AGENTS.md`, раздел «Экономия лимита Muse»: ты работаешь через платный API;
-- этот файл;
+First read:
+- `AGENTS.md`, section "Muse quota saving": you work through a paid API;
+- this file;
 - `docs/reports/tz-10b.md`;
-- `src/components/garage-3d/GarageScene.tsx` (только его props и как он грузит модель);
-- `src/components/journey-3d/stageContent.ts` (тексты этапов со сроками компании — переиспользуй, не меняй цифры).
+- `src/components/garage-3d/GarageScene.tsx` (only its props and how it loads the model);
+- `src/components/journey-3d/stageContent.ts` (the stage texts with the company's timings — reuse them, do not change the numbers).
 
-Выполни целиком, без вопросов. Что не выходит за 2 попытки — запиши в отчёт и иди дальше.
+Complete it in full, without questions. What does not work within 2 attempts — record in the report and move on.
 
-Ветка `tz-11` (создана от `main`, гараж уже влит). Коммиты по ходу, не пушь.
+Branch `tz-11` (created from `main`; the garage is already merged). Commits along the way, do not push.
 
-## Цель
-Главная страница `/` — одна киношная история на ~2:45 спокойного скролла: **наша машина** (та же 3D-модель `public/models/car-v2.glb`, что в гараже) проходит путь из Кореи до клиента. Каждый этап проверен и виден.
+## Goal
+The main page `/` — one cinematic story of about 2:45 of calm scrolling: **our car** (the same 3D model `public/models/car-v2.glb` as in the garage) travels the route from Korea to the client. Every stage is verified and visible.
 
-Уровень — рекламный ролик автопроизводителя. Сейчас главная использует старую сцену `journey-3d`, которую Артур забраковал («это не 3D»). Её не удаляй, просто перестань использовать на `/`.
+The level is a car manufacturer's commercial. Right now the main page uses the old `journey-3d` scene, which Arthur rejected ("this is not 3D"). Do not delete it; just stop using it on `/`.
 
-## Архитектура
-**Не один огромный мир, а цепочка блоков.** Каждый 3D-блок — отдельный компонент со своим `WebGLRenderer`. Монтируется, только когда блок ближе 1 экрана к вьюпорту, и полностью освобождается (`dispose`, `forceContextLoss`), когда ушёл дальше 2 экранов. Одновременно живут максимум 2 канваса.
+## Architecture
+**Not one huge world, but a chain of blocks.** Each 3D block is a separate component with its own `WebGLRenderer`. It is mounted only when the block is within 1 screen of the viewport, and fully released (`dispose`, `forceContextLoss`) when it has moved more than 2 screens away. At most 2 canvases live at the same time.
 
-Между 3D-блоками — **мост**: sticky-секция с полноэкранной картинкой Muse Image. На ней медленный наезд и параллакс (CSS/2D, без WebGL) и стеклянные карточки с текстом. Мост должен ощущаться продолжением сцены: тот же свет, то же направление движения.
+Between the 3D blocks — a **bridge**: a sticky section with a full-screen Muse Image picture. On it, a slow push-in and parallax (CSS/2D, no WebGL) and glass cards with text. The bridge must feel like a continuation of the scene: the same light, the same direction of motion.
 
-Новая папка `src/components/journey-v2/`:
-- `JourneyV2.tsx` — оркестратор: список блоков, высота каждого в `vh`, прогресс скролла внутри блока передаётся в блок, общий прогресс — в индикатор;
-- `blocks.ts` — чистые функции и данные: порядок блоков, высоты, `blockAt(progress)`, `stageForBlock`;
-- `useCar.ts` — общий загрузчик `car-v2.glb` (кэш одного `GLTF` на страницу; каждый блок клонирует сцену);
-- `scenes/*.tsx` — 3D-блоки;
+New folder `src/components/journey-v2/`:
+- `JourneyV2.tsx` — the orchestrator: the list of blocks, each block's height in `vh`, the scroll progress inside a block is passed into the block, the overall progress goes to the indicator;
+- `blocks.ts` — pure functions and data: the order of blocks, heights, `blockAt(progress)`, `stageForBlock`;
+- `useCar.ts` — a shared loader for `car-v2.glb` (a cache of one `GLTF` per page; each block clones the scene);
+- `scenes/*.tsx` — the 3D blocks;
 - `Bridge.tsx`, `Hud.tsx`, `Reviews.tsx`.
 
-Блоки используют общий хелпер: renderer, ACES, PMREM-окружение, bloom только на десктопе, eco-режим как в гараже.
+The blocks use a shared helper: renderer, ACES, the PMREM environment, bloom only on desktop, eco mode as in the garage.
 
-## Блоки и тайминг
-Desktop: 100vh скролла ≈ 3 с спокойного скролла.
+## Blocks and timing
+Desktop: 100vh of scroll ≈ 3 s of calm scrolling.
 
-| # | Блок | Тип | Высота | Что в кадре |
+| # | Block | Type | Height | What is in the frame |
 |---|---|---|---|---|
-| 1 | Сеул, ночной мост | 3D | 500vh | Ночь, длинный мост над широкой рекой. Огни города на обоих берегах (Points + Muse Image-панорама вдали), поток фар. Наша машина едет по мосту, камера идёт рядом, низко, затем поднимается. Подпись: «Покупка в Корее — находим машину на аукционах и у дилеров» |
-| — | Мост «Подбор» | мост | 300vh | Карточки этапа `inspection` (что происходит, кто отвечает, сроки) |
-| 2 | Гараж осмотра | 3D | как в `GarageScene` | `<GarageScene report={…} lang={…} />` без изменений компонента. Отчёт — последний отчёт MINI (как `/cars`), передаётся с сервера |
-| — | Мост «Отчёт и документы» | мост | 300vh | Карточки `korea_road` (документы, 말소, 1–2 рабочих дня) |
-| 3 | Порт Пусан, погрузка | 3D | 450vh | Ночь. Ряды контейнеров (InstancedMesh), 2–3 портальных крана, мокрый асфальт с отражениями огней. Ro-ro судно с опущенной кормовой рампой. Машина заезжает по рампе внутрь, рампа поднимается и закрывается. Подпись `port_busan` (до 7 дней, суда 2 раза в неделю) |
-| — | Мост «Море» | мост | 450vh | Самый спокойный. Ночное море, луна, кильватер; карточки `sea` (1–2 дня), «документы на шаг впереди» |
-| 4 | Владивосток | 3D | 400vh | Рассвет, округлые лесистые сопки (силуэтами + Muse Image вдали), вантовый мост на фоне. Судно у причала, рампа опускается, машина съезжает на причал. Подпись `vladivostok` |
-| — | Мост «Таможня» | мост | 300vh | Ворота таможни, штамп «Cleared» (анимация); карточки `customs` (СБКТС/ЭПТС, ~10 дней). Никаких сумм |
-| 5 | Длинная дорога | 3D | 450vh | **Камера сверху.** Машина едет по длинной дороге; ландшафт меняется (побережье → лес → степь) — тайлы земли с цветом/текстурой Muse Image, деревья instanced. Впереди машины по земле «рисуется» тонкая линия маршрута. В конце камера поднимается до упрощённой карты: линии из Владивостока в Москву (~9 000 км, 12–14 дней), Новосибирск, Алматы, Ташкент |
-| 6 | Вручение | 3D | 300vh | Золотой час, двор/гараж клиента. Машина останавливается, фары гаснут. Тёплый свет. Карточка «Ключи и документы переданы» (руки и лица не моделировать). Линия маршрута замыкается |
-| 7 | Отзывы | секция | 200vh | `Reviews.tsx` — см. ниже |
-| 8 | Финал | секция | 100vh | Спокойный отъезд камеры от машины (статичный кадр или лёгкое 3D). «Одна ссылка на машину — от Кореи до вашего гаража». Кнопки «Подобрать авто» (→ `/cars`) и «Демо-отчёт осмотра» (→ последний `/r/:id`) |
+| 1 | Seoul, night bridge | 3D | 500vh | Night, a long bridge over a wide river. City lights on both banks (Points + a Muse Image panorama in the distance), a stream of headlights. Our car drives across the bridge, the camera moves alongside, low, then rises. Caption: "Purchase in Korea — we find the car at auctions and with dealers" (RU copy lives in src/components/journey-v2/copy.ts) |
+| — | Bridge "Selection" | bridge | 300vh | Cards of the `inspection` stage (what happens, who is responsible, timings) |
+| 2 | Inspection garage | 3D | as in `GarageScene` | `<GarageScene report={…} lang={…} />` with no changes to the component. The report is the MINI's latest report (as in `/cars`), passed from the server |
+| — | Bridge "Report and documents" | bridge | 300vh | Cards of `korea_road` (documents, 말소, 1–2 working days) |
+| 3 | Port of Busan, loading | 3D | 450vh | Night. Rows of containers (InstancedMesh), 2–3 gantry cranes, wet asphalt with light reflections. A ro-ro ship with its stern ramp lowered. The car drives up the ramp into the hold, the ramp rises and closes. Caption `port_busan` (up to 7 days, ships twice a week) |
+| — | Bridge "Sea" | bridge | 450vh | The calmest one. The night sea, the moon, the wake; cards for `sea` (1–2 days), "documents one step ahead" |
+| 4 | Vladivostok | 3D | 400vh | Dawn, rounded forested hills (silhouettes + Muse Image in the distance), a cable-stayed bridge in the background. The ship is at the quay, the ramp lowers, the car drives off onto the quay. Caption `vladivostok` |
+| — | Bridge "Customs" | bridge | 300vh | The customs gate, a "Cleared" stamp (animation); cards for `customs` (SBKTS/EPTS, ~10 days). No amounts |
+| 5 | Long road | 3D | 450vh | **Camera from above.** The car drives along a long road; the landscape changes (coast → forest → steppe) — ground tiles with Muse Image color/texture, instanced trees. Ahead of the car a thin route line is "drawn" on the ground. At the end the camera rises to a simplified map: lines from Vladivostok to Moscow (~9,000 km, 12–14 days), Novosibirsk, Almaty, Tashkent |
+| 6 | Handover | 3D | 300vh | Golden hour, the client's yard/garage. The car stops, the headlights go out. Warm light. A card "Keys and documents handed over" (do not model hands or faces). The route line closes into a loop |
+| 7 | Reviews | section | 200vh | `Reviews.tsx` — see below |
+| 8 | Finale | section | 100vh | A calm camera pull-back from the car (a static frame or light 3D). "One link for the car — from Korea to your garage". Buttons "Find a car" (→ `/cars`) and "Demo inspection report" (→ the latest `/r/:id`) |
 
-Итог под индикатором: «После оплаты до Москвы — примерно 4–5 недель» (формулировка фиксированная).
+The total under the indicator: "About 4–5 weeks from payment to Moscow" (fixed wording; RU copy lives in the copy file).
 
-## Ассеты Muse Image
-Генерируешь сам, один прогон: `scripts/journey-v2/generate-assets.mjs`, последовательно. Сохранять в `public/journey-v2/` + `prompts.json` (промпт, модель, дата, мс). JPEG q82, ≤ 1 МБ каждый.
+## Muse Image assets
+You generate them yourself, in one run: `scripts/journey-v2/generate-assets.mjs`, sequentially. Save into `public/journey-v2/` + `prompts.json` (prompt, model, date, ms). JPEG q82, ≤ 1 MB each.
 
-Стиль всех кадров один: кинематографичный, премиальный автопром, анаморфный, мягкая дымка; без людей, без текста, без логотипов и узнаваемых брендов.
+One style for all frames: cinematic, premium automotive, anamorphic, soft haze; no people, no text, no logos and no recognizable brands.
 
-Ассеты:
-- **панорамы-окружения** для 3D-блоков (отражения + дальний фон): `env-seoul-night`, `env-port-night`, `env-vladivostok-dawn`, `env-golden-hour`;
-- **картинки мостов**: `bridge-sourcing` (ночное шоссе к центру осмотра), `bridge-documents` (автовоз выезжает из бокса ночью), `bridge-sea` (ночное море, судно, луна, кильватер), `bridge-customs` (ворота таможни на рассвете);
-- **текстуры**: `tex-asphalt-wet`, `tex-terrain-coast`, `tex-terrain-forest`, `tex-terrain-steppe` (бесшовные, вид сверху).
+Assets:
+- **environment panoramas** for the 3D blocks (reflections + the far background): `env-seoul-night`, `env-port-night`, `env-vladivostok-dawn`, `env-golden-hour`;
+- **bridge pictures**: `bridge-sourcing` (a night highway to the inspection center), `bridge-documents` (a car carrier leaving the bay at night), `bridge-sea` (the night sea, a ship, the moon, the wake), `bridge-customs` (the customs gate at dawn);
+- **textures**: `tex-asphalt-wet`, `tex-terrain-coast`, `tex-terrain-forest`, `tex-terrain-steppe` (seamless, top-down view).
 
-Сопки Владивостока: формулировка промпта «rounded forested hills (sopki), Russian Far East». Не «volcano»-подобные пики — в прошлый раз вышли вулканы.
+Vladivostok's hills: the prompt wording is "rounded forested hills (sopki), Russian Far East". Not volcano-like peaks — last time volcanoes came out.
 
-## Машина
-- Одна и та же `car-v2.glb` во всех 3D-блоках: нормализация, как в гараже (длина 4.4 м).
-- Фары горят ночью (emissive-спрайты + bloom).
-- Колёса крутятся при движении. Колёса — часть одного меша, поэтому делай мягкую вибрацию кузова (лёгкий наклон и тряска 1–2 мм) вместо вращения.
-- В 3D-блоках машина двигается по прогрессу скролла, не по времени. Скролл вверх отматывает точно назад.
+## The car
+- The same `car-v2.glb` in all the 3D blocks: normalized as in the garage (length 4.4 m).
+- The headlights are on at night (emissive sprites + bloom).
+- The wheels turn when moving. The wheels are part of one mesh, so use a soft body vibration (a slight tilt and a 1–2 mm shake) instead of rotation.
+- In the 3D blocks the car moves with the scroll progress, not with time. Scrolling up rewinds exactly.
 
-## HUD (всегда виден)
-- Индикатор этапов справа (на мобильном — сверху компактно). Этапы: Покупка → Осмотр → Документы → Порт → Море → Прибытие → Таможня → Доставка. Подсвечен текущий. Клик — плавный скролл к началу блока.
-- Одна зона подписи (низ слева), текст меняется по битам.
-- Переключатель RU/EN (по умолчанию EN; `?lang=ru`). Тексты — `stageContent.ts` и новый `journey-v2/copy.ts`.
-- Кнопка «Подобрать авто» видна всегда.
+## HUD (always visible)
+- The stage indicator on the right (on mobile — compact at the top). Stages: Purchase → Inspection → Documents → Port → Sea → Arrival → Customs → Delivery. The current one is highlighted. A click — a smooth scroll to the start of the block.
+- One caption zone (bottom left), the text changes by beat.
+- RU/EN switch (default EN; `?lang=ru`). The texts — `stageContent.ts` and the new `journey-v2/copy.ts`.
+- The "Find a car" button is always visible.
 
-## Отзывы
-Ревьюер положит `public/reviews/manifest.json`: `[{ id, client, city, car, video, poster, quote_ru, quote_en }]` + mp4 и постеры.
-- Показать 2–3 карточки: видео без звука с автоплеем по видимости, постер до загрузки, цитата, «клиент, город, машина».
-- **Если файла нет — блок скрыт.** Никаких выдуманных отзывов, имён и звёзд.
+## Reviews
+The reviewer will place `public/reviews/manifest.json`: `[{ id, client, city, car, video, poster, quote_ru, quote_en }]` + mp4 files and posters.
+- Show 2–3 cards: a video without sound with autoplay on visibility, a poster before loading, a quote, "client, city, car".
+- **If the file is absent — the block is hidden.** No invented reviews, names, or stars.
 
-## Производительность и фолбэки
-- Desktop 60 fps на маке. На мобильном pixelRatio ≤ 1.5, без bloom и отражений, высоты блоков ×1.3.
-- `prefers-reduced-motion` / нет WebGL: вертикальная лента — по одному кадру на блок (картинки Muse Image) с теми же подписями и карточками. Гараж — его собственный фолбэк.
-- Бюджет на 3D-блок ≤ 400 000 треугольников (без машины).
+## Performance and fallbacks
+- Desktop 60 fps on a Mac. On mobile: pixelRatio ≤ 1.5, no bloom and no reflections, block heights ×1.3.
+- `prefers-reduced-motion` / no WebGL: a vertical strip — one frame per block (Muse Image pictures) with the same captions and cards. The garage has its own fallback.
+- Budget per 3D block ≤ 400 000 triangles (without the car).
 
-## Файлы
-Разрешено:
+## Files
+Allowed:
 - `src/components/journey-v2/*`
-- `src/app/page.tsx` (подключить `JourneyV2` вместо старого hero)
+- `src/app/page.tsx` (connect `JourneyV2` instead of the old hero)
 - `src/app/lab/journey-v2/*`
 - `scripts/journey-v2/*`
 - `public/journey-v2/*`
 - `tests/journey-v2-*.test.ts`
-- `docs/reports/tz-11.md` и `docs/reports/assets/tz11-*`
+- `docs/reports/tz-11.md` and `docs/reports/assets/tz11-*`
 
-`garage-3d/*` не менять, только импорт. `journey-3d/*` не менять, кроме импорта `stageContent`.
+Do not change `garage-3d/*` — only import it. Do not change `journey-3d/*` except for importing `stageContent`.
 
-## Тесты (vitest, без WebGL и сети)
-- `blockAt` — границы и монотонность;
-- сумма высот = длина истории;
-- каждый этап HUD достижим;
-- `stageForBlock` покрывает все блоки;
-- `copy.ts` — у каждого текста есть `ru` и `en`;
-- отзывы: при пустом манифесте блок не рендерится.
+## Tests (vitest, no WebGL and no network)
+- `blockAt` — boundaries and monotonicity;
+- the sum of heights = the length of the history;
+- every HUD stage is reachable;
+- `stageForBlock` covers all blocks;
+- `copy.ts` — every text has `ru` and `en`;
+- reviews: with an empty manifest the block does not render.
 
-## Критерии готовности
-1. Зелёные:
+## Acceptance criteria
+1. Green:
    - `npx tsc --noEmit`;
    - `npm run lint`;
-   - `npx vitest run` (все старые + новые);
+   - `npx vitest run` (all old + new tests);
    - `npm run build`;
-   - `node --check` для новых `.mjs`.
-2. `scripts/journey-v2/capture.mjs` (на маке, GPU, как `scripts/garage/capture.mjs`). Скриншоты 1440×900:
-   - середина каждого 3D-блока и каждого моста: `tz11-01-seoul.png`, `tz11-02-sourcing.png`… по порядку;
-   - мобильные 390×844: Сеул, Пусан, дорога сверху;
-   - фолбэк.
-   - FPS из `data-fps` каждого блока.
-3. На скриншотах:
-   - машина одна и та же и стоит на земле/палубе;
-   - нет висящих в воздухе предметов;
-   - у мостов текст читается;
-   - у Владивостока сопки, не вулканы;
-   - на дороге видна линия маршрута.
-4. Отчёт `docs/reports/tz-11.md`:
-   - сырой вывод проверок;
-   - время каждого вызова Muse Image и размеры ассетов;
-   - треугольники и fps по блокам;
-   - полная высота страницы и оценка длительности скролла;
+   - `node --check` for the new `.mjs` files.
+2. `scripts/journey-v2/capture.mjs` (on a Mac, GPU, like `scripts/garage/capture.mjs`). Screenshots at 1440×900:
+   - the middle of each 3D block and each bridge: `tz11-01-seoul.png`, `tz11-02-sourcing.png`… in order;
+   - mobile 390×844: Seoul, Busan, the road from above;
+   - the fallback.
+   - FPS from `data-fps` of each block.
+3. On the screenshots:
+   - the car is the same one and stands on the ground/deck;
+   - no objects float in the air;
+   - the text on the bridges is readable;
+   - Vladivostok has hills, not volcanoes;
+   - the route line is visible on the road.
+4. Report `docs/reports/tz-11.md`:
+   - raw output of the checks;
+   - the time of each Muse Image call and the asset sizes;
+   - triangles and fps per block;
+   - the full page height and the estimated scroll duration;
    - `git diff --stat main`;
-   - что не получилось.
+   - what did not work.
 
-## Запись
-После ревью Артур снимает `/` полным скроллом (~2:45). Это кадры 0:00–0:25 и 2:20–2:52 видео и ролик для X.
+## Recording
+After review, Arthur records `/` with a full scroll (~2:45). These are frames 0:00–0:25 and 2:20–2:52 of the video, and the clip for X.

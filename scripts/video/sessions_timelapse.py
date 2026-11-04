@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # @agent:   claude-code
 # @project: hanbridge-inspector
-# @purpose: One timelapse of all recorded Muse Code sessions (ТЗ-01…11): per ТЗ a title card (number, date, what was built) and ~12 s of keyframes
+# @purpose: One timelapse of all recorded Muse Code sessions (TZ-01…11): per TZ a title card (number, date, what was built) and ~12 s of keyframes
 #           with the real session clock; black and idle stretches dropped; every frame that goes into the video is OCR'd (macOS Vision) and
 #           scanned for keys, tokens, e-mails and phone numbers before anything is built — a hit stops the build until it is blurred (BLUR below)
 # @created: 2026-11-04
 # @updated: 2026-11-04 claude-code — Arthur: only Muse Code at work — frames with the Claude app / Claude Code / a chat in view are cut whole
-#           (not blurred), frames without Muse Code's terminal too; a ТЗ with too little Muse Code left goes to the "not recorded" card
+#           (not blurred), frames without Muse Code's terminal too; a TZ with too little Muse Code left goes to the "not recorded" card
 # @updated: 2026-11-04 claude-code — review: names of people and of other projects (Claude app chat list, Finder, 1Password, the account footer)
 #           are blurred frame by frame from the OCR boxes, the whole sidebar column with them; scans fail closed (every frame must come back
-#           from OCR, a ТЗ with no text stops); `verify` re-OCRs the built frames and the final mp4 and fails on any name left readable
+#           from OCR, a TZ with no text stops); `verify` re-OCRs the built frames and the final mp4 and fails on any name left readable
 # usage: [OCR=<binary from ocr.swift>] python3 scripts/video/sessions_timelapse.py <META-HACKATON dir> extract|scan|build|verify
 #        (macOS Vision does not run inside the agent sandbox: run scan and verify outside it)
 import json, os, re, shutil, subprocess, sys
@@ -18,8 +18,8 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageStat, ImageChops
 root = os.path.abspath(sys.argv[1]); phase = sys.argv[2]
 REC = os.path.join(root, "recordings"); WORK = os.path.join(REC, "timelapse", "sessions"); os.makedirs(WORK, exist_ok=True)
 OCR = os.environ.get("OCR", "/tmp/claude-501/ocr/ocr")  # swiftc -O scripts/video/ocr.swift -o $OCR
-FPS, PER = 30, 12.0  # 12 s of picture per ТЗ
-# (ТЗ, recording, date shown, one line on what was built) — lines from docs/reports/tz-*.md; dates: recording start (file creation or mtime − duration, Bangkok time)
+FPS, PER = 30, 12.0  # 12 s of picture per TZ
+# (TZ, recording, date shown, one line on what was built) — lines from docs/reports/tz-*.md; dates: recording start (file creation or mtime − duration, Bangkok time)
 SESS = [
     ("01", "tz01.mp4", "27 Oct", "Meta API client, schemas, the Muse Spark expert"),
     ("02", "tz-02.mp4", "28 Oct", "SAM 3.1 segmentation and Spark defect vision"),
@@ -32,14 +32,14 @@ SESS = [
     ("11", "tz-11.mov", "29 Oct", "journey v2: short 3D scenes + Muse Image bridges"),
 ]
 NOT_RECORDED = "TZ-03, TZ-06, TZ-07 and TZ-12 were not recorded (TZ-03 and TZ-06 were done by Claude), TZ-13 was a Claude Code task"
-# regions to blur per ТЗ, normalised x,y,w,h over the 1920-wide frame — filled after reviewing scan hits
+# regions to blur per TZ, normalised x,y,w,h over the 1920-wide frame — filled after reviewing scan hits
 BLUR: dict[str, list[tuple[float, float, float, float]]] = {}
 # extracted frames left out whole (first..last file number): TZ-02 115–147 — WhatsApp with contacts, a phone number, then the OBD PDF (VIN, owner)
 EXCLUDE: dict[str, tuple[int, int]] = {"02": (115, 147)}
 SECRET = re.compile(r"(sk-[A-Za-z0-9]{8,}|vercel_blob_rw_\w+|ghp_\w{10,}|xox[abp]-\w+|AKIA[0-9A-Z]{12,}|Bearer\s+[A-Za-z0-9._-]{12,}|eyJ[A-Za-z0-9_-]{15,}|"
                     r"(API_KEY|TOKEN|SECRET|PASSWORD|BASETEN|GLIMMER|META_API|BLOB_READ)\w*\s*[=:]\s*\S{6,}|[\w.+-]+@[\w-]+\.[\w.]{2,}|\+?\d[\d\s()-]{9,}\d)", re.I)
 
-# personal data seen in ТЗ-01/02 (the Claude app's chat list, Finder, 1Password, the account footer, the shell prompt): people's names and other projects
+# personal data seen in TZ-01/02 (the Claude app's chat list, Finder, 1Password, the account footer, the shell prompt): people's names and other projects
 DENY = re.compile(r"[name]|[name]|[name]|Артур|Artur\b|Arthur Lim|arthurlim@|\bЛим\b|[name]|Export Company|OpenClaw|HERMES|\.hermes|\bШтаб|Таможня /|калькулятор|"
                   r"manus\.|Лидогенерац|[name]|[name]|1Pass|WhatsApp|Сотрудник", re.I)
 # Arthur (04.11): the video shows Muse Code coding, not our chats. A frame stays only if Muse Code's terminal is in it (MUSE) and nothing of a chat
@@ -47,10 +47,10 @@ DENY = re.compile(r"[name]|[name]|[name]|Артур|Artur\b|Arthur Lim|arthurlim
 MUSE = re.compile(r"Ran \d* ?commands?|^\W*(Edited|Explored|Read|Ran|Added|Updated|Wrote) |muse[- ]wonder|muse tz-|esc to interrupt|Worked for|context left|\bmuse\b", re.I)
 CHAT = re.compile(r"Ответить|это ИИ|может ошибаться|Opus \d|Sonnet \d|Показать все|Claude Code|bypass permissions|⏺|✻|Summary kickoff|claude\.ai|WhatsApp|Telegram|Gmail|Входящие|"
                   r"Поделиться|этой сессии|Рабочий стол \d|^\W*(Claude|Google Chrome|Finder|Safari)\W*$", re.I)  # last: window labels in Mission Control
-MIN_FRAMES = 25  # fewer distinct Muse Code frames than this → the ТЗ is left out and named on the last card (its 12 s would be a slideshow of >0.5 s stills)
+MIN_FRAMES = 25  # fewer distinct Muse Code frames than this → the TZ is left out and named on the last card (its 12 s would be a slideshow of >0.5 s stills)
 # rows that mark a sidebar list even when no name in it was read; the whole list column around them is blurred
 SIDEBAR = re.compile(r"Показать все|Недавние|Избранное|Рабочий стол|Chrome Apps|huggingface|Open Design|СЕЙФЫ|Watchtower|Audit & Setup")
-# the desktop "Изображения" stack shows a photo of a person as its icon: the icon above the label is blurred
+# the desktop "Pictures" stack (RU macOS label) shows a photo of a person as its icon: the icon above the label is blurred
 ICON = re.compile(r"^Из\W*ния$|^Изображения$")
 
 def run(*a, **k): return subprocess.run(list(a), check=True, **k)

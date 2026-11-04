@@ -1,51 +1,55 @@
-# ТЗ-05 — Агент-оркестратор, verifier, отчёт /r/:id, прогон на реальном MINI
+# TZ-05 — Orchestrator agent, verifier, report /r/:id, run on real MINI
 
-В `main` уже есть ТЗ-01..04, 06, 08, 09. Прочитай AGENTS.md, CONTEXT.md, PROJECT-STATUS.md и docs/reports/tz-02.md, tz-03.md, tz-04.md (там сырые прогоны инструментов на реальной MINI). Tool calling у Spark проверен: **YES** (нативные `tool_calls`), JSON-режим не нужен. Выполни задание целиком; проблемы фиксируй в отчёте.
+`main` already contains TZ-01..04, 06, 08, 09. Read AGENTS.md, CONTEXT.md, PROJECT-STATUS.md and docs/reports/tz-02.md, tz-03.md, tz-04.md (they contain raw tool runs on the real MINI). Spark tool calling has been verified: **YES** (native `tool_calls`), JSON mode is not needed. Complete the task in full; record problems in the report.
 
-## Цель
-Агент на Muse Spark сам ведёт осмотр: решает, какие инструменты вызвать и в каком порядке, собирает находки с доказательствами, отдельным проходом проверяет каждую (verifiable agent), выносит вердикт или передаёт менеджеру. Клиент получает ссылку /r/:id с отчётом, картой, трассой агента и чатом.
+## Goal
+An agent on Muse Spark runs the inspection itself: it decides which tools to call and in what order, collects findings with evidence, verifies each one in a separate pass (a verifiable agent), and issues a verdict or hands the car to a manager. The client gets a link /r/:id with the report, the map, the agent trace and a chat.
 
-## Инструменты агента
-**Уже реализованы — агент их только вызывает, не переписывать:**
-| tool | функция | файл |
+## Agent tools
+**Already implemented — the agent only calls them, do not rewrite them:**
+| tool | function | file |
 |---|---|---|
 | `segment_image` | `segmentImage` | `src/lib/agent/tools/segment.ts` |
 | `find_defects` | `findDefects` | `src/lib/agent/tools/defects.ts` |
-| `transcribe_note` | `transcribeNote` (голос инспектора из **любого** видео осмотра: в видео всех 5 машин инспектор проговаривает замеры) | `src/lib/agent/tools/voice.ts` |
-| `read_gauge_video` | `readGaugeVideo` (цвет экрана толщиномера; цифры не читаются — это нормально) | `src/lib/agent/tools/gauge.ts` |
+| `transcribe_note` | `transcribeNote` (the inspector's voice from **any** inspection video: in the videos of all 5 cars the inspector narrates the measurements) | `src/lib/agent/tools/voice.ts` |
+| `read_gauge_video` | `readGaugeVideo` (the color of the gauge screen; the digits are not read — this is normal) | `src/lib/agent/tools/gauge.ts` |
 | `make_listing_photo` | `makeListingPhoto`, hero — `getOrCreateHeroImage` | `src/lib/agent/tools/listing.ts` |
 | `get_shipping_status` | `getShippingStatus` | `src/lib/agent/tools/shipping.ts` |
 | `analyze_paint_readings` | `findingsFromPaintReadings` | `src/lib/domain/paint.ts` |
-Новые (сделать в этом ТЗ): `read_diagnostic_report`, `read_inspector_report`, `estimate_landed_cost`, `handoff_to_manager`, `finalize_report`; `read_auction_sheet` — только если у машины есть фото листа (сейчас ни у одной нет — не делать).
-Данные машин: `docs/DEMO_CARS.md`. Видео длинные (3–9 мин): `transcribe_note` вызывать на 1–2 видео машины (агент выбирает), не на всех; `read_gauge_video` — только где есть `paint_gauge.mp4` (MINI). Сверка источников — главное: голос vs цвет экрана vs фото vs текст инспектора; совпадение двух независимых источников повышает confidence, противоречие → `conflict` (пример из tz-03: крыша MINI 161 мкм, инспектор «завод» — объяснение «контрастная крыша»).
-`segment_image`, `transcribe_note`, `read_auction_sheet` (если есть фото листа), `read_diagnostic_report`, `read_inspector_report`, `analyze_paint_readings`, `find_defects`, `read_gauge_video`, `make_listing_photo`, `get_shipping_status`, `estimate_landed_cost`, `handoff_to_manager`, `finalize_report`.
-- `read_auction_sheet({mediaId})` — Spark vision по фото корейского аукционного листа → `{grade, mileageKm, year, repairMarks: [{panel, code, meaning_en, meaning_ru}], rawKoreanLines[]}`; каждая отметка → evidence `auction_sheet` с дословной строкой.
-- `analyze_paint_readings` — из ТЗ-01 (детерминированно).
-- (схема) добавить `"obd"` в enum `EvidenceSchema.type` и в `FINDINGS_DRAFT_SPEC`.
-- `read_diagnostic_report({carId, file})` — PDF OBD-диагностики LAUNCH из `demo-data/<carId>/sheets/*.pdf` (есть у BMW 530i и Kia Morning): текст через `pdftotext` (если пусто — страницы в картинки и Spark vision) → `{ systemsChecked, faultCodes: [{ code, system, description }], mileageKm, vin, scanTime }`; каждый код → evidence `{ type:"obd", mediaId:<pdf>, quote }`. 0 кодов → положительная находка «электроника без ошибок» (severity low, info). В отчёт и trace НЕ выводить имена, телефоны и адреса мастерских из PDF; VIN — только с маской последних 6 символов.
-- `read_inspector_report({carId})` — `demo-data/<carId>/inspector_report_ru.txt` (текст инспектора) → утверждения по панелям с цитатой (evidence `transcript`, `quote`), чтобы агент сверял слова инспектора с фото и толщиномером.
-- `get_shipping_status` — из ТЗ-08 (`src/lib/agent/tools/shipping.ts`, фикстура, `source: "demo_fixture"`), этапы `inspection…delivery`.
-- `estimate_landed_cost` — ВСЕГДА `{status:"manager_quote_required"}` (никаких цифр растаможки в демо).
-- `handoff_to_manager({reason})` — ставит `verdict.handoff = true`, причина в отчёт.
 
-## Что сделать
+New (to do in this TZ): `read_diagnostic_report`, `read_inspector_report`, `estimate_landed_cost`, `handoff_to_manager`, `finalize_report`; `read_auction_sheet` — only if the car has a photo of the auction sheet (currently none does — do not build it).
+
+Car data: `docs/DEMO_CARS.md`. The videos are long (3–9 min): call `transcribe_note` on 1–2 videos per car (the agent chooses), not on all of them; `read_gauge_video` — only where `paint_gauge.mp4` exists (MINI). Cross-checking the sources is the main point: voice vs screen color vs photos vs the inspector's text; agreement of two independent sources raises confidence, a contradiction → `conflict` (example from tz-03: the MINI roof reads 161 µm while the inspector said "factory" (Russian in the original input) — explanation: "contrasting roof").
+
+Tools called in the orchestrator loop: `segment_image`, `transcribe_note`, `read_auction_sheet` (if a sheet photo exists), `read_diagnostic_report`, `read_inspector_report`, `analyze_paint_readings`, `find_defects`, `read_gauge_video`, `make_listing_photo`, `get_shipping_status`, `estimate_landed_cost`, `handoff_to_manager`, `finalize_report`.
+
+- `read_auction_sheet({mediaId})` — Spark vision on a photo of a Korean auction sheet → `{grade, mileageKm, year, repairMarks: [{panel, code, meaning_en, meaning_ru}], rawKoreanLines[]}`; each mark → evidence `auction_sheet` with the verbatim line.
+- `analyze_paint_readings` — from TZ-01 (deterministic).
+- (schema) add `"obd"` to the enum `EvidenceSchema.type` and to `FINDINGS_DRAFT_SPEC`.
+- `read_diagnostic_report({carId, file})` — LAUNCH OBD diagnostic PDF from `demo-data/<carId>/sheets/*.pdf` (available for BMW 530i and Kia Morning): text via `pdftotext` (if empty — pages are converted to images and go to Spark vision) → `{ systemsChecked, faultCodes: [{ code, system, description }], mileageKm, vin, scanTime }`; each code → evidence `{ type:"obd", mediaId:<pdf>, quote }`. 0 codes → a positive finding "electronics without faults" (severity low, info). Do NOT output workshop names, phone numbers or addresses from the PDF into the report or the trace; the VIN — only with the last 6 characters shown.
+- `read_inspector_report({carId})` — `demo-data/<carId>/inspector_report_ru.txt` (the inspector's text) → statements per panel with a quote (evidence `transcript`, `quote`), so the agent can check the inspector's words against the photos and the gauge.
+- `get_shipping_status` — from TZ-08 (`src/lib/agent/tools/shipping.ts`, fixture, `source: "demo_fixture"`), stages `inspection…delivery`.
+- `estimate_landed_cost` — ALWAYS `{status:"manager_quote_required"}` (no customs figures in the demo).
+- `handoff_to_manager({reason})` — sets `verdict.handoff = true`, the reason goes into the report.
+
+## What to do
 1. `src/lib/agent/orchestrator.ts`:
-   - Цикл `sparkChat(tools)` → выполнить tool_calls (независимые — параллельно) → вернуть результаты как `role:"tool"` → до `finalize_report` или 16 шагов. Агент сам решает порядок; доступные медиа машины передаются в первом сообщении (какие есть: фото, видео, голос, листы, отчёт инспектора).
-   - Каждый шаг → `AgentStep {i, tool, argsSummary, why, ms, ok, outputSummary}` в `trace`. В system-промпте: «каждое утверждение — только с evidence; нет evidence — нет находки».
-2. `src/lib/agent/verifier.ts` — отдельный проход по каждой находке на **open-weight модели** `muse-spark-open-1026` через Baseten (`src/lib/meta/sparkOpen.ts`, см. AGENTS.md; если `BASETEN_API_KEY` нет или Baseten недоступен — фолбэк на `muse-spark-1.3`, модель верификатора пишется в trace). Так оркестратор (закрытая Spark) и проверяющий (открытые веса) — разные модели: честная независимая проверка + номинация Best Open Weight. Верификатор получает ТОЛЬКО находку + её evidence (вырезанный по боксу кадр с маской, цитату, замер, строку листа) и отвечает `{supported: boolean, confidence, note}`. Не подтверждено → `verified:false`, находка уходит в раздел «Unconfirmed» и не влияет на вердикт. Противоречие источников (толщиномер ≤150, а голос «перекрас») → пометка `conflict`.
-3. Вердикт: детерминированные правила поверх подтверждённых находок (critical → WALK_AWAY; high или ≥3 medium → NEGOTIATE; иначе BUY) + текстовое обоснование от Spark. Правила handoff из AGENTS.md.
-4. Стриминг прогресса: `POST /api/inspections/:id/run` → SSE-события шагов; UI `/inspect/:id` показывает трассу «вживую» (иконка инструмента, why, время). Это ключевой кадр видео.
-5. Отчёт `/r/:id` (публичный, без логина, `noindex`): шапка авто + вердикт крупно; **3D-карта** `<InspectionMap report={report} lang={lang} mediaUrl={(id) => url} />` из ТЗ-06 (`mediaUrl` → URL оригинального кадра в Blob; `report.vehicle.bodyType/doors` выставлять через `guessBodyType(make, model)`); список подтверждённых находок — у каждой миниатюра кадра с маской / цитата с таймкодом (клик → проигрывание аудио с tStart) / замер / строка листа, confidence; раздел Unconfirmed; listing-фото; блок «Agent trace»; чат с экспертом (ТЗ-01) по этому отчёту; вкладка «Доставка» — `<JourneyScene compact currentStage={shipping.stage} bodyType=… />` из ТЗ-08. Переключатель EN/RU. OG-картинка для шеринга.
-6. Хранение: `src/lib/store/reports.ts` — если есть `BLOB_READ_WRITE_TOKEN`: отчёт JSON в Vercel Blob `reports/{id}.json`, оригиналы медиа (только те кадры/фрагменты, на которые ссылаются evidence; фото — с размытым номером через `makeListingPhoto`-логику, **читаемых номеров в Blob и отчёте быть не должно**) в `media/{carId}/…`; без токена — локально `data/reports/*.json` + `public/generated/` (оба в .gitignore). id — nanoid(10).
-7. (Не делать в этом ТЗ) Flow загрузки `/inspect/new` — демо идёт по готовым машинам из `demo-data`. Вместо этого `/inspect/:carId` запускает агента по машине из каталога и показывает трассу вживую (п. 4).
-8. Каталог: `scripts/e2e/run-cars.mjs [carId…]` — полный прогон агента по каждой машине из `demo-data/<carId>/` (MINI + до 4 машин), загрузка оригиналов в Blob, отчёт в Blob; печатает trace, находки (всего/подтверждено/отклонено), вердикт, URL отчёта, время. Страница `/cars` — список отчётов (фото, марка/модель, вердикт, ссылка на `/r/:id`).
-9. README: обновить «Built during the hackathon» ссылками на PR/коммиты ТЗ-01..05, схема архитектуры (mermaid), какие Meta-модели где используются.
+   - Loop: `sparkChat(tools)` → execute tool_calls (independent ones in parallel) → return the results as `role:"tool"` → until `finalize_report` or 16 steps. The agent decides the order itself; the car's available media are passed in the first message (what exists: photos, videos, voice, sheets, inspector's report).
+   - Each step → `AgentStep {i, tool, argsSummary, why, ms, ok, outputSummary}` in `trace`. System prompt: "every statement — only with evidence; no evidence — no finding".
+2. `src/lib/agent/verifier.ts` — a separate pass over each finding on an **open-weight model** `muse-spark-open-1026` via Baseten (`src/lib/meta/sparkOpen.ts`, see AGENTS.md; if `BASETEN_API_KEY` is absent or Baseten is unavailable — fall back to `muse-spark-1.3`, and the verifier model is written to trace). This way the orchestrator (closed Spark) and the verifier (open weights) are different models: an honest independent check + a nomination for Best Open Weight. The verifier receives ONLY the finding + its evidence (the frame cropped by box with mask, the quote, the measurement, the sheet line) and answers `{supported: boolean, confidence, note}`. Not confirmed → `verified:false`; the finding goes to the "Unconfirmed" section and does not affect the verdict. A source contradiction (gauge ≤150 but voice says "repaint") → mark `conflict`.
+3. Verdict: deterministic rules over the confirmed findings (critical → WALK_AWAY; high or ≥3 medium → NEGOTIATE; otherwise BUY) + a textual justification from Spark. Handoff rules from AGENTS.md.
+4. Progress streaming: `POST /api/inspections/:id/run` → SSE events for the steps; the UI `/inspect/:id` shows the trace "live" (tool icon, why, time). This is the key frame of the video.
+5. Report `/r/:id` (public, no login, `noindex`): car header + verdict in large type; the **3D map** `<InspectionMap report={report} lang={lang} mediaUrl={(id) => url} />` from TZ-06 (`mediaUrl` → URL of the original frame in Blob; set `report.vehicle.bodyType/doors` via `guessBodyType(make, model)`); the list of confirmed findings — each with a thumbnail of the frame with mask / a quote with timecode (click → play the audio from tStart) / a measurement / a sheet line, and confidence; an Unconfirmed section; listing photos; an "Agent trace" block; a chat with the expert (TZ-01) about this report; a "Delivery" tab — `<JourneyScene compact currentStage={shipping.stage} bodyType=… />` from TZ-08. EN/RU switch. OG image for sharing.
+6. Storage: `src/lib/store/reports.ts` — if `BLOB_READ_WRITE_TOKEN` is set: the report JSON in Vercel Blob `reports/{id}.json`, original media (only the frames/fragments referenced by evidence; photos — with the plate blurred via the `makeListingPhoto` logic; **there must be no readable plate numbers in Blob or in the report**) in `media/{carId}/…`; without the token — locally `data/reports/*.json` + `public/generated/` (both in .gitignore). id — nanoid(10).
+7. (Not to do in this TZ) the `/inspect/new` upload flow — the demo runs on the ready cars from `demo-data`. Instead, `/inspect/:carId` runs the agent on a car from the catalog and shows the trace live (item 4).
+8. Catalog: `scripts/e2e/run-cars.mjs [carId…]` — a full agent run on each car from `demo-data/<carId>/` (MINI + up to 4 cars), uploads the originals to Blob, the report to Blob; prints the trace, the findings (total/confirmed/rejected), the verdict, the report URL, the time. Page `/cars` — list of reports (photo, make/model, verdict, link to `/r/:id`).
+9. README: update "Built during the hackathon" with links to the PRs/commits of TZ-01..05, an architecture diagram (mermaid), and which Meta models are used where.
 
-## Критерии готовности
-- tsc / build / lint / vitest зелёные; сырой вывод в docs/reports/tz-05.md.
-- `node --check scripts/e2e/run-cars.mjs`; прогон по всем машинам из demo-data, полный вывод в отчёте; `/cars` показывает все отчёты.
-- У MINI находки минимум из фото (SAM+Spark) и толщиномера (видео `paint_gauge.mp4`); голос и аукционный лист — только если есть у машины, иначе агент пишет в trace «источник отсутствует».
-- Тест verifier: подсунуть находку с чужим кадром → `verified:false`.
-- Тест handoff: уверенность 0.5 → `handoff:true`.
-- `/r/:id` открывается в инкогнито на Vercel Preview; скриншоты десктоп + мобильный в `docs/reports/assets/`.
-- Время полного прогона ≤ 90 с (если больше — где узкое место, по trace).
+## Acceptance criteria
+- tsc / build / lint / vitest green; raw output in docs/reports/tz-05.md.
+- `node --check scripts/e2e/run-cars.mjs`; a run across all cars from demo-data, full output in the report; `/cars` shows all reports.
+- MINI findings come at least from the photos (SAM+Spark) and the gauge (video `paint_gauge.mp4`); voice and the auction sheet — only if the car has them, otherwise the agent writes "source absent" in the trace.
+- Verifier test: feed a finding with someone else's frame → `verified:false`.
+- Handoff test: confidence 0.5 → `handoff:true`.
+- `/r/:id` opens in incognito on Vercel Preview; desktop + mobile screenshots in `docs/reports/assets/`.
+- Full run time ≤ 90 s (if longer — where the bottleneck is, per the trace).

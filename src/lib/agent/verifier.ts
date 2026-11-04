@@ -97,7 +97,7 @@ export function applyUploadVoiceRule(findings: Finding[], measuredPanels: Readon
   };
 }
 
-/** Pure: the unconfirmed typed readings lead the verdict reasons; with nothing verified the model's «no adverse findings» is replaced. */
+/** Pure: the unconfirmed typed readings lead the verdict reasons; with nothing verified the model's "no adverse findings" is replaced. */
 export function withOwnerReasons(verdict: Verdict, rule: { reasons_en: string[]; reasons_ru: string[] }, anyVerified: boolean): Verdict {
   if (!rule.reasons_en.length) return verdict;
   return anyVerified

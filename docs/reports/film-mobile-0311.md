@@ -1,14 +1,14 @@
 <!-- @agent: claude-code · @project: hanbridge-inspector · @purpose: film on phones, per scene, before/after ccb93c3+219efdb · @created: 2026-11-03 -->
-# Фильм на телефоне: замер по сценам (03.11)
+# Film on phones: stutter measurement per scene (03.11)
 
-Прибор: `BROWSER=webkit MBPS=8 node scripts/film4/stutter-scenes.mjs` — Playwright WebKit, профиль iPhone 14 (390×844 @3, touch), ответы mp4 замедлены до 8 Мбит/с; production `/lab/film?lang=en`. Скролл — равномерно за 40 с (как на записи экрана Артура), Play — кнопкой до конца.
-**noFrame** — мс, когда на экране слой клипа без декодированного кадра (до правки — чёрный экран на телефоне; после — под клипом всегда постер); **black** — ни кадра, ни загруженного постера (есть только в новой разметке).
+Instrument: `BROWSER=webkit MBPS=8 node scripts/film4/stutter-scenes.mjs` — Playwright WebKit, iPhone 14 profile (390×844 @3, touch), mp4 responses throttled to 8 Mbit/s; production `/lab/film?lang=en`. Scroll — evenly over 40 s (as in Arthur's screen recording), Play — via the button until the end.
+**noFrame** — ms during which the clip layer on screen has no decoded frame (before the fix — a black screen on the phone; after — the poster is always under the clip); **black** — neither a frame nor a loaded poster (exists only in the new markup).
 
-Скролл: noFrame 30521 → 1904 мс, black — → 0 мс, длинные кадры >50 мс 85 → 2.
-Play: длинные кадры 224 (ccb93c3, лёгкие клипы без hb-lite) → 4 (219efdb), black 0 мс, noFrame 1587 мс (первая сцена до первого кадра, виден постер).
-Десктоп после (Chrome GPU, 1600×900): Play — длинные кадры 0, стоп-кадр 475 мс; скролл 120 с — длинные кадры 3, max seek 17 мс (до, по `docs/reports/film-stutter-0311.md` после 8c8cf11: Play 0 длинных кадров, стоп-кадр 443–1067 мс в двух прогонах; скролл 3 длинных кадра, max seek 9–14 мс). Замеры «после» — production 219efdb.
+Scroll: noFrame 30521 → 1904 ms, black — → 0 ms, long frames >50 ms 85 → 2.
+Play: long frames 224 (ccb93c3, light clips without hb-lite) → 4 (219efdb), black 0 ms, noFrame 1587 ms (first scene until its first frame, the poster is visible).
+Desktop after (Chrome GPU, 1600×900): Play — long frames 0, freeze frame 475 ms; scroll 120 s — long frames 3, max seek 17 ms (before, per `docs/reports/film-stutter-0311.md` after 8c8cf11: Play 0 long frames, freeze frame 443–1067 ms in two runs; scroll 3 long frames, max seek 9–14 ms). "After" measurements — production 219efdb.
 
-| сцена | клип | скролл noFrame, мс до → после | Play fps ccb93c3 → 219efdb |
+| scene | clip | scroll noFrame, ms before → after | Play fps ccb93c3 → 219efdb |
 |---|---|---|---|
 | open | bridge-a.mp4 | 5452 → 1766 | 60 → 59 |
 | b | bridge-b.mp4 | 0 → 0 | 60 → 60 |

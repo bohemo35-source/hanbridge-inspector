@@ -1,3 +1,8 @@
+# @agent:   claude-code
+# @project: hanbridge-inspector
+# @purpose: Muse Glimmer 30B (Meta open weights) served with vLLM on Modal (H100), OpenAI-compatible photo-triage endpoint
+# @created: 2026-10-29
+# @updated: 2026-11-04 claude-code — scaledown_window 5 → 15 min (no min_containers, no GPU snapshots); header added
 # Muse Glimmer 30B (Meta open weights, Apache 2.0) served with vLLM on Modal.
 # OpenAI-compatible API: <url>/v1/chat/completions, auth: Bearer $VLLM_API_KEY (Modal secret "glimmer-key").
 # Deploy: modal deploy infra/modal/glimmer_vllm.py
@@ -23,7 +28,7 @@ app = modal.App("hanbridge-glimmer")
     image=image,
     gpu="H100",
     timeout=60 * 60,
-    scaledown_window=5 * 60,  # scale to zero after 5 idle minutes (saves credits)
+    scaledown_window=15 * 60,  # scale to zero after 15 idle minutes: a visitor's second run skips the 1–3 min cold start; we pay only for idle time after real use
     volumes={"/root/.cache/huggingface": hf_cache, "/root/.cache/vllm": vllm_cache},
     secrets=[modal.Secret.from_name("glimmer-key")],
 )

@@ -1,59 +1,59 @@
-# ТЗ-09 — Шлифовка сцены «Путь машины» до уровня видео
+# TZ-09 — Polishing the "Vehicle journey" scene to video quality
 
-Сначала прочитай AGENTS.md, `docs/tz/08_journey_scene.md`, `docs/reports/tz-08.md` и посмотри скриншоты `docs/reports/assets/tz08-*.png`. Выполни целиком, без вопросов; что не выходит за 2 попытки — в отчёт и дальше. Ветка `tz-09` от `main` → коммиты; не пушить (пуш делает ревьюер).
+First read AGENTS.md, `docs/tz/08_journey_scene.md`, `docs/reports/tz-08.md`, and look at the screenshots `docs/reports/assets/tz08-*.png`. Complete it in full, without questions; what does not work within 2 attempts — into the report, and move on. Branch `tz-09` from `main` → commits; do not push (the reviewer pushes).
 
-## Проблема (ревью ТЗ-08, по скриншотам)
-Фоны Muse Image кинематографичные, а самодельная low-poly геометрия рядом с ними выглядит дёшево и местами сломана:
-1. Канвас занимает ~70% высоты (на 1440×900 сцена 630 px, ниже пустая полоса) — `/lab/journey` и hero на `/` должны быть на весь вьюпорт.
-2. «Море»: машина на серой плоскости, рядом белый куб и красный цилиндр; воды и корабля не видно.
-3. «Дорога и мост»: контейнеры висят в небе полупрозрачными цветными прямоугольниками.
-4. «Осмотр в Корее»: ванты моста режут машину, белое небо, не похоже на площадку осмотра.
-5. Горизонт геометрии не совпадает с горизонтом фото — видна «склейка».
+## Problem (TZ-08 review, from the screenshots)
+The Muse Image backdrops are cinematic, but the homemade low-poly geometry next to them looks cheap and in places broken:
+1. The canvas takes ~70% of the height (at 1440×900 the scene is 630 px, with an empty strip below) — `/lab/journey` and the hero on `/` must fill the whole viewport.
+2. "Sea": the car sits on a grey plane, next to a white cube and a red cylinder; the water and the ship are not visible.
+3. "Road & bridge": containers hang in the sky as semi-transparent colored rectangles.
+4. "Inspection in Korea": the bridge cables cut through the car, the sky is white, it does not look like an inspection site.
+5. The geometry horizon does not match the photo horizon — a visible "seam".
 
-## Цель
-Кадр, который не стыдно показать крупно: **фото этапа (Muse Image) — главный герой на весь экран**, перед ним машина и минимум геометрии, слитые туманом и светом в одну картинку. Принцип 2.5D: фон-плейт + передний план, а не попытка построить мир кодом.
+## Goal
+A frame that is not embarrassing to show large: **the stage photo (Muse Image) is the hero, full screen**, with the car and a minimum of geometry in front of it, merged into one picture by fog and light. 2.5D principle: a background plate + foreground, not an attempt to build the world in code.
 
-## Что сделать (только `src/components/journey-3d/*`, `src/app/lab/journey/*`, `scripts/journey/capture.mjs`)
-1. **Компоновка:** не-compact режим — sticky-контейнер ровно `100svh`, канвас заполняет его; `compact` (для отчёта ТЗ-05) — как было. Проверить, что `/lab/journey` рендерит не-compact.
-2. **Фон-плейт вместо купола:** фото этапа — полноэкранная плоскость в пространстве камеры (или `scene.background` текстурой) с лёгким параллаксом от прогресса (±2–3%), кросс-фейд 0.6 с между этапами. Горизонт фото ≈ 40% высоты кадра — камера и земля настроены так, чтобы горизонт геометрии совпадал с ним; стык закрыт полосой тумана (fog того же цвета, что нижний край фото — брать средний цвет нижних 10% картинки при загрузке).
-3. **Передний план по этапам** (остальную геометрию этапа скрыть, не удалять генераторы):
-   - `inspection`: тёмный глянцевый пол (MeshStandardMaterial roughness 0.35) + два софтбокса (RectAreaLight или emissive-панели) над машиной, никаких вант; бейдж «Report ready».
-   - `korea_road`: только полотно дороги с разметкой, уходящее к горизонту фото; мост — только на фото. Контейнеры убрать.
-   - `port_busan`: дорога/пирс до кромки, 1–2 ряда контейнеров **на земле** рядом с дорогой (непрозрачные, с тенью), ничего в воздухе.
-   - `sea`: вода (шейдер) до горизонта, корпус ro-ro под машиной — читаемый тёмный корпус с белой надстройкой позади машины, машина на палубе; лёгкая качка камеры. Убрать белый куб и красный цилиндр, если это не части корабля.
-   - `vladivostok`, `customs`, `delivery`: дорога + туман, сопки только как тёмный силуэт у горизонта (или убрать, если спорят с фото); ворота «Cleared» — на `customs`.
-4. **Машина:** контровой свет (rim light) по цвету неба этапа, мягкая контактная тень под колёсами (plane с radial-gradient текстурой), фары/стопы с bloom (UnrealBloomPass уже допустим по ТЗ-07; eco-режим выключает).
-5. **Подписи:** правый список этапов — читаемый на светлом небе (полупрозрачная подложка), левый заголовок этапа не перекрывает машину.
-6. Не трогать: id этапов, `route.ts` API (`stageAt`/`progressOf`), `getShippingStatus`, props `JourneyScene`, фоны в `public/journey/` (не перегенерировать).
+## What to do (only `src/components/journey-3d/*`, `src/app/lab/journey/*`, `scripts/journey/capture.mjs`)
+1. **Layout:** non-compact mode — a sticky container of exactly `100svh`, the canvas fills it; `compact` (for the TZ-05 report) — as before. Check that `/lab/journey` renders the non-compact mode.
+2. **Background plate instead of the dome:** the stage photo is a full-screen plane in camera space (or `scene.background` as a texture) with a light parallax from progress (±2–3%), and a 0.6 s cross-fade between stages. The photo horizon sits at ≈ 40% of the frame height — the camera and ground are set up so the geometry horizon coincides with it; the seam is covered by a fog strip in the same color as the bottom edge of the photo — take the average color of the bottom 10% of the picture on load.
+3. **Foreground per stage** (hide the rest of the stage geometry, do not delete the generators):
+   - `inspection`: dark glossy floor (MeshStandardMaterial roughness 0.35) + two softboxes (RectAreaLight or emissive panels) above the car, no cables; a "Report ready" badge.
+   - `korea_road`: only the road surface with markings, receding to the photo horizon; the bridge — only in the photo. Remove the containers.
+   - `port_busan`: road/pier up to the edge, 1–2 rows of containers **on the ground** next to the road (opaque, with shadow), nothing in the air.
+   - `sea`: water (shader) to the horizon, the ro-ro hull under the car — a readable dark hull with a white superstructure behind the car, the car on the deck; light camera sway. Remove the white cube and the red cylinder, unless they are parts of the ship.
+   - `vladivostok`, `customs`, `delivery`: road + fog; hills only as dark silhouettes at the horizon (or remove them if they conflict with the photo); the "Cleared" gate — on `customs`.
+4. **Car:** rim light matching the sky color of the stage, a soft contact shadow under the wheels (a plane with a radial-gradient texture), headlights/taillights with bloom (UnrealBloomPass is already allowed by TZ-07; eco mode turns it off).
+5. **Captions:** the right-hand list of stages must be readable on a light sky (semi-transparent backing); the left stage title must not overlap the car.
+6. Do not touch: stage ids, the `route.ts` API (`stageAt`/`progressOf`), `getShippingStatus`, `JourneyScene` props, the backgrounds in `public/journey/` (do not regenerate them).
 
-## Критерии готовности
-- `npx tsc --noEmit`, `npm run lint`, `npx vitest run` (все 47+ без правок старых тестов), `npm run build` — зелёные; сырой вывод в `docs/reports/tz-09.md`.
-- Новые скриншоты `docs/reports/assets/tz09-<stage>.png` (7 этапов, 1440×900) + `tz09-mobile.png`; на каждом: канвас на весь кадр, нет висящих в воздухе объектов, горизонт без видимой склейки. В отчёте — пара «до/после» для `sea` и `korea_road`.
-- Треугольников сцены ≤ 250 000; размер `public/journey/` не изменился.
-- `git diff --stat` — только разрешённые файлы (+ `public/journey/proof/`, `stageContent.ts`).
+## Acceptance criteria
+- `npx tsc --noEmit`, `npm run lint`, `npx vitest run` (all 47+ with the old tests unchanged), `npm run build` — green; raw output in `docs/reports/tz-09.md`.
+- New screenshots `docs/reports/assets/tz09-<stage>.png` (7 stages, 1440×900) + `tz09-mobile.png`; on each: the canvas fills the frame, no objects hanging in the air, no visible horizon seam. In the report — a before/after pair for `sea` and `korea_road`.
+- Scene triangles ≤ 250 000; the size of `public/journey/` unchanged.
+- `git diff --stat` — only the allowed files (+ `public/journey/proof/`, `stageContent.ts`).
 
-## Часть B — длиннее и информативнее (по просьбе Артура)
-Сейчас 7 этапов ≈ 7 экранов скролла (~25 с) и только заголовок. Нужно ≈ 2 экрана на этап (~50–60 с полного скролла), и в каждом этапе — что происходит с машиной клиента.
+## Part B — longer and more informative (at Arthur's request)
+Right now the 7 stages ≈ 7 scroll screens (~25 s) and only a title. We need ≈ 2 screens per stage (~50–60 s of full scroll), and in each stage — what happens to the client's car.
 
-1. Высота секции: десктоп `1400vh`, мобильный `1000vh`. Внутри этапа 3 «бита» по прогрессу (`route.ts`: добавить чистую функцию `beatAt(progress) → { stage, beat: 0|1|2, local: 0..1 }`, с тестами; `stageAt`/`progressOf` не менять):
-   - бит 0 — кинематографичный въезд (камера и машина, как сейчас), заголовок этапа;
-   - бит 1 — информационная карточка (слева, стекло/blur, не перекрывает машину): «Что происходит», «Документы», «Кто отвечает», «Что видит клиент», «Обычно длится»;
-   - бит 2 — «доказательство» этапа (см. п. 3), затем переход к следующему этапу.
-2. Тексты — в отдельном файле `src/components/journey-3d/stageContent.ts` (RU/EN, типизировано по `StageId`), поле `typical: { ru: string; en: string }` — сроки **ровно как ниже** (это реальные сроки компании от Артура, не менять и не округлять). **Никаких цен, пошлин, сумм** — только процесс. Карточка этапа: «Что происходит», «Документы», «Кто отвечает», «Что видит клиент», «Обычно» (= `typical`).
-   - `inspection` — «Обычно: в день выбора (если до 16:00), иначе на следующий день». Процесс: менеджер подбирает и присылает варианты; клиент выбирает; осмотр по чек-листу (кузов, толщиномер, OBD-диагностика, салон, ходовая), фото/видео; отчёт с вердиктом уходит клиенту в тот же день; после решения клиента — бронь, на оплату 10 дней (чем раньше оплата, тем раньше машина на площадке).
-   - `korea_road` — «Обычно: 1–2 рабочих дня». Экспортные документы, снятие с учёта (말소), подготовка машины к отправке, перегон в порт.
-   - `port_busan` — «Обычно: до 7 дней от выкупа до погрузки — суда уходят 2 раза в неделю». Приёмка на терминале, фотофиксация состояния, погрузка, коносамент (B/L).
-   - `sea` — «Обычно: 1–2 дня». Морской переход до Владивостока, клиент видит этап.
-   - `vladivostok` — «Обычно: выгрузка и таможня в среднем 10 дней» (общий срок с этапом `customs`, повторить и там). Выгрузка, осмотр после доставки, фото прибытия.
-   - `customs` — «Обычно: выгрузка и таможня в среднем 10 дней». Брокер подаёт документы (СБКТС/ЭПТС, таможенная декларация), выпуск — «Cleared».
-   - `delivery` — «Обычно: до Москвы ~9 000 км, 12–14 дней». Автовоз/ЖД до города клиента или самовывоз, передача ключей и документов.
-   - Итог под прогресс-баром: «После оплаты до Москвы — примерно 4–5 недель» (до 7 + 1–2 + ~10 + 12–14 дней; формулировка фиксированная).
-3. «Доказательство» этапа (бит 2), данные — только реальные/из props:
-   - `inspection`: 3–4 миниатюры реальных фото из `public/journey/proof/inspection-*.jpg` (скопировать 4 фото MINI из `demo-data/mini-cooper-s/photos/` с **замазанным номером** через sharp-размытие по боксу из `segmentImage`; если номер не найден — фото не брать) + счётчик «N находок, M подтверждено» из prop `reportSummary?` (если нет — блок скрыт);
-   - `port_busan`, `vladivostok`: иконка-чек «Фотофиксация состояния» (без фото, если их нет);
-   - `customs`: анимированный чек-лист документов;
-   - остальные — нет блока.
-4. Прогресс-бар этапов справа показывает и биты (три точки под активным этапом); клик по этапу — плавный скролл к его началу.
-5. `prefers-reduced-motion` / нет WebGL: фолбэк-лента карточек показывает те же тексты из `stageContent.ts`.
+1. Section height: desktop `1400vh`, mobile `1000vh`. Inside each stage — 3 "beats" by progress (`route.ts`: add a pure function `beatAt(progress) → { stage, beat: 0|1|2, local: 0..1 }`, with tests; do not change `stageAt`/`progressOf`):
+   - beat 0 — cinematic entrance (camera and car, as now), the stage title;
+   - beat 1 — an information card (left side, glass/blur, must not overlap the car) with the headings "What happens", "Documents", "Who is responsible", "What the client sees", "Usually takes" (RU copy lives in src/components/journey-3d/stageContent.ts);
+   - beat 2 — the "proof" of the stage (see item 3), then the transition to the next stage.
+2. Texts — in a separate file `src/components/journey-3d/stageContent.ts` (RU/EN, typed by `StageId`), field `typical: { ru: string; en: string }` — the timings **exactly as below** (these are the company's real timings from Arthur — do not change or round them). **No prices, duties or amounts** — only the process. Stage card: "What happens", "Documents", "Who is responsible", "What the client sees", "Usually" (= `typical`); the RU headings are as in item 1.
+   - `inspection` — `typical`: "Usually: on the day of choice if before 16:00, otherwise the next day". Process: the manager selects and sends options; the client chooses; inspection by checklist (body, paint gauge, OBD diagnostics, interior, running gear), photos/video; the report with the verdict goes to the client the same day; after the client's decision — booking, 10 days to pay (the earlier the payment, the earlier the car arrives at the site).
+   - `korea_road` — `typical`: "Usually: 1–2 working days". Export documents, deregistration (말소), preparing the car for shipping, transfer to the port.
+   - `port_busan` — `typical`: "Usually: up to 7 days from purchase to loading — ships depart twice a week". Acceptance at the terminal, photo record of the condition, loading, bill of lading (B/L).
+   - `sea` — `typical`: "Usually: 1–2 days". The sea crossing to Vladivostok; the client sees this stage.
+   - `vladivostok` — `typical`: "Usually: unloading and customs take about 10 days on average" — the overall timing shared with the `customs` stage; repeat it there too. Unloading, inspection after delivery, arrival photos.
+   - `customs` — `typical`: same as above. The broker submits the documents (SBKTS/EPTS — Russian vehicle documents — and the customs declaration); release — "Cleared".
+   - `delivery` — `typical`: "Usually: about 9,000 km to Moscow, 12–14 days". Car carrier / rail to the client's city, or self-pickup; handover of keys and documents.
+   - Summary under the progress bar — "About 4–5 weeks from payment to Moscow". The wording is fixed; the basis is up to 7 + 1–2 + ~10 + 12–14 days.
+3. "Proof" of the stage (beat 2), the data — only real data or from props:
+   - `inspection`: 3–4 thumbnails of real photos from `public/journey/proof/inspection-*.jpg` (copy 4 MINI photos from `demo-data/mini-cooper-s/photos/` with the **plate blurred** via sharp blur over the box from `segmentImage`; if no plate is found — do not use that photo) + a counter "N findings, M confirmed" from the prop `reportSummary?` (if it is absent — the block is hidden);
+   - `port_busan`, `vladivostok`: a check icon "Photo record of condition", without photos if there are none;
+   - `customs`: an animated document checklist;
+   - the others — no block.
+4. The stage progress bar on the right shows the beats too (three dots under the active stage); clicking a stage smoothly scrolls to its start.
+5. `prefers-reduced-motion` / no WebGL: the fallback card strip shows the same texts from `stageContent.ts`.
 
-Критерии части B: тесты `beatAt` (границы, монотонность, 21 бит достижимы); скриншоты `tz09-<stage>-info.png` (бит 1) для 7 этапов; полный скролл ≈ 50–60 с на 1440×900 (оценка по высоте секции, указать в отчёте); в `public/journey/proof/` нет фото с читаемым номером (проверить глазами, указать в отчёте).
+Part B acceptance criteria: tests for `beatAt` (boundaries, monotonicity, all 21 beats reachable); screenshots `tz09-<stage>-info.png` (beat 1) for the 7 stages; a full scroll ≈ 50–60 s at 1440×900 (estimate from the section height — state it in the report); `public/journey/proof/` contains no photo with a readable plate (verify by eye, state it in the report).

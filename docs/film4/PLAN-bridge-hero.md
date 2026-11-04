@@ -1,49 +1,49 @@
-<!-- @agent: claude-code · @project: hanbridge-inspector · @purpose: план 3D-моста на первом экране (эффект «разборки» как у trionn.com) · @created: 2026-11-02 -->
-# План: 3D-мост Hanbridge на первом экране (эффект «разборки», как у trionn.com)
+<!-- @agent: claude-code · @project: hanbridge-inspector · @purpose: plan for the 3D bridge on the first screen (a "disassembly" effect like trionn.com) · @created: 2026-11-02 -->
+# Plan: 3D Hanbridge bridge on the first screen (a "disassembly" effect, like trionn.com)
 
-## Можно ли сделать
-Да. three.js уже есть в проекте, а приёмы (bloom, инстансы, взрыв деталей по прогрессу) уже работают в гараже-студии. Объём — 5–7 часов вместе с мобильной версией и проверкой. Упрощённый вариант — 2–3 часа.
+## Is it feasible
+Yes. three.js is already in the project, and the techniques (bloom, instances, detail explosion driven by progress) already work in the garage studio. Scope: 5–7 hours including the mobile version and testing. Simplified version: 2–3 hours.
 
-## Что видит человек
-1. **Покой.** На чёрном фоне медленно поворачивается минималистичный вантовый мост: два пилона, полотно, ванты. Детали из графитового стекла, кромки светятся натриевым светом. По полотну бежит золотая линия — тот же мотив, что в фильме. Внизу едва видна точечная сетка-горизонт (как наши карты), в воздухе медленно плывут частицы.
-2. **Наведение.** Ванты чуть вибрируют, под курсором деталь подсвечивается.
-3. **Клик или удержание.** Мост разбирается: 60–90 осколков (секции полотна, блоки пилонов, ванты) разлетаются по дуге с вращением. Они собираются в **6 групп**, у каждой подпись:
-   - **Осмотр** — ИИ-агент, живой прогон → `/inspect/kia-sportage`;
-   - **Доказательства** — отчёт → `/r/...`;
-   - **Гараж** — 3D-гараж машины → `/garage/kia-sportage`;
-   - **Путь** — фильм → `#journey`;
-   - **Своя машина** — загрузка фото → `/inspect/new`;
-   - **Честный чек** — один инвойс и ноль комиссии → сцена чека в фильме.
+## What the visitor sees
+1. **Rest.** On a black background a minimalist cable-stayed bridge slowly rotates: two pylons, the deck, the stay cables. Details are graphite glass, the edges glow with sodium light. A golden line runs along the deck — the same motif as in the film. At the bottom a faint dotted grid horizon is visible (like our maps), and particles drift slowly in the air.
+2. **Hover.** The stay cables vibrate slightly, and the part under the cursor lights up.
+3. **Click or hold.** The bridge disassembles: 60–90 fragments (deck sections, pylon blocks, stay cables) fly apart along an arc while rotating. They gather into **6 groups**, each with a label:
+   - **Inspection** — AI agent, live run → `/inspect/kia-sportage`;
+   - **Evidence** — report → `/r/...`;
+   - **Garage** — 3D garage of the car → `/garage/kia-sportage`;
+   - **Route** — film → `#journey`;
+   - **Your car** — photo upload → `/inspect/new`;
+   - **Honest check** — one invoice and zero commission → the receipt scene in the film.
 
-   Клик по группе ведёт в нужный раздел. Повторный клик или «Собрать» возвращает мост на место.
-4. **Скролл.** Мост «въезжает» в первый кадр фильма: камера пролетает сквозь пролёт, и начинается сцена `open` (Сеул, мост).
+   A click on a group leads to the corresponding section. A repeated click or "Assemble" returns the bridge to its place.
+4. **Scroll.** The bridge "drives into" the first frame of the film: the camera flies through the span, and the `open` scene (Seoul, bridge) begins.
 
-## Ограничение (урок Bolt)
-Первый экран обязан сразу показывать работающий инструмент и питч в одну строку. Поэтому мост — это **фон или правая половина**. Питч, кнопки «Проверить свою машину» и «Открыть отчёт» и карточки машин видны сразу, без клика. Разборка — бонус для любопытных, а не ворота перед продуктом.
+## Constraint (Bolt lesson)
+The first screen must immediately show a working tool and the pitch in one line. So the bridge is **the background or the right half**. The pitch, the buttons "Check your car" and "Open a report", and the car cards are visible right away, without a click. Disassembly is a bonus for the curious, not a gate in front of the product.
 
-## Как устроено технически
-- `src/components/bridge-hero/BridgeHero.tsx` + `bridge.ts`, обычный three.js, как в студии.
-- Геометрия процедурная: полотно — 24 сегмента `BoxGeometry`, пилоны — по 8 блоков, ванты — 2×12 тонких цилиндров. Всё лежит в одном `InstancedMesh` на материал, это 2–3 draw call.
-- Для каждого инстанса хранятся `home` (матрица в собранном мосте) и `target` (позиция в группе + случайный поворот). В кадре — `lerp` или `slerp` по прогрессу с задержкой по индексу, как `partExplodeT` в гараже.
-- Свет: кромки — `MeshBasicMaterial` с цветом ×3 и `toneMapped:false`, плюс `UnrealBloomPass`. Стекло — `MeshPhysicalMaterial` (`transmission` 0.3, `roughness` 0.2).
-- Подписи групп — HTML поверх canvas, позиции проецируются, как ярлыки деталей в гараже.
-- Загрузка: компонент `dynamic(ssr:false)`, монтируется после первой отрисовки текста (LCP не страдает). Без WebGL2 и при `prefers-reduced-motion` показывается статичная SVG-картинка моста.
-- Мобильная версия: 40 осколков, без bloom, разборка по тапу, группы — списком под мостом.
+## Technical design
+- `src/components/bridge-hero/BridgeHero.tsx` + `bridge.ts`, plain three.js, as in the studio.
+- Geometry is procedural: the deck is 24 `BoxGeometry` segments, the pylons are 8 blocks each, the stay cables are 2×12 thin cylinders. Everything sits in one `InstancedMesh` per material, which means 2–3 draw calls.
+- Each instance stores `home` (matrix in the assembled bridge) and `target` (position in the group + random rotation). In the frame — `lerp` or `slerp` by progress with a delay by index, like `partExplodeT` in the garage.
+- Lighting: the edges are `MeshBasicMaterial` with colour ×3 and `toneMapped:false`, plus `UnrealBloomPass`. Glass is `MeshPhysicalMaterial` (`transmission` 0.3, `roughness` 0.2).
+- Group labels are HTML over the canvas; positions are projected, like the part labels in the garage.
+- Loading: the component is `dynamic(ssr:false)` and mounts after the first text render (LCP is not hurt). Without WebGL2 or with `prefers-reduced-motion`, a static SVG picture of the bridge is shown.
+- Mobile version: 40 fragments, no bloom, disassembly on tap, groups as a list under the bridge.
 
-## Модели Meta
-- **Muse Image** — фон: тёмная туманная панорама Хангана с огнями (одна генерация, ~1 МБ).
-- **Muse Wonder** — по нашему опыту это текстовая модель с рассуждением (`reasoning_effort: low`). Можно поручить ей генератор геометрии моста и шейдер свечения кромок и записать это в отчёт. Код проверяю я.
+## Meta models
+- **Muse Image** — background: a dark, foggy panorama of Hangang with lights (one generation, ~1 MB).
+- **Muse Wonder** — in our experience this is a text model with reasoning (`reasoning_effort: low`). It can be assigned the bridge geometry generator and the edge-glow shader, and this should be recorded in the report. I review the code.
 
-## Шаги и оценка
-| Шаг | Время |
+## Steps and estimate
+| Step | Time |
 |---|---|
-| Процедурный мост, материалы, bloom, idle-анимация | 1,5 ч |
-| Разборка/сборка в 6 групп, подписи, клики | 1,5 ч |
-| Встройка в `Hero` (правая половина и фон), переход скроллом в фильм | 1 ч |
-| Мобильная версия, фолбэки, производительность | 1 ч |
-| Проверка глазами, скриншоты, ревью | 0,5–1 ч |
+| Procedural bridge, materials, bloom, idle animation | 1.5 h |
+| Disassembly/assembly into 6 groups, labels, clicks | 1.5 h |
+| Embedding in `Hero` (right half and background), scroll transition into the film | 1 h |
+| Mobile version, fallbacks, performance | 1 h |
+| Visual check, screenshots, review | 0.5–1 h |
 
-## Риски
-- Слабые телефоны: держать ≤ 90 инстансов, без теней, DPR ≤ 1.5.
-- Отвлекает от инструмента. Решение: разборка только по клику, текст и кнопки всегда сверху.
-- Сроки: делать **после** видео и сабмита либо в упрощённом виде — мост + разборка без перехода в фильм, 2–3 часа.
+## Risks
+- Weak phones: keep ≤ 90 instances, no shadows, DPR ≤ 1.5.
+- Distracts from the tool. Decision: disassembly only on click; text and buttons always on top.
+- Timing: do this **after** the video and the submission, or in a simplified form — bridge + disassembly without the transition into the film, 2–3 hours.

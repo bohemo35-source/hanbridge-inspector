@@ -5,10 +5,12 @@
 // @created: 2026-11-02
 // @updated: 2026-11-03 claude-code — video note: the gauge screen must be in the frame (owner decision: a readable matching screen confirms)
 // @updated: 2026-11-03 claude-code — optional video (straight to Vercel Blob from the browser, deleted after the run); gauge hint: photo signs of repaint need gauge numbers
+// @updated: 2026-11-04 claude-code — honest wait: expected time (about 1.5–2 min), elapsed seconds and the current step (EN/RU) while the agent runs
 "use client";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { upload } from "@vercel/blob/client";
+import { stepLabel } from "./stepLabel";
 
 type Step = { i?: number; tool: string; why?: string; ms?: number; ok?: boolean; outputSummary?: string };
 const MODEL_OF: Record<string, string[]> = {
@@ -28,14 +30,16 @@ const T = {
     open: "Open report", need: "Fill make, model, year and add 3–10 photos.", prep: "Preparing photos…", back: "Demo cars",
     video: "Video with your voice (optional, ≤150 MB)", videoNote: "Keep the gauge screen in the frame and say each reading aloud («hood 110, left fender 240»): a number counts as confirmed only where the screen shows the same. The first 3 min are used; the video goes to temporary storage and is deleted right after the inspection.",
     upVideo: "Uploading video", videoBig: "Video must be under 150 MB.",
-    gaugeHint: "Photos can show signs of repaint (shade, gloss, overspray, gaps) but not paint thickness. Such signs go to «Not confirmed» and a manager checks them — add gauge numbers to confirm." },
+    gaugeHint: "Photos can show signs of repaint (shade, gloss, overspray, gaps) but not paint thickness. Such signs go to «Not confirmed» and a manager checks them — add gauge numbers to confirm.",
+    eta: "Usually about 1.5–2 min (a few minutes with a long video). Keep this page open.", now: "now", elapsed: "s" },
   ru: { title: "Проверить свою машину", sub: "Добавьте 3–10 фото обхода (лучше всего машина целиком с 4 углов). Можно указать замеры толщиномера. Тот же агент осмотрит машину вживую за 1–2 минуты.",
     make: "Марка", model: "Модель", year: "Год", body: "Кузов", photos: "Фото (3–10)", paint: "Толщиномер, мкм (необязательно)", go: "Осмотреть", busy: "Агент работает…",
     privacy: "Фото используются только для этого осмотра и не сохраняются. По публичной ссылке публикуются отчёт и одно фото для объявления со скрытым номером. Не загружайте фото людей и документов.",
     open: "Открыть отчёт", need: "Заполните марку, модель, год и добавьте 3–10 фото.", prep: "Готовлю фото…", back: "Демо-машины",
     video: "Видео с голосом (необязательно, до 150 МБ)", videoNote: "Держите экран толщиномера в кадре и называйте замеры вслух («капот 110, левое крыло 240»): цифра подтверждается, только если экран показывает то же самое. Используются первые 3 мин; видео попадает во временное хранилище и удаляется сразу после осмотра.",
     upVideo: "Загружаю видео", videoBig: "Видео должно быть меньше 150 МБ.",
-    gaugeHint: "По фото видны признаки окраса (оттенок, блеск, напыл, зазоры), но не толщина краски. Такие признаки идут в «Не подтверждено», их проверит менеджер — добавьте замеры толщиномера, чтобы подтвердить." },
+    gaugeHint: "По фото видны признаки окраса (оттенок, блеск, напыл, зазоры), но не толщина краски. Такие признаки идут в «Не подтверждено», их проверит менеджер — добавьте замеры толщиномера, чтобы подтвердить.",
+    eta: "Обычно около 1,5–2 мин (с длинным видео — несколько минут). Не закрывайте страницу.", now: "сейчас", elapsed: "с" },
 };
 
 async function shrink(file: File): Promise<Blob> {
@@ -54,6 +58,8 @@ function NewInspection() {
   const [steps, setSteps] = useState<Step[]>([]);
   const [status, setStatus] = useState(""); const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [t0, setT0] = useState(0); const [, tick] = useState(0);
+  useEffect(() => { if (!busy) return; const id = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(id); }, [busy]);
   const [done, setDone] = useState<{ url: string; reportId: string; verdict?: { decision: string } } | null>(null);
   // wake the open-weight Glimmer GPU while the form is being filled (cold start takes 1–3 min)
   useEffect(() => { fetch("/api/glimmer-warm").catch(() => undefined); }, []);
@@ -63,7 +69,7 @@ function NewInspection() {
     const fd0 = new FormData(e.currentTarget);
     if (!fd0.get("make") || !fd0.get("model") || !fd0.get("year") || files.length < 3 || files.length > 10) { setError(t.need); return; }
     if (video && video.size > 150 * 1024 * 1024) { setError(t.videoBig); return; }
-    setBusy(true); setStatus(t.prep);
+    setBusy(true); setT0(Date.now()); setStatus(t.prep);
     try {
       const fd = new FormData();
       for (const [k, v] of fd0.entries()) if (k !== "photos" && k !== "video" && String(v).trim()) fd.append(k, v);
@@ -124,6 +130,12 @@ function NewInspection() {
         <p style={{ fontSize: 12, color: "#8b94a1", margin: 0 }}>{t.privacy}</p>
         <button disabled={busy} style={{ padding: "11px 18px", borderRadius: 8, background: "#c9a46a", border: 0, fontWeight: 700, cursor: busy ? "default" : "pointer", justifySelf: "start" }}>{busy ? status || t.busy : t.go}</button>
       </form>
+      {busy && (
+        <p style={{ margin: "14px 0 0", color: "#c9cfd6", fontSize: 13, borderLeft: "2px solid #9fb4ff", paddingLeft: 10 }}>
+          {t.eta} <span style={{ font: "12px monospace", color: "#8b94a1" }}>{Math.round((Date.now() - t0) / 1000)} {t.elapsed}</span>
+          {status === t.busy && <><br />{t.now}: {stepLabel(steps.at(-1)?.tool, lang)}</>}
+        </p>
+      )}
       {error && <p style={{ color: "#e5544b" }}>{error}</p>}
       <div style={{ marginTop: 20, display: "grid", gap: 8 }}>
         {steps.map((s, k) => (

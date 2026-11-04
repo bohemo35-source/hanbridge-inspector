@@ -75,7 +75,7 @@ export const HUD_STAGES: Array<{ id: StageId; blockId: string }> = [
   { id: "customs", blockId: "bridge-customs" },
   { id: "delivery", blockId: "road" },
 ];
-// HUD labels per TZ: Покупка → Осмотр → Документы → Порт → Море → Прибытие → Таможня → Доставка
+// HUD labels per TZ: Purchase → Inspection → Documents → Port → Sea → Arrival → Customs → Delivery
 export const HUD_ORDER: Array<{ key: string; blockId: string }> = [
   { key: "purchase", blockId: "seoul" },
   { key: "inspection", blockId: "garage" },

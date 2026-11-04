@@ -64,7 +64,7 @@ describe("ownerReadingOnly", () => {
     expect(rule.handoffReason).toContain("front_left_door 245 µm");
     expect(rule.reasons_en[0]).toContain("245 µm points to filler");
   });
-  it("withOwnerReasons: the typed reading leads, «no adverse findings» is replaced, handoff on", () => {
+  it("withOwnerReasons: the typed reading leads, 'no adverse findings' is replaced, handoff on", () => {
     const rule = applyOwnerOnlyRule([{ ...typedOnly }], typed, new Set());
     const v = withOwnerReasons({ ...decideVerdict([]), reasons_en: ["No adverse findings identified"], reasons_ru: ["Нет"] }, rule, false);
     expect(v.reasons_en[0]).toContain("owner's typed reading 245 µm");

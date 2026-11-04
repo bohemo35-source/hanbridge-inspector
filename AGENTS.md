@@ -1,62 +1,63 @@
 # AGENTS.md — Hanbridge Inspector (Meta Global AI Developer Hackathon)
 
-Ты — Muse Code. Этот файл читается перед КАЖДЫМ ТЗ из docs/tz/.
+You are Muse Wonder (inside Muse Code, Meta's coding agent). This file is read before EVERY TZ from docs/tz/.
 
-## Продукт
-Hanbridge Inspector — ИИ-агент, который ведёт весь осмотр б/у авто в Корее для покупателя из СНГ/Центральной Азии:
-медиа осмотра → находки с доказательствами → проверка находок → вердикт BUY / NEGOTIATE / WALK AWAY → ссылка на отчёт /r/:id + чат по отчёту (EN/RU).
-Это НЕ «анализатор картинок» и НЕ «RAG»: ценность в оркестрации, проверяемости каждой находки и передаче менеджеру при низкой уверенности.
+## Product
+Hanbridge Inspector — an AI agent that runs the entire inspection of a used car in Korea for a buyer from CIS / Central Asia:
+inspection media → findings with evidence → findings verification → verdict BUY / NEGOTIATE / WALK AWAY → link to the report /r/:id + chat about the report (EN/RU).
+This is NOT an "image analyzer" and NOT "RAG": the value lies in orchestration, verifiability of each finding, and handoff to a manager at low confidence.
 
-## Жёсткие правила хакатона
-1. Весь код пишется с нуля в этом репо. Запрещено копировать код/ассеты из ~/Developer/Landing_Exportal_muse, Hanbridge_3D_lab и любых старых репо.
-2. Репо публичный. Секреты только в env (`META_API_KEY`, `BLOB_READ_WRITE_TOKEN`, …). `.env*` в `.gitignore`. Ключи не логировать, не отдавать на клиент, не писать в отчёты.
-3. Только ассеты с правами: свои фото Артура из demo-data/, сгенерированное Muse Image, собственный SVG.
-4. Никаких выдуманных цифр по растаможке/стоимости. Нет данных → `status: "manager_quote_required"`.
-5. Коммиты маленькие и осмысленные: `feat(sam): ...`, `fix(agent): ...`. Каждое ТЗ = ветка `tz-0N` → PR в main.
+## Hard hackathon rules
+1. All code is written from scratch in this repo. Copying code/assets from ~/Developer/Landing_Exportal_muse, Hanbridge_3D_lab and any old repos is forbidden.
+2. The repo is public. Secrets only in env (`META_API_KEY`, `BLOB_READ_WRITE_TOKEN`, …). `.env*` in `.gitignore`. Do not log keys, do not send them to the client, do not write them to reports.
+3. Only assets with usage rights: Arthur's own photos from demo-data/, Muse Image-generated content, own SVG.
+4. No invented customs/cost figures. No data → `status: "manager_quote_required"`.
+5. Small, meaningful commits: `feat(sam): ...`, `fix(agent): ...`. Each TZ = branch `tz-0N` → PR into main.
 
-## Стек
-Next.js 15 (App Router) + TypeScript strict + Tailwind, деплой Vercel. Хранилище: Vercel Blob (медиа + JSON отчётов). Валидация: zod. Обработка изображений: sharp.
-Лимит тела запроса Vercel ≈ 4.5 МБ → фото/видео/WAV грузить напрямую с клиента в Blob (`@vercel/blob/client` upload), на сервер передавать URL.
-Роуты с вызовами Meta: `export const runtime = "nodejs"; export const maxDuration = 60;`
+## Stack
+Next.js 15 (App Router) + TypeScript strict + Tailwind, deployed on Vercel. Storage: Vercel Blob (media + JSON reports). Validation: zod. Image processing: sharp.
+Vercel request body limit ≈ 4.5 MB → photos/videos/WAV are uploaded directly from the client to Blob (`@vercel/blob/client` upload); the server receives the URL.
+Routes calling Meta: `export const runtime = "nodejs"; export const maxDuration = 60;`
 
-## Meta Model API (проверено 21–23.10)
-База `https://api.meta.ai/v1`, `Authorization: Bearer ${META_API_KEY}`.
-- `muse-spark-1.3` — POST /chat/completions. ВСЕГДА `reasoning_effort: "low"`, `max_tokens >= 1500` (при меньших приходит `content: null`). Пустой content = ошибка → retry 1 раз → фолбэк.
-- `sam-3.1` — POST /responses, body `{model:"sam-3.1", input:[{role:"user", content:[{type:"input_text",text:"<concept>"},{type:"input_image",image_url:"data:image/jpeg;base64,…"}]}]}`, ~2–3 с. Ответ в `output[0].content[0].text` (проверено 27.10 на фото MINI): префикс `<0f>0`, затем по каждому экземпляру `<|box;x1=991;y1=193;x2=1025;y2=201;w=1280;h=720|><|mask;x=0;y=0;data=H,W,<encoded>|>` — пары key=value, координаты в пикселях отправленного изображения (w,h = его размер); `data` начинается с высоты и ширины маски (= размер бокса), дальше закодированные пиксели относительно бокса. Алгоритм декодирования: https://dev.meta.ai/docs/sam/reading-segmentation. Пустой ответ = 0 экземпляров. SAM хорошо находит предметы (`car`, `license plate`, `wheel`, панели), а `scratch`/`dent` на тестовом фото дали 0 — дефекты ищет Spark по вырезкам, SAM даёт геометрию.
-- `muse-voice-transcribe-1.0` — POST /asr/transcribe, multipart: `request` (JSON `{model, audioEncoding:"WAV", mode:"PUSH_TO_TALK"}`) + `audio` (WAV ≤ 10 мин). TTS у Meta нет.
-- `muse-image-1.0` — POST /images/generations `{model, prompt, n}` → `data[0].b64_json` (~23 с); правки — /images/edits.
-**Open-weight (Baseten, кредиты хакатона $100 + до 2M TPM):** `muse-spark-open-1026` (точное имя модели `meta-models/muse-spark-open-1026`, другие ключ не принимает), база `https://inference.baseten.co/v1`, OpenAI-совместимый `/chat/completions`, `Authorization: Bearer ${BASETEN_API_KEY}`. Модель всегда рассуждает (читать reasoning отдельно от content — docs.baseten.co/inference/model-apis/reasoning), поддерживает vision. Клиент — `src/lib/meta/sparkOpen.ts`, через тот же `metaFetch`-подобный обёрточный слой.
-Все вызовы — только через `src/lib/meta/*` (единый клиент: таймаут, 1 retry, лог длительности и model id без тела и ключа).
+## Meta Model API (verified 21–23.10)
+Base `https://api.meta.ai/v1`, `Authorization: Bearer ${META_API_KEY}`.
+- `muse-spark-1.3` — POST /chat/completions. ALWAYS `reasoning_effort: "low"`, `max_tokens >= 1500` (with smaller values the response comes back with `content: null`). Empty content = error → retry once → fallback.
+- `sam-3.1` — POST /responses, body `{model:"sam-3.1", input:[{role:"user", content:[{type:"input_text",text:"<concept>"},{type:"input_image",image_url:"data:image/jpeg;base64,…"}]}]}`, ~2–3 s. Response in `output[0].content[0].text` (verified 27.10 on a MINI photo): prefix `<0f>0`, then for each instance `<|box;x1=991;y1=193;x2=1025;y2=201;w=1280;h=720|><|mask;x=0;y=0;data=H,W,<encoded>|>` — key=value pairs, coordinates in pixels of the sent image (w,h = its size); `data` starts with the mask height and width (= box size), then the encoded pixels relative to the box. Decoding algorithm: https://dev.meta.ai/docs/sam/reading-segmentation. An empty response = 0 instances. SAM finds objects well (`car`, `license plate`, `wheel`, panels), but `scratch`/`dent` gave 0 on the test photo — defects are searched by Spark on crops, SAM provides the geometry.
+- `muse-voice-transcribe-1.0` — POST /asr/transcribe, multipart: `request` (JSON `{model, audioEncoding:"WAV", mode:"PUSH_TO_TALK"}`) + `audio` (WAV ≤ 10 min). Meta has no TTS.
+- `muse-image-1.0` — POST /images/generations `{model, prompt, n}` → `data[0].b64_json` (~23 s); edits — /images/edits.
+**Open-weight (Baseten, hackathon credits $100 + up to 2M TPM):** `muse-spark-open-1026` (exact model name `meta-models/muse-spark-open-1026`; the endpoint does not accept other names), base `https://inference.baseten.co/v1`, OpenAI-compatible `/chat/completions`, `Authorization: Bearer ${BASETEN_API_KEY}`. The model always reasons (read reasoning separately from content — docs.baseten.co/inference/model-apis/reasoning), supports vision. Client — `src/lib/meta/sparkOpen.ts`, via the same wrapper layer as `metaFetch`.
 
-## Доменные правила
-- Толщиномер (мкм): ≤150 заводская краска; 151–220 перекрас; >220 шпатлёвка/ремонт.
-- Каждая находка (`Finding`) обязана иметь хотя бы одно доказательство (`Evidence`): кадр + box/маска, цитата из голосовой заметки с таймкодом, замер толщиномера или строка аукционного листа. Находка без evidence в отчёт не попадает.
-- `confidence` 0..1. Итоговая уверенность < 0.6 или критическая находка с confidence < 0.7 → `handoff_to_manager`.
+All calls go only through `src/lib/meta/*` (single client: timeout, 1 retry, logging of duration and model id without body and key).
 
-## Структура (целевая)
+## Domain rules
+- Thickness gauge (microns): ≤150 factory paint; 151–220 repaint; >220 filler/repair.
+- Each finding (`Finding`) must have at least one piece of evidence (`Evidence`): frame + box/mask, a quote from a voice note with a timecode, a thickness-gauge reading, or a line from the auction sheet. A finding without evidence does not get into the report.
+- `confidence` 0..1. Overall confidence < 0.6, or a critical finding with confidence < 0.7 → `handoff_to_manager`.
+
+## Structure (target)
 ```
-src/app/            страницы и route handlers
-src/lib/meta/       клиенты Meta API (spark.ts, sam.ts, asr.ts, image.ts, client.ts)
-src/lib/agent/      оркестратор, инструменты, verifier
-src/lib/schema/     zod-схемы (Inspection, Finding, Evidence, Report)
-src/lib/store/      Blob-хранилище
-scripts/smoke/      живые smoke-скрипты на каждую модель
-demo-data/<car>/    реальные осмотры (photos/, video/, sheets/, inspector_report_ru.txt, paint.json); не в git
-docs/tz/            ТЗ
-docs/reports/       отчёты Muse после каждого ТЗ
+src/app/            pages and route handlers
+src/lib/meta/       Meta API clients (spark.ts, sam.ts, asr.ts, image.ts, client.ts)
+src/lib/agent/      orchestrator, tools, verifier
+src/lib/schema/     zod schemas (Inspection, Finding, Evidence, Report)
+src/lib/store/      Blob storage
+scripts/smoke/      live smoke scripts for each model
+demo-data/<car>/    real inspections (photos/, video/, sheets/, inspector_report_ru.txt, paint.json); not in git
+docs/tz/            TZ specs
+docs/reports/       Muse reports after each TZ
 ```
 
-## Экономия лимита Muse (обязательно)
-- Не запускай субагентов и «double check»/verify-проходы: проверку делает ревьюер (Claude).
-- Не перечитывай большие файлы целиком без нужды; `package-lock.json`, `node_modules`, `.next`, `demo-data` не читать.
-- `npm install` — один раз в начале. `next build` — один раз в конце. Между ними хватает `tsc --noEmit` и `vitest`.
-- Живые запросы к Meta API — только в smoke-скриптах, по одному прогону.
-- Не можешь починить за 2 попытки — запиши в отчёт и иди дальше.
+## Saving Muse quota (mandatory)
+- Do not launch subagents or "double check"/verify passes: verification is done by the reviewer (Claude).
+- Do not re-read large files in full without need; `package-lock.json`, `node_modules`, `.next`, `demo-data` must not be read.
+- `npm install` — once at the start. `next build` — once at the end. In between, `tsc --noEmit` and `vitest` are enough.
+- Live requests to the Meta API — only in smoke scripts, one run each.
+- If you cannot fix something in 2 attempts — write it in the report and move on.
 
-## Definition of Done для любого ТЗ
-1. `npx tsc --noEmit` — 0 ошибок. `npm run build` — успешно. `npm run lint` — 0 ошибок.
-2. Для каждого изменённого .js/.mjs скрипта — `node --check <file>`.
-3. Smoke-скрипт этого ТЗ прогнан живым запросом, вывод (без ключа) сохранён.
-4. Отчёт `docs/reports/tz-0N.md`: что сделано, список файлов, СЫРОЙ вывод tsc/build/smoke/curl, что не работает. Не пересказ — вывод команд.
-5. Не трогать файлы вне задачи. Если без этого никак — объяснить в отчёте.
-6. Не публиковать, не пушить в main, не деплоить в прод без явного «делай» от Артура.
+## Definition of Done for any TZ
+1. `npx tsc --noEmit` — 0 errors. `npm run build` — success. `npm run lint` — 0 errors.
+2. For each changed .js/.mjs script — `node --check <file>`.
+3. The smoke script of this TZ was run with a live request, and its output (without the key) is saved.
+4. Report `docs/reports/tz-0N.md`: what was done, list of files, RAW output of tsc/build/smoke/curl, what does not work. Not a recap — command output.
+5. Do not touch files outside the task. If there is no other way, explain it in the report.
+6. Do not publish, do not push to main, do not deploy to prod without an explicit "do it" from Arthur.

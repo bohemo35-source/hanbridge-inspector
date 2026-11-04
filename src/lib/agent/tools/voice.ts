@@ -57,7 +57,7 @@ export interface VoiceRejected {
 }
 
 // ---------- pure logic (tested) ----------
-/** lowercase, ё→е, drop punctuation, collapse spaces — for quote matching across ASR/LLM punctuation differences */
+/** lowercase, Cyrillic "yo" → "ye", drop punctuation, collapse spaces — for quote matching across ASR/LLM punctuation differences */
 export function normalizeText(s: string): string {
   return s
     .toLowerCase()

@@ -1,100 +1,100 @@
-# ТЗ-12 — Путешествие v3: фото-плейты Muse Image + наша 3D-машина вместо коробок
+# TZ-12 — Journey v3: Muse Image photo plates + our 3D car instead of boxes
 
-Сначала прочитай:
-- `AGENTS.md` (платный API — экономь токены);
+First read:
+- `AGENTS.md` (paid API — save tokens);
 - `docs/reports/tz-11.md`;
-- скриншоты `docs/reports/assets/tz11-*.png`;
+- the screenshots `docs/reports/assets/tz11-*.png`;
 - `src/components/journey-v2/SceneBlock.tsx`, `sceneKit.ts`, `scenes/helpers.ts`.
 
-Выполни целиком, без вопросов. Ветка `tz-11`, коммиты по ходу, не пушь.
+Complete it in full, without questions. Branch `tz-11`, commits along the way, do not push.
 
-Трогать можно только:
+You may only touch:
 - `src/components/journey-v2/*`;
 - `scripts/journey-v2/*`;
 - `public/journey-v2/*`;
 - `tests/journey-v2-*.test.ts`;
-- `docs/reports/tz-12.md` и `docs/reports/assets/tz12-*`.
+- `docs/reports/tz-12.md` and `docs/reports/assets/tz12-*`.
 
-## Почему
-Ревью скриншотов ТЗ-11:
-- **мосты на картинках Muse Image выглядят как кино**;
-- **3D-блоки, построенные кодом, выглядят дёшево**:
-  - судно в Пусане и во Владивостоке — серые коробки;
-  - Владивосток — коричневая плоскость;
-  - гараж клиента при вручении — оранжевая коробка;
-  - Сеул — плоская белая дорога.
+## Why
+Review of the TZ-11 screenshots:
+- **the bridges, as Muse Image pictures, look cinematic**;
+- **the 3D blocks built in code look cheap**:
+  - the ships in Busan and Vladivostok are grey boxes;
+  - Vladivostok is a brown plane;
+  - the client's garage at the handover is an orange box;
+  - Seoul is a flat white road.
 
-Строить мир кодом мы не успеем и не дотянем до уровня фото.
+We will not have time to build the world in code and get it up to photo quality.
 
-**Решение — композитинг, как в кино: фото-плейт + настоящая 3D-машина.** Фон блока — картинка Muse Image уровня мостов. Поверх — наша `car-v2.glb` (та же, что в гараже) в 3D. Камера подобрана под перспективу плейта, есть невидимый пол-«ловец теней» (`ShadowMaterial`), свет и цвет под плейт. Машина едет по прогрессу скролла. Получаются фото-качество и настоящая 3D-машина в одном кадре.
+**Decision — compositing, as in film: a photo plate + a real 3D car.** The background of a block is a Muse Image picture at the level of the bridges. On top of it — our `car-v2.glb` (the same one as in the garage) in 3D. The camera is matched to the plate's perspective, there is an invisible ground plane that catches shadows (`ShadowMaterial`), and the light and color match the plate. The car drives with the scroll progress. The result is photo quality and a real 3D car in one frame.
 
-## Что сделать
+## What to do
 
-### 1. Плейты
-Сгенерируй новые плейты Muse Image для 3D-блоков. Скрипт `scripts/journey-v2/generate-plates.mjs` дописывает `public/journey-v2/prompts.json`.
+### 1. Plates
+Generate new Muse Image plates for the 3D blocks. The script `scripts/journey-v2/generate-plates.mjs` appends to `public/journey-v2/prompts.json`.
 
-Общие требования к каждому плейту:
-- кадр **без машин на переднем плане**, с пустой полосой/площадкой, по которой поедет наша машина;
-- горизонт примерно на 40–45% высоты кадра;
-- камера на высоте глаз 1.4–1.7 м, лёгкий 3/4-ракурс;
-- стиль тот же, что у мостов: кино, анаморф, дымка; без людей, текста и логотипов.
+General requirements for each plate:
+- a frame **with no cars in the foreground**, with an empty strip/area along which our car will drive;
+- the horizon at about 40–45% of the frame height;
+- the camera at eye height 1.4–1.7 m, a light 3/4 angle;
+- the same style as the bridges: cinematic, anamorphic, haze; no people, text or logos.
 
-| Блок | Плейт | Что в кадре | Как едет машина |
+| Block | Plate | What is in the frame | How the car moves |
 |---|---|---|---|
-| Сеул | `plate-seoul-bridge.jpg` | Ночной Сеул: длинный подсвеченный мост через широкую реку, огни небоскрёбов на обоих берегах, мокрый асфальт; пустая правая полоса уходит вдаль | Из ближнего плана вглубь, по полосе |
-| Порт | `plate-port-ramp.jpg` | Ночной контейнерный порт: портальные краны, ряды контейнеров, мокрый асфальт с отражениями натриевых фонарей. Справа — корма огромного ro-ro судна с опущенной рампой, внутри светящийся трюм | Подъезжает и заезжает по рампе в трюм, исчезает внутри (уменьшение + затемнение + маска по проёму трюма) |
-| Владивосток | `plate-vladivostok-quay.jpg` | Рассвет, «rounded forested hills (sopki), Russian Far East», вантовый мост вдали в дымке. Причал, у которого стоит ro-ro судно с опущенной рампой | Съезжает с рампы на причал к камере |
-| Вручение | `plate-handover.jpg` | Золотой час, современный дом клиента с гаражом, въезд из плитки, тёплый свет в окнах | Подъезжает и останавливается, фары гаснут, задние огни мигают один раз |
+| Seoul | `plate-seoul-bridge.jpg` | Night Seoul: a long lit bridge over a wide river, skyscraper lights on both banks, wet asphalt; the empty right lane runs into the distance | From the near plane deeper, along the lane |
+| Port | `plate-port-ramp.jpg` | A night container port: gantry cranes, rows of containers, wet asphalt with sodium-lamp reflections. On the right — the stern of a huge ro-ro ship with its ramp lowered, a glowing hold inside | Drives up and in along the ramp into the hold, disappears inside (scale-down + darkening + a mask on the hold opening) |
+| Vladivostok | `plate-vladivostok-quay.jpg` | Dawn, "rounded forested hills (sopki), Russian Far East", a cable-stayed bridge in the distance in haze. A quay with a ro-ro ship with its ramp lowered | Drives off the ramp onto the quay toward the camera |
+| Handover | `plate-handover.jpg` | Golden hour, the client's modern house with a garage, a tiled driveway, warm light in the windows | Drives up and stops, the headlights go out, the taillights blink once |
 
-### 2. Композитинг в `SceneBlock`
-Сделай общий режим `plate`:
-1. **Фон.** Плейт — полноэкранная плоскость в пространстве камеры (cover, без растяжения). Лёгкий параллакс от прогресса: ±2% сдвиг и 3–5% наезд.
-2. **Камера.** `PerspectiveCamera` (FOV ~35–40) стоит так, чтобы плоскость земли `y=0` совпала с полосой на фото. Для каждого плейта параметры в `blocks.ts`: высота камеры, наклон, FOV, путь машины — 3–5 точек на земле `x/z`, CatmullRom. Подбери руками по скриншоту, сделай отладочный режим `?debug=plate` с сеткой на земле и сверь.
-3. **Тень.** `PlaneGeometry` + `ShadowMaterial` (opacity 0.35–0.5) под машиной. Мягкая контактная тень (радиальный градиент) обязательна.
-4. **Свет под плейт:**
-   - `environment` = этот же плейт через PMREM (отражения совпадут с фоном);
-   - направленный свет по главному источнику на фото;
-   - цветовой tone/tint машины под плейт (ночь холодная, рассвет и золотой час тёплые).
-5. **Машина:**
-   - ночью горят фары и стопы (эмиссия + bloom);
-   - лёгкая вибрация кузова при движении;
-   - масштаб — по ширине полосы (машина ≈ 1/3 ширины полосы на ближнем плане).
-6. **Глубина.** Где машина уходит за предмет (въезд в трюм), сделай маску. Простейший вариант — вторая копия плейта с вырезанным передним краем проёма поверх машины: маска PNG из SAM 3.1 (`segmentImage` по концепту `ship ramp` / `doorway`). Если SAM не даёт — машина затемняется и уменьшается до 0 у проёма.
+### 2. Compositing in `SceneBlock`
+Make a shared `plate` mode:
+1. **Background.** The plate is a full-screen plane in camera space (cover, no stretching). Light parallax from progress: a ±2% shift and a 3–5% push-in.
+2. **Camera.** `PerspectiveCamera` (FOV ~35–40) positioned so the ground plane `y=0` coincides with the strip in the photo. For each plate, the parameters are in `blocks.ts`: camera height, tilt, FOV, and the car's path — 3–5 points on the ground `x/z`, CatmullRom. Tune them by hand against the screenshot; make a debug mode `?debug=plate` with a grid on the ground and check against it.
+3. **Shadow.** `PlaneGeometry` + `ShadowMaterial` (opacity 0.35–0.5) under the car. A soft contact shadow (a radial gradient) is mandatory.
+4. **Light matched to the plate:**
+   - `environment` = this same plate through PMREM (the reflections will match the background);
+   - a directional light from the main light source in the photo;
+   - the color tone/tint of the car matched to the plate (night is cold; dawn and golden hour are warm).
+5. **Car:**
+   - at night the headlights and taillights are on (emission + bloom);
+   - a light body vibration while moving;
+   - scale — by the width of the strip (the car ≈ 1/3 of the strip's width at the near plane).
+6. **Depth.** Where the car goes behind an object (driving into the hold), make a mask. The simplest option: a second copy of the plate with the near edge of the opening cut out, placed over the car — a PNG mask from SAM 3.1 (`segmentImage` with the concept `ship ramp` / `doorway`). If SAM does not produce it — the car darkens and shrinks to 0 at the opening.
 
-### 3. Что оставить и что убрать
-- **Блок «дорога сверху»** остаётся 3D: он работает. Но добавь вид сверху как у карты-фото:
-  - тайлы земли крупнее и разнообразнее (побережье → лес → степь → пригород);
-  - тень от машины;
-  - на финале — карта с маршрутами.
-- **Гараж** без изменений.
-- **Мосты** без изменений.
-- Старые код-сцены Порта, Владивостока и Вручения не удаляй: переключи блоки на режим `plate`, а код-сцену оставь фолбэком при ошибке загрузки плейта.
+### 3. What to keep and what to remove
+- **The "road from above" block** stays 3D: it works. But add a top-down view like the photo-maps:
+  - ground tiles larger and more varied (coast → forest → steppe → suburbs);
+  - the car's shadow;
+  - at the finale — a map with the routes.
+- **The garage** — unchanged.
+- **The bridges** — unchanged.
+- Do not delete the old code-built scenes of the Port, Vladivostok and Handover: switch those blocks to the `plate` mode, and keep the code scene as a fallback if the plate fails to load.
 
-### 4. Исправления по ревью ТЗ-11
-- **Подпись внизу.** На мостах текст не показывать (карточки моста — справа). Убедись по скриншотам, что подпись «Покупка в Корее» не висит на мостах «Отчёт и документы», «Море», «Таможня».
-- **HUD.** Активный этап совпадает с блоком. На отзывах и финале — «Доставка», а не «Покупка».
-- **Длительность.** Нарасти высоты блоков, чтобы полная история была ≈ 2:45 при «100vh ≈ 3 с». Сейчас 4150vh ≈ 2:05, нужно ≈ 5500vh. Добавляй в первую очередь мостам «Море» и «Подбор» и блоку «дорога»: там спокойные кадры.
+### 4. Fixes from the TZ-11 review
+- **Caption at the bottom.** Do not show text on the bridges (the bridge cards are on the right). Check on the screenshots that the caption "Purchase in Korea" (RU copy lives in src/components/journey-v2/copy.ts) does not hang over the bridges "Report and documents", "Sea" and "Customs".
+- **HUD.** The active stage matches the block. On the reviews and the finale — "Delivery", not "Purchase".
+- **Duration.** Increase the block heights so that the full story is ≈ 2:45 at "100vh ≈ 3 s". Right now 4150vh ≈ 2:05; we need ≈ 5500vh. Add the most to the bridges "Sea" and "Selection" and to the "road" block: those have calm frames.
 
-## Критерии готовности
-1. Зелёные:
+## Acceptance criteria
+1. Green:
    - `npx tsc --noEmit`;
    - `npm run lint`;
    - `npx vitest run`;
    - `npm run build`;
-   - `node --check` новых `.mjs`.
-2. Скриншоты на маке (GPU): середина каждого блока и моста в `tz12-*`, отдельно `tz12-debug-plate-*` для 4 плейтов, мобильные Сеул и Порт.
-3. На скриншотах:
-   - машина стоит на земле/рампе, а не парит;
-   - перспектива машины совпадает с полосой на фото;
-   - есть тень;
-   - ночью фары светят;
-   - коробок вместо судов больше нет;
-   - в порту машина «въезжает» в трюм.
-4. Отчёт `docs/reports/tz-12.md`:
-   - сырой вывод;
-   - время генерации плейтов и SAM;
-   - параметры камер;
+   - `node --check` for the new `.mjs` files.
+2. Screenshots on a Mac (GPU): the middle of each block and bridge in `tz12-*`, separately `tz12-debug-plate-*` for the 4 plates, and the mobile Seoul and Port shots.
+3. On the screenshots:
+   - the car stands on the ground/ramp, not floating;
+   - the car's perspective matches the strip in the photo;
+   - there is a shadow;
+   - at night the headlights are on;
+   - there are no more boxes instead of ships;
+   - in the port the car "drives" into the hold.
+4. Report `docs/reports/tz-12.md`:
+   - raw output;
+   - the generation time of the plates and of SAM;
+   - the camera parameters;
    - fps;
-   - общая высота страницы;
+   - the total page height;
    - `git diff --stat`;
-   - что не получилось.
+   - what did not work.

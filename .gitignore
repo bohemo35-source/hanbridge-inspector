@@ -39,3 +39,8 @@ demo-data/*/out/
 
 # local reports (TZ-05, no-Blob fallback)
 data/reports/
+
+# python bytecode and local agent settings (TZ-FINAL-0411)
+__pycache__/
+.claude/
+node_modules
