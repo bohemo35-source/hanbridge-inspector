@@ -8,7 +8,8 @@
 // @updated: 2026-11-03 claude-code — «How the agent worked — up to 16 steps»: the real step log of the hero car's report + a muted loop from the jury video
 // @updated: 2026-11-04 claude-code — the agent-steps loop plays only while on screen (ViewLoop): off screen it kept decoding and seeking every 7.6 s under the film
 // @updated: 2026-11-02 claude-code — first screen: 3D bridge on the right (desktop) / under the buttons (mobile); text and buttons stay in the flow above it
-// @updated: 2026-11-04 claude-code — «300 photos in a chat» (was 40), same number as the description and the X post
+// @updated: 2026-11-04 claude-code — «300 photos in a chat» (was 40)
+// @updated: 2026-11-04 claude-code — 100 photos + a few videos (real per-inspection numbers)
 import Link from "next/link";
 import type { Report } from "@/lib/schema";
 import { CARS, carMedia } from "@/lib/agent/catalog";
@@ -23,7 +24,7 @@ const T = {
     kicker: "HANBRIDGE INSPECTOR · AGENT ON META MODELS",
     h1: "A used car in Korea, inspected by an AI agent. Every finding backed by evidence.",
     sub: "The agent reads the walk-around photos, paint-gauge video, the inspector's voice note and the diagnostic report, checks each finding in a second independent pass, and returns BUY / NEGOTIATE / WALK AWAY — with a link the buyer can click through to the frame or the voice quote.",
-    who: "For car exporters and dealers: one verifiable link per car instead of 300 photos in a chat.",
+    who: "For car exporters and dealers: one verifiable link per car instead of 100 photos and a few videos in a chat.",
     open: "Open report",
     garage: "3D garage",
     live: "Watch the agent live (~1.5 min)",
@@ -45,7 +46,7 @@ const T = {
     kicker: "HANBRIDGE INSPECTOR · АГЕНТ НА МОДЕЛЯХ META",
     h1: "Авто с пробегом в Корее, осмотренное ИИ-агентом. У каждой находки есть доказательство.",
     sub: "Агент читает фото обхода, видео толщиномера, голосовую заметку инспектора и диагностику, перепроверяет каждую находку отдельным проходом и выдаёт BUY / NEGOTIATE / WALK AWAY — со ссылкой, где покупатель кликает до кадра или цитаты.",
-    who: "Для экспортёров и дилеров: одна проверяемая ссылка на авто вместо 300 фото в чате.",
+    who: "Для экспортёров и дилеров: одна проверяемая ссылка на авто вместо 100 фото и пары видео в чате.",
     open: "Открыть отчёт",
     garage: "3D-гараж",
     live: "Смотреть агента вживую (~1,5 мин)",
