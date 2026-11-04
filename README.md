@@ -6,7 +6,7 @@ Photos, paint-gauge video, the inspector's voice and the OBD report go in; a ver
 Built for the **Meta Global AI Developer Hackathon** (Indie Developer track, Oct 26 – Nov 4, 2026).
 
 **Try it live (no login):** https://hanbridge-inspector.vercel.app — pick a demo car → "Watch the agent live" streams every tool call (model badge on each step) → report `/r/:id`.
-Demo video (3 min): _link added at submission_
+Demo video (3 min): https://youtu.be/tuGpgB6Agjg
 
 ## Why
 A buyer in Almaty or Tashkent pays thousands of dollars for a car they have never seen. Trust breaks at the inspection: 100 photos and a few videos in a chat, a paint-gauge readout and an auction sheet in Korean that the buyer cannot verify.
@@ -35,7 +35,7 @@ npm run dev
 ## Built during the hackathon
 All code in this repository was written after the kickoff on 2026-10-26.
 
-**Muse Wonder wrote the product core.** Working inside Muse Code from the task specs in `docs/tz` (TZ-01…TZ-11), it built the Meta API client and schemas, the Spark expert, SAM segmentation, voice and paint-gauge → findings, the listing image, the agent orchestrator + verifier + report `/r/:id`, the parametric 3D body map, the journey scene and the first garage scene (reports in `docs/reports`, history in `git log`). Through the API (`muse-wonder-1.0`) it also drafted trailer lines — two of them made it into the film (`docs/film4/wonder-copy.json`) — and the geometry of the 3D bridge on the first screen (`docs/bridge/wonder-bridge.json`). Files marked `@agent: muse-code` are code written by Muse Wonder in Muse Code. Proof: a timelapse of the recorded sessions (_link added at submission_).
+**Muse Wonder wrote the product core.** Working inside Muse Code from the task specs in `docs/tz` (TZ-01…TZ-11), it built the Meta API client and schemas, the Spark expert, SAM segmentation, voice and paint-gauge → findings, the listing image, the agent orchestrator + verifier + report `/r/:id`, the parametric 3D body map, the journey scene and the first garage scene (reports in `docs/reports`, history in `git log`). Through the API (`muse-wonder-1.0`) it also drafted trailer lines — two of them made it into the film (`docs/film4/wonder-copy.json`) — and the geometry of the 3D bridge on the first screen (`docs/bridge/wonder-bridge.json`). Files marked `@agent: muse-code` are code written by Muse Wonder in Muse Code. Proof: a timelapse of the recorded Muse Wonder sessions (TZ-01…TZ-11, ~4 h in 2:15) — https://youtu.be/oY2_zF4SoEQ
 
 Progress by task:
 - [x] TZ-01 core + Spark expert — `tz-01` (merged)
