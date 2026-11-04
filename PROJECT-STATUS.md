@@ -133,3 +133,11 @@ Journey v2 на `/`: цепочка коротких 3D-сцен (Сеул, Пу
 - Бэкап до чистки: `~/Documents/META-HACKATON/backups/hanbridge-inspector-github-pre-filter-20261104.bundle` (478 МБ, проверен). Рабочая папка чистки: `~/Documents/META-HACKATON/repo-filter-0411/`.
 - Основная копия и `hi-v4` переведены на новую историю (`reset --keep`, деревья совпадают). **`hi-glimmer` не трогали:** его ветка `glimmer` на старой истории — из него не пушить (особенно с --force), иначе старое вернётся.
 - Следующее: Артур делает репозиторий публичным; YouTube / X / форма.
+
+## 04.11 вечер — 100 фото везде, мелкое «40» в ролике, расходы (Claude Code; production 10f4553 READY)
+- Число фото: 100 фото и пара видео (реально на один осмотр). Сайт (первый экран EN/RU) — коммит 10f4553, на production проверено curl. Описание YouTube и пост X — уже на 100 (параллельная сессия).
+- Ролик для жюри v7 (`UPLOAD/YouTube/hanbridge-inspector-jury-v7.mp4` = `recordings/jury-cut-final-v7b.mp4`): мелкая строка «…instead of 40 photos in a chat.» на прокручиваемой главной (0:27.7–0:34.1) отслежена по кадрам и заменена на «100» (Inter Tight 16.2 px, `recordings/v5work/small40/`). OCR каждого кадра 27.5–34.5 с и 1 к/с по всему ролику: 0 × «40 photos». Без заплатки — `recordings/jury-cut-final-v7.mp4`.
+- README: раздел «What it cost» (bbced60, 2ec0306): Meta API $43.22 из $150 (остаток $106.78, страница Billing), Modal грант $98.74 из $100 (всего Modal $158.92: Wan $139.06, Glimmer $19.85), Baseten $100 (расход не виден — воркспейс хакатона), свои: подписка Meta (Muse Code), Claude Max $100/мес, Vercel Pro $20/мес, Tripo 535 из 1000 кредитов, ElevenLabs Starter годовой ($5/мес). Копия для формы — `UPLOAD/costs-for-form.md`.
+- В `description.txt` добавлена роль Артура (Arthur Lim — idea and product, task specs, real inspection data, narration).
+
+**Следующие шаги (Артур):** сделать репозиторий публичным; YouTube (v7 + таймлапс unlisted, ссылка в описании); пост X (`UPLOAD/X/hanbridge-x.mp4` + `post.txt`); форма подачи (расходы — `UPLOAD/costs-for-form.md`); Modal — карта/пополнение (грант почти исчерпан).
