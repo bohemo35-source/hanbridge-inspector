@@ -76,6 +76,26 @@ flowchart LR
 
 Not Meta: the short film on `/lab/film` ("how the car gets home") is animated with Wan from Muse Image start frames; the film is decoration below the tool, not part of the agent. Code was also written with Claude (marked `@agent: claude` / `claude-code`).
 
+## What it cost
+Numbers as of 2026-11-04. We list only what we can see in our own accounts.
+
+Hackathon credits:
+
+| Service | Credit | Used | What for |
+|---|---|---|---|
+| Meta Model API | $150 | ≈ $44 | The product's Meta models (Muse Spark, SAM 3.1, Muse Voice Transcribe, Muse Image, Muse Wonder) and Muse Code sessions once Arthur's own Meta subscription hit its limit |
+| Modal | $100 grant | $98.74 | GPUs for Muse Glimmer (H100) and for animating the film scenes with Wan 2.2 (H200) |
+| Baseten | $100 | — | Muse Spark Open, the independent verifier (the usage sits in the hackathon workspace, not visible to us) |
+
+Modal compute from 10 Oct to 4 Nov came to $158.92: Wan 2.2 film scenes $139.06, Muse Glimmer $19.85. The part above the grant was covered by the $30 monthly credit included in Modal's free Starter plan (October and November).
+
+Paid by us:
+- Meta subscription (Arthur's): Muse Code ran on it first and switched to the API credit above when the limit ran out.
+- Claude Max, $100 / month: Claude Code (film player, 3D garage studio, site design, reviews).
+- Vercel Pro, $20 / month: hosting with higher function and upload limits.
+- Tripo API: 1,000 credits bought, 535 used (hero car 295, four body templates 240).
+- ElevenLabs Starter, billed yearly ($5 / month): the narration voice clone.
+
 ## Assets and data
 - Third-party assets (CC0 HDRIs, one CC-BY 3D model) and generated media are listed with sources in [`ASSETS.md`](ASSETS.md).
 - The 3D body map uses parametric brand-neutral templates generated in code (`src/components/damage-map-3d/buildCar.ts`); inspection evidence always uses the original inspection frames.
