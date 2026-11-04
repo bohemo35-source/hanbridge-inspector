@@ -124,3 +124,12 @@ Journey v2 на `/`: цепочка коротких 3D-сцен (Сеул, Пу
 - Найдено и исправлено: `/r/:id` без `?lang` открывался на русском, хотя форма EN. Теперь EN по умолчанию (`src/app/r/[id]/lang.ts` `reportLang`, тест `tests/report-lang.test.ts`); RU-ссылки сохраняют `?lang=ru` (`/cars`, «Открыть отчёт» в `GarageScene`). Ревью: PASS.
 - Как и раньше: `index_photos` (Glimmer) падает по таймауту 45 с при холодном Modal, если форму отправить сразу; агент всё равно смотрит каждое фото через `find_defects`. Цифры с экрана толщиномера читаются нестабильно между прогонами (было 2/5 и 0.90, теперь 1/5 и 0.80).
 - Не сделано: русский перевод интерфейса и отчёта (смесь RU/EN) — после конкурса, решение Артура.
+
+## 04.11 день — 300 фото, лимиты, чистка истории репозитория (Claude Code)
+- Лендинг: «instead of 300 photos in a chat» (было 40), `UPLOAD/YouTube/description.txt`: «300 photos», строка `Code: https://github.com/bohemo35-source/hanbridge-inspector`. «77 photos» у Sportage не трогали (факт индекса).
+- Vercel теперь Pro. Лимиты (env, production+preview): RUN 20/ч, 600/сут; UPLOAD 10/ч, 150/сут (`scripts/ops/set-limits.local.mjs` в основной копии).
+- Blob: `hanbridge-inspector-blob` 600.9 МБ / 750 файлов; в команде ещё `open-instinct-blob` (148 Б), `[name]-blob` (10.1 МБ) и интеграции open-instinct / fan_app. Разбивку по папкам не получить: токен Blob в Vercel зашифрован.
+- **История переписана (разрешение Артура 04.11):** `git filter-repo --strip-blobs-with-ids` — 74 старых файла (65 тяжёлых >200 КБ, не нужных ни в одной ветке: старые клипы `public/film*`, 3 версии `kia-sportage.glb`, старые скриншоты `docs/reports`; плюс 9 старых картинок `public/landing/` с неразмытым именем). Деревья всех веток не изменились (проверено). Пак 456 → 369 МБ. Force-push всех 18 веток; `main` = `film-v4` = ef6eede, production READY. Секреты: значения из `.env.local` в истории не встречаются. PR #1 (tz-06) хранит старые коммиты, но вычищенных файлов в них нет.
+- Бэкап до чистки: `~/Documents/META-HACKATON/backups/hanbridge-inspector-github-pre-filter-20261104.bundle` (478 МБ, проверен). Рабочая папка чистки: `~/Documents/META-HACKATON/repo-filter-0411/`.
+- Основная копия и `hi-v4` переведены на новую историю (`reset --keep`, деревья совпадают). **`hi-glimmer` не трогали:** его ветка `glimmer` на старой истории — из него не пушить (особенно с --force), иначе старое вернётся.
+- Следующее: Артур делает репозиторий публичным; YouTube / X / форма.
