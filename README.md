@@ -83,7 +83,7 @@ Hackathon credits:
 
 | Service | Credit | Used | What for |
 |---|---|---|---|
-| Meta Model API | $150 | ≈ $44 | The product's Meta models (Muse Spark, SAM 3.1, Muse Voice Transcribe, Muse Image, Muse Wonder) and Muse Code sessions once Arthur's own Meta subscription hit its limit |
+| Meta Model API | $150 | $43.22 ($106.78 left) | The product's Meta models (Muse Spark, SAM 3.1, Muse Voice Transcribe, Muse Image, Muse Wonder) and Muse Code sessions once Arthur's own Meta subscription hit its limit |
 | Modal | $100 grant | $98.74 | GPUs for Muse Glimmer (H100) and for animating the film scenes with Wan 2.2 (H200) |
 | Baseten | $100 | — | Muse Spark Open, the independent verifier (the usage sits in the hackathon workspace, not visible to us) |
 
