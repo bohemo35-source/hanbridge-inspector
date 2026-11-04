@@ -1,10 +1,11 @@
 // @agent:   claude-code
 // @project: hanbridge-inspector
-// @purpose: record the film from the site to mp4 with its sound: CDP screencast of a visible Chrome (no background throttling) after pressing Play; the page logs when narration/drums start and stop, the same mix (voice 0.8, drums as in the player, fades) is rebuilt with ffmpeg and muxed; outputs a 1080p and a small 720p file
+// @purpose: record the film from the site to mp4 with its sound: CDP screencast of a visible Chrome (no background throttling) after pressing Play; the page logs when narration/drums start and stop, the same mix (voice and drums as in the player, fades) is rebuilt with ffmpeg and muxed; outputs a 1080p and a small 720p file
 // @created: 2026-11-03
 // @updated: 2026-11-03 claude-code — window content = emulated CSS size (1600×900 @1.2 → 1920×1080), the JPEG of every frame must be W×H (a mismatched window cropped the right edge)
 // @updated: 2026-11-03 claude-code — drums level 0.58 (DRUMS env), as in the player
 // @updated: 2026-11-04 claude-code — Chrome muted (--mute-audio): the page still plays its audio, nothing comes out of the speakers (the sound is mixed from the files)
+// @updated: 2026-11-04 claude-code — balance as in the player: voice 1.0, drums-mix.mp3 (drums × 0.35 baked in) at 1.0; remix an existing recording: remix-film-audio.mjs
 // usage: node scripts/film4/record-film.mjs <url> <outBase> [W=1920] [H=1080]   → <outBase>-1080p.mp4, <outBase>-720p.mp4
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -14,7 +15,7 @@ import { spawn, spawnSync, execFileSync } from "node:child_process";
 const { chromium } = createRequire(path.join(os.homedir(), "node_modules", "x.js"))("playwright");
 const [url, outBase, W = "1920", H = "1080"] = process.argv.slice(2);
 if (!url || !outBase) { console.error("usage: record-film.mjs <url> <outBase>"); process.exit(1); }
-const DRUMS = Number(process.env.DRUMS ?? 0.58); // keep in step with Film4.tsx (watch mode with narration)
+const DRUMS = Number(process.env.DRUMS ?? 1), VOICE = Number(process.env.VOICE ?? 1); // keep in step with Film4.tsx (drums-mix.mp3 carries the 0.35)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const port = 9342, profile = path.join(os.tmpdir(), "hb-record-film");
 fs.rmSync(profile, { recursive: true, force: true });
@@ -106,11 +107,11 @@ const narrOn = aud.find((x) => x.ev === "playing" && /narration/.test(x.src));
 const narrEnd = aud.find((x) => (x.ev === "ended" || x.ev === "pause") && /narration/.test(x.src));
 const drumOn = aud.find((x) => x.ev === "playing" && /drums/.test(x.src));
 if (!narrOn || !drumOn) throw new Error("no audio events: " + JSON.stringify(aud));
-const narrFile = path.join("public", "film3", "audio", narrOn.src), drumFile = path.join("public", "film3", "audio", "drums.mp3");
+const narrFile = path.join("public", "film3", "audio", narrOn.src), drumFile = path.join("public", "film3", "audio", drumOn.src);
 const nAt = rel(narrOn.wall), dAt = rel(drumOn.wall), endAt = narrEnd ? rel(narrEnd.wall) : span;
-// the player (Film4.tsx): drums fade 0 → DRUMS over 1.5 s, voice 0.8; when the voice ends the drums fade out over 0.7 s
+// the player (Film4.tsx): drums fade 0 → DRUMS over 1.5 s, voice VOICE; when the voice ends the drums fade out over 0.7 s
 const fc = [
-  `[0:a]atrim=start=${narrOn.pos.toFixed(3)}:end=${(narrOn.pos + endAt - nAt).toFixed(3)},asetpts=PTS-STARTPTS,volume=0.8,adelay=${Math.round(nAt * 1000)}:all=1[v]`,
+  `[0:a]atrim=start=${narrOn.pos.toFixed(3)}:end=${(narrOn.pos + endAt - nAt).toFixed(3)},asetpts=PTS-STARTPTS,volume=${VOICE},adelay=${Math.round(nAt * 1000)}:all=1[v]`,
   `[1:a]aloop=loop=-1:size=2e9,atrim=0:${(endAt - dAt + 0.8).toFixed(3)},asetpts=PTS-STARTPTS,volume=${DRUMS},afade=t=in:d=1.5,afade=t=out:st=${(endAt - dAt).toFixed(3)}:d=0.7,adelay=${Math.round(dAt * 1000)}:all=1[d]`,
   `[v][d]amix=inputs=2:normalize=0:duration=longest,apad,atrim=0:${span.toFixed(3)}[a]`,
 ].join(";");

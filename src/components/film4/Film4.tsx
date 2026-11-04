@@ -8,6 +8,7 @@
 // @updated: 2026-11-03 claude-code — phones: light clips (film3/m/), poster image always under the clip, the clip shows once it has a frame, decoder woken once
 // @updated: 2026-11-03 claude-code — clip time spans the transition tail too: the incoming clip moves while it fades in (was parked on frame 0)
 // @updated: 2026-11-04 claude-code — Play/Stop generation counter, followY, clipSync (drift by rate, seek past 1 s); portrait: 4:3 band with equal gaps (portrait.ts), line under it, cards under the line — never over the picture
+// @updated: 2026-11-04 claude-code — portrait: Play / "or scroll" under the picture band (title stays on it); sound balance baked into drums-mix.mp3 (iOS ignores .volume): voice 1.0, drums 0.35
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -128,16 +129,18 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     if (timing.current === undefined) timing.current = await fetch(`/film3/audio/narration-${lang}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     if (!autoRef.current || gen !== autoGen.current) return; // stopped (wheel, Stop) or Play pressed again while the timing was loading: one loop, no music without a picture
     const tm = timing.current;
-    if (!music.current) { music.current = new Audio("/film3/audio/drums.mp3"); music.current.loop = true; music.current.volume = 0; }
-    // levels (EBU R128): voice −17.4 LUFS, drums −20.8 LUFS (one loop) → at 0.8 / 0.58 the voice sits 6.0 dB over the drums (measured on a 170 s drums loop; 6.2 from the one-loop figure)
-    // (first mix 1.0 / 0.22 = 16.6 dB, then 0.8 / 0.35 = 10.5 dB — the owner could not hear the drums; 0.35 → 0.58 = +4.4 dB)
-    music.current.play().then(() => fade(music.current, tm ? 0.58 : 0.6, 1500)).catch(() => {});
+    // The balance lives in the files, not in .volume: iOS Safari ignores HTMLMediaElement.volume (always 1), so on an iPhone every
+    // volume set here was heard as 1.0 / 1.0 (voice only 3.4 dB over the drums). drums-mix.mp3 = drums.mp3 × 0.35 (−29.9 LUFS, made with
+    // ffmpeg), voice −17.4 LUFS at 1.0 → the voice sits 12.5 dB over the drums on every device; .volume only fades in/out (desktop, Android).
+    // (history: 1.0 / 0.22, 0.8 / 0.35, 0.8 / 0.58 — the owner: "the voice got quiet, the drums loud", back to drums 0.35, voice 1.0)
+    if (!music.current) { music.current = new Audio("/film3/audio/drums-mix.mp3"); music.current.loop = true; music.current.volume = 0; }
+    music.current.play().then(() => fade(music.current, 1, 1500)).catch(() => {});
     playSec.current = (i) => { const w = tm?.scenes[SCENES[i].id]; return w ? w[1] - w[0] : SCENES[i].sec; };
     // where the voice should be for the current scroll position
     const vhNow = () => window.innerHeight / 100;
     const sceneAt = (yy: number) => { const local = (yy - top0) / vhNow(); let i = SCENES.length - 1; while (i > 0 && starts[i] > local) i--; return { i, t: cl((local - starts[i]) / SCENES[i].vh) }; };
     if (tm) {
-      if (!narr.current || narr.current.dataset.lang !== lang) { narr.current?.pause(); narr.current = new Audio(tm.file); narr.current.dataset.lang = lang; narr.current.volume = 0.8; }
+      if (!narr.current || narr.current.dataset.lang !== lang) { narr.current?.pause(); narr.current = new Audio(tm.file); narr.current.dataset.lang = lang; narr.current.volume = 1; }
       const { i, t } = sceneAt(window.scrollY); const w = tm.scenes[SCENES[i].id];
       if (w) narr.current.currentTime = w[0] + t * (w[1] - w[0]);
       narr.current.play().catch(() => {});
@@ -284,15 +287,25 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
           </div>
 
           {/* opening title */}
+          {/* portrait: the title sits on the picture band, Play and "or scroll" under it (in the line's slot) — never over the picture */}
           {s.open && (
-            <div className="absolute inset-0 z-[6] flex flex-col items-center justify-center px-5 text-center" style={{ opacity: 1 - e }}>
+            <div className={`absolute z-[6] flex flex-col items-center justify-center px-5 text-center ${P ? "inset-x-0" : "inset-0"}`} style={{ opacity: 1 - e, ...(P ? { top: P.bandTop, height: P.bandH } : {}) }}>
               <div className="font-mono text-[11px] uppercase tracking-[.5em] text-sodium-hi/90">{UI.presents[lang]}</div>
               <h1 className="mt-5 font-display text-[clamp(54px,11vw,168px)] font-medium uppercase leading-[.86] tracking-[.12em]" style={{ textShadow: "0 4px 60px rgba(0,0,0,.6)" }}>Hanbridge</h1>
               <p className="mt-5 font-display text-[clamp(20px,2.4vw,34px)] italic text-bone/90">{UI.tagline[lang]}</p>
-              <div className="mt-10 flex flex-col items-center gap-4">
-                <PlayButton on={auto} onClick={auto ? stopAuto : startAuto} lang={lang} />
-                <span className="font-mono text-[10px] uppercase tracking-[.4em] text-bone-2">{UI.scroll[lang]}</span>
-              </div>
+              {!P && (
+                <div className="mt-10 flex flex-col items-center gap-4">
+                  <PlayButton on={auto} onClick={auto ? stopAuto : startAuto} lang={lang} />
+                  <span className="font-mono text-[10px] uppercase tracking-[.4em] text-bone-2">{UI.scroll[lang]}</span>
+                </div>
+              )}
+            </div>
+          )}
+          {s.open && P && (
+            // centred between the band and the progress rail (40 px); the block (button 62 + 12 + "or scroll" 15) is 89 px tall
+            <div className="absolute inset-x-0 z-[6] flex flex-col items-center gap-3" style={{ top: P.bandTop + P.bandH + Math.max(P.gap, (stage.h - 40 - P.bandTop - P.bandH - 89) / 2), opacity: 1 - e }}>
+              <PlayButton on={auto} onClick={auto ? stopAuto : startAuto} lang={lang} />
+              <span className="font-mono text-[10px] uppercase tracking-[.4em] text-bone-2">{UI.scroll[lang]}</span>
             </div>
           )}
 
