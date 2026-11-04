@@ -17,7 +17,7 @@ import type { GarageData } from "@/lib/garage/data";
 import InsertView from "./Inserts";
 import { ACTS, RECEIPT_BUSAN, RECEIPT_CUSTOMS, SCENES, UI, type Lang, type Line, type Scene } from "./story";
 import { TW, clipProgress, clipSpan, clipSync } from "./clipTime";
-import { portraitLayout } from "./portrait";
+import { playTop, portraitLayout } from "./portrait";
 import { followY, newVoiceClock, voiceDecision } from "./voiceFollow";
 
 const GarageScene = dynamic(() => import("@/components/garage-3d/GarageScene"), { ssr: false });
@@ -130,8 +130,8 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
     if (!autoRef.current || gen !== autoGen.current) return; // stopped (wheel, Stop) or Play pressed again while the timing was loading: one loop, no music without a picture
     const tm = timing.current;
     // The balance lives in the files, not in .volume: iOS Safari ignores HTMLMediaElement.volume (always 1), so on an iPhone every
-    // volume set here was heard as 1.0 / 1.0 (voice only 3.4 dB over the drums). drums-mix.mp3 = drums.mp3 × 0.35 (−29.9 LUFS, made with
-    // ffmpeg), voice −17.4 LUFS at 1.0 → the voice sits 12.5 dB over the drums on every device; .volume only fades in/out (desktop, Android).
+    // volume set here was heard as 1.0 / 1.0 (voice only 3.1 dB over the drums on a 168.5 s drums loop). drums-mix.mp3 = drums.mp3 × 0.35 (−29.9 LUFS, made with
+    // ffmpeg), voice −17.4 LUFS at 1.0 → the voice sits 12.3–12.5 dB over the drums on every device (loop / film mix); .volume only fades in/out (desktop, Android).
     // (history: 1.0 / 0.22, 0.8 / 0.35, 0.8 / 0.58 — the owner: "the voice got quiet, the drums loud", back to drums 0.35, voice 1.0)
     if (!music.current) { music.current = new Audio("/film3/audio/drums-mix.mp3"); music.current.loop = true; music.current.volume = 0; }
     music.current.play().then(() => fade(music.current, 1, 1500)).catch(() => {});
@@ -302,8 +302,8 @@ export default function Film4({ report, lang, garage }: { report?: Report; lang:
             </div>
           )}
           {s.open && P && (
-            // centred between the band and the progress rail (40 px); the block (button 62 + 12 + "or scroll" 15) is 89 px tall
-            <div className="absolute inset-x-0 z-[6] flex flex-col items-center gap-3" style={{ top: P.bandTop + P.bandH + Math.max(P.gap, (stage.h - 40 - P.bandTop - P.bandH - 89) / 2), opacity: 1 - e }}>
+            // centred between the band and the progress rail (playTop, portrait.ts, tested)
+            <div className="absolute inset-x-0 z-[6] flex flex-col items-center gap-3" style={{ top: playTop(P, stage.h), opacity: 1 - e }}>
               <PlayButton on={auto} onClick={auto ? stopAuto : startAuto} lang={lang} />
               <span className="font-mono text-[10px] uppercase tracking-[.4em] text-bone-2">{UI.scroll[lang]}</span>
             </div>

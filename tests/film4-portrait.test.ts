@@ -2,8 +2,9 @@
 // @project: hanbridge-inspector
 // @purpose: Portrait film layout: a bigger band (4:3), equal gaps above and below, the line under the band and the card under the line — never over the picture
 // @created: 2026-11-04
+// @updated: 2026-11-04 claude-code — playTop: Play under the band, above the progress rail, equal gaps
 import { describe, expect, it } from "vitest";
-import { HEAD, MIN_GAP, RAIL, TEXT, portraitLayout } from "../src/components/film4/portrait";
+import { HEAD, MIN_GAP, PLAY_BLOCK, PROGRESS, RAIL, TEXT, playTop, portraitLayout } from "../src/components/film4/portrait";
 
 const screens = [[390, 664], [390, 725], [390, 844], [430, 932]] as const; // Safari with bars, Arthur's iPhone, full 390×844, 430×932
 
@@ -30,5 +31,19 @@ describe("portraitLayout", () => {
   it("short screens shrink the band, never below the whole 16:9 frame", () => {
     const L = portraitLayout(390, 600, 272);
     expect(L.bandH).toBeCloseTo((390 * 9) / 16); expect(L.gap).toBe(MIN_GAP);
+  });
+});
+
+describe("playTop (opening scene: Play / \"or scroll\" never over the picture)", () => {
+  // 390×844 / 375×812 full screens, 375×667 (SE), 390×664 and 375×548 (Safari with both bars), 320×568
+  const sizes = [[390, 844], [375, 812], [375, 667], [390, 664], [375, 548], [320, 568]] as const;
+  it("under the band with a real gap, above the progress rail, gaps equal", () => {
+    for (const [w, h] of sizes) {
+      const L = portraitLayout(w, h, 0), top = playTop(L, h);
+      const above = top - (L.bandTop + L.bandH), below = h - PROGRESS - (top + PLAY_BLOCK);
+      expect(above).toBeGreaterThanOrEqual(16);
+      expect(below).toBeGreaterThanOrEqual(16);
+      expect(Math.abs(above - below)).toBeLessThan(0.5);
+    }
   });
 });
