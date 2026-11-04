@@ -3,6 +3,7 @@
 // @purpose: Garage inspection scroll scene: real 32-part car on a lift, exploded view, gauge labels, verdict
 // @created: 2026-10-29
 // @updated: 2026-10-30 claude-code (TZ-13 look: autoshop HDRI reflections, rim + softbox light, metallic parts with dark matte insides, blurred floor reflection)
+// @updated: 2026-11-04 claude-code — «Open report» keeps ?lang=ru (reports default to EN)
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -720,7 +721,7 @@ export default function GarageScene(props: GarageSceneProps) {
             <p className="mt-1 text-sm text-zinc-300">
               {counts.total} {lang === "ru" ? "находок" : "findings"} · {counts.confirmed} {lang === "ru" ? "подтверждено" : "confirmed"}
             </p>
-            <a href={`/r/${report.id}`} className="mt-3 inline-block rounded-full bg-amber-300 px-4 py-1.5 text-sm font-semibold text-zinc-950">
+            <a href={`/r/${report.id}${lang === "ru" ? "?lang=ru" : ""}`} className="mt-3 inline-block rounded-full bg-amber-300 px-4 py-1.5 text-sm font-semibold text-zinc-950">
               {lang === "ru" ? "Открыть отчёт" : "Open report"}
             </a>
           </div>

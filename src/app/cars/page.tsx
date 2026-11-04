@@ -2,6 +2,7 @@
 // @project: hanbridge-inspector
 // @purpose: /cars — demo-car catalog + all generated reports with verdicts and /r/:id links
 // @created: 2026-10-29
+// @updated: 2026-11-04 claude-code — report links with ?lang=ru (this page is Russian; reports default to EN)
 import { CARS } from "@/lib/agent/catalog";
 import { listReportsAsync } from "@/lib/store/reports";
 export const runtime = "nodejs";
@@ -31,7 +32,7 @@ export default async function CarsPage() {
       <h2>Отчёты ({reports.length})</h2>
       <div style={{ display: "grid", gap: 8 }}>
         {reports.map((r) => (
-          <a key={r.id} href={`/r/${r.id}`} style={{ color: "#e8ebee", background: "#11141a", border: "1px solid #242a33", borderRadius: 10, padding: 14, textDecoration: "none", display: "flex", gap: 14 }}>
+          <a key={r.id} href={`/r/${r.id}?lang=ru`} style={{ color: "#e8ebee", background: "#11141a", border: "1px solid #242a33", borderRadius: 10, padding: 14, textDecoration: "none", display: "flex", gap: 14 }}>
             {r.listingUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={r.listingUrl} alt="" style={{ width: 140, borderRadius: 8 }} /> : null}
             <span><b>{r.vehicle.year ?? ""} {r.vehicle.make} {r.vehicle.model}</b><br />
               <span style={{ fontWeight: 800, color: r.verdict.decision === "BUY" ? "#4fb38a" : r.verdict.decision === "WALK_AWAY" ? "#e5544b" : "#e3a33b" }}>{r.verdict.decision.replace("_", " ")}</span>

@@ -5,6 +5,7 @@
 // @updated: 2026-11-02 claude-code — garage studio (one neutral 3D car, panels from this report, real photos) replaces the parametric map when the car has a photo index
 // @updated: 2026-11-03 claude-code — TOOL_MODEL moved to src/lib/agent/toolModels.ts (shared with the landing step log)
 // @updated: 2026-11-02 claude-code — film v4 design: display/mono type, sodium palette, evidence chips, model badges in the agent trace, ?lang= on load
+// @updated: 2026-11-04 claude-code — default language EN (the upload form in EN links here without ?lang; jury reads EN); ?lang=ru keeps Russian
 // @updated: 2026-11-03 claude-code — «open the car's garage» only for catalog cars (uploads have no /garage page); «Not confirmed» without «by the verifier» (an owner-typed reading never reaches it)
 "use client";
 import dynamic from "next/dynamic";
@@ -31,7 +32,7 @@ const dColor = (d: string) => (d === "BUY" ? "var(--ok)" : d === "WALK_AWAY" ? "
 const tc = (t?: number) => (t === undefined ? "" : `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")} `);
 
 export function ReportView({ report, garage, initialLang }: { report: Report; garage?: GarageData; initialLang?: Lang }) {
-  const [lang, setLang] = useState<Lang>(initialLang ?? "ru");
+  const [lang, setLang] = useState<Lang>(initialLang ?? "en");
   const [tab, setTab] = useState<"report" | "delivery">("report");
   const [chat, setChat] = useState<Array<{ role: string; content: string }>>([]);
   const [input, setInput] = useState("");
